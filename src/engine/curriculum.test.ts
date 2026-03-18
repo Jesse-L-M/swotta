@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { getTestDb } from "@/test/setup";
-import { loadQualification, getTopicTree } from "./curriculum";
+import { loadQualification, getTopicTree, qualificationSeedSchema } from "./curriculum";
 import {
   examBoards,
   subjects,
@@ -854,5 +854,87 @@ describe("getTopicTree", () => {
     for (const root of tree) {
       expect(root.edges).toEqual([]);
     }
+  });
+});
+
+describe("seed data validation", () => {
+  it("rejects seed with missing required fields", async () => {
+    const db = getTestDb();
+    const invalidSeed = {
+      subject: { name: "Biology", slug: "biology" },
+      // missing examBoard, level, versionCode, etc.
+    };
+
+    await expect(
+      loadQualification(db, invalidSeed as QualificationSeed)
+    ).rejects.toThrow("Invalid seed data");
+  });
+
+  it("rejects seed with empty topics array", async () => {
+    const db = getTestDb();
+    const invalidSeed: QualificationSeed = {
+      ...minimalSeed,
+      subject: { name: "Empty", slug: "empty" },
+      versionCode: "0000",
+      topics: [],
+    };
+
+    await expect(loadQualification(db, invalidSeed)).rejects.toThrow(
+      "Invalid seed data"
+    );
+  });
+
+  it("rejects seed with empty components array", async () => {
+    const db = getTestDb();
+    const invalidSeed: QualificationSeed = {
+      ...minimalSeed,
+      subject: { name: "NoComp", slug: "nocomp" },
+      versionCode: "0001",
+      components: [],
+    };
+
+    await expect(loadQualification(db, invalidSeed)).rejects.toThrow(
+      "Invalid seed data"
+    );
+  });
+
+  it("rejects seed with invalid edge type", async () => {
+    const invalidSeed = {
+      ...minimalSeed,
+      subject: { name: "BadEdge", slug: "badedge" },
+      versionCode: "0002",
+      topics: [
+        {
+          name: "Topic A",
+          code: "A",
+          edges: [{ toCode: "B", type: "invalid_type" }],
+        },
+        { name: "Topic B", code: "B" },
+      ],
+    };
+
+    const db = getTestDb();
+    await expect(
+      loadQualification(db, invalidSeed as unknown as QualificationSeed)
+    ).rejects.toThrow("Invalid seed data");
+  });
+
+  it("rejects seed with empty command words array", async () => {
+    const db = getTestDb();
+    const invalidSeed: QualificationSeed = {
+      ...minimalSeed,
+      subject: { name: "NoCW", slug: "nocw" },
+      versionCode: "0003",
+      commandWords: [],
+    };
+
+    await expect(loadQualification(db, invalidSeed)).rejects.toThrow(
+      "Invalid seed data"
+    );
+  });
+
+  it("validates the real GCSE Biology seed against the schema", () => {
+    const result = qualificationSeedSchema.safeParse(seedJson);
+    expect(result.success).toBe(true);
   });
 });
