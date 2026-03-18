@@ -1,0 +1,71 @@
+import { redirect } from "next/navigation";
+import { getAuthContext } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { loadLearnerByUserId, loadQualifications } from "@/components/dashboard/data";
+import { loadJourneyData } from "@/components/journey/data";
+import { JourneyTimeline } from "@/components/journey/journey-timeline";
+import { PostExamSummary } from "@/components/journey/post-exam-summary";
+import {
+  generatePostExamSummary,
+  calculateDaysToExam,
+} from "@/engine/proximity";
+import type { LearnerId, QualificationVersionId } from "@/lib/types";
+
+export default async function JourneyPage() {
+  const ctx = await getAuthContext();
+  if (!ctx) redirect("/login");
+
+  const learner = await loadLearnerByUserId(ctx.user.id, db);
+  if (!learner) redirect("/onboarding");
+
+  const [journeyData, qualifications] = await Promise.all([
+    loadJourneyData(learner.id, db),
+    loadQualifications(learner.id, db),
+  ]);
+
+  const now = new Date();
+  const pastExams = qualifications.filter((q) => {
+    if (!q.examDate) return false;
+    const examDate = new Date(q.examDate + "T00:00:00");
+    return calculateDaysToExam(now, examDate) < 0;
+  });
+
+  const postExamSummaries = await Promise.all(
+    pastExams.map((q) =>
+      generatePostExamSummary(
+        db,
+        learner.id as LearnerId,
+        q.qualificationVersionId as QualificationVersionId
+      )
+    )
+  );
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="font-[family-name:var(--font-instrument-serif)] text-3xl text-[#1A1917]">
+          Your learning journey
+        </h1>
+        <p className="mt-1 text-[#5C5950]">
+          Track your misconceptions, celebrate your progress, and see how far
+          you&apos;ve come.
+        </p>
+      </div>
+
+      <JourneyTimeline data={journeyData} />
+
+      {postExamSummaries.length > 0 && (
+        <section data-testid="post-exam-section">
+          <h2 className="mb-4 font-[family-name:var(--font-instrument-serif)] text-xl text-[#1A1917]">
+            Exam summaries
+          </h2>
+          <div className="space-y-4">
+            {postExamSummaries.map((summary, idx) => (
+              <PostExamSummary key={idx} summary={summary} />
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
