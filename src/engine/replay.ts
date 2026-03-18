@@ -1,5 +1,5 @@
 import { eq, desc, inArray } from "drizzle-orm";
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 import type { Database } from "@/lib/db";
 import {
   studySessions,
@@ -11,6 +11,7 @@ import {
 import type { LearnerId, SessionId, TopicId, BlockType } from "@/lib/types";
 import { BLOCK_TYPE_LABELS } from "@/lib/labels";
 import { calculateCalibration } from "@/engine/calibration";
+import { structuredLog } from "@/lib/logger";
 
 const SHARE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
@@ -95,14 +96,23 @@ export function verifyShareToken(
       .update(payload)
       .digest("hex");
 
-    if (signature !== expected) return null;
+    const sigBuf = Buffer.from(signature, "utf-8");
+    const expectedBuf = Buffer.from(expected, "utf-8");
+    if (
+      sigBuf.length !== expectedBuf.length ||
+      !timingSafeEqual(sigBuf, expectedBuf)
+    )
+      return null;
 
     const expiresAt = new Date(Number(expiresAtStr));
     if (isNaN(expiresAt.getTime())) return null;
     if (expiresAt.getTime() < Date.now()) return null;
 
     return { sessionId, expiresAt };
-  } catch {
+  } catch (error: unknown) {
+    structuredLog("share_token_verify_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return null;
   }
 }
