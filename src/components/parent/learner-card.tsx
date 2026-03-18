@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import type { WeeklyReportData } from "@/lib/types";
 import { ExamCountdown, type ExamInfo } from "./exam-countdown";
 import { FlagAlertList } from "./flag-alerts";
+import { StatCard } from "./study-patterns";
 
 export interface LearnerCardProps {
   id: string;
@@ -53,25 +54,10 @@ export function LearnerCard({
 
       {/* Quick stats */}
       {latestReport ? (
-        <div className="grid grid-cols-3 gap-3 text-center">
-          <div>
-            <div data-testid="stat-value" className="font-serif text-xl font-bold tabular-nums">
-              {latestReport.sessionsCompleted}
-            </div>
-            <div className="text-xs text-muted-foreground">Sessions</div>
-          </div>
-          <div>
-            <div data-testid="stat-value" className="font-serif text-xl font-bold tabular-nums">
-              {latestReport.totalStudyMinutes}
-            </div>
-            <div className="text-xs text-muted-foreground">Minutes</div>
-          </div>
-          <div>
-            <div data-testid="stat-value" className="font-serif text-xl font-bold tabular-nums">
-              {latestReport.topicsReviewed}
-            </div>
-            <div className="text-xs text-muted-foreground">Topics</div>
-          </div>
+        <div className="grid grid-cols-3 gap-3">
+          <StatCard value={latestReport.sessionsCompleted} label="Sessions" />
+          <StatCard value={latestReport.totalStudyMinutes} label="Minutes" />
+          <StatCard value={latestReport.topicsReviewed} label="Topics" />
         </div>
       ) : (
         <p data-testid="no-report" className="text-sm text-muted-foreground">

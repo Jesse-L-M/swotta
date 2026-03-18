@@ -1,5 +1,23 @@
 # TODOs
 
+## Wire Clerk auth into parent pages
+
+**Added:** 2026-03-18 | **Source:** Task 2.3 eng review
+
+**What:** Replace `getGuardianUserId()` stubs with real Clerk auth calls in `src/app/(parent)/dashboard/page.tsx` and `src/app/(parent)/learners/[id]/page.tsx`.
+
+**Why:** Both parent pages currently return `null` from the auth stub, so they always show "Sign in required." Once Task 2.1 (Auth + Layout Shell) merges, these need to call Clerk's `currentUser()` and look up the guardian's user ID via the `users` table.
+
+**Pros:** Makes parent pages functional for real guardian users.
+
+**Cons:** Blocked until Task 2.1 merges and provides `src/lib/auth.ts` helpers.
+
+**Context:** The `getGuardianUserId()` function in each page is a placeholder marked with `// TODO: Replace with real Clerk auth once Task 2.1 (Auth + Layout) is merged`. The pattern should be: call `requireAuth()` → get `userId` → query `users` table by `clerkId` → return `user.id`. The guardian link scoping is already implemented in the page queries.
+
+**Depends on:** Task 2.1 (Auth + Layout Shell) merged to main.
+
+---
+
 ## Wire endSession to call mastery.processAttemptOutcome
 
 **What:** After `endSession` updates the DB, call the mastery engine to update the learner's topic state (mastery level, ease factor, next review date) based on the session outcome.

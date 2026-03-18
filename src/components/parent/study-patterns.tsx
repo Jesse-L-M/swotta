@@ -72,4 +72,4 @@ function StatCard({ value, label }: { value: string | number; label: string }) {
   );
 }
 
-export { formatMinutes };
+export { formatMinutes, StatCard };
