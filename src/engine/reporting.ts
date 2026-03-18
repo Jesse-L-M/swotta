@@ -1,0 +1,778 @@
+import fs from "node:fs";
+import path from "node:path";
+import { db as prodDb, type Database } from "@/lib/db";
+import type {
+  LearnerId,
+  UserId,
+  TopicId,
+  TopicMastery,
+  WeeklyReportData,
+} from "@/lib/types";
+import {
+  studySessions,
+  learnerTopicState,
+  misconceptionEvents,
+  weeklyReports,
+  notificationEvents,
+  guardianLinks,
+  topics,
+  users,
+  learners,
+} from "@/db/schema";
+import { eq, and, gte, lte, sql, desc, inArray } from "drizzle-orm";
+import Anthropic from "@anthropic-ai/sdk";
+import { sendEmail as defaultSendEmail, type EmailOptions, type EmailResult } from "@/email/send";
+import { renderWeeklyReportEmail } from "@/email/templates/weekly-report";
+
+// ---------------------------------------------------------------------------
+// Dependency injection for testability
+// ---------------------------------------------------------------------------
+
+export interface ReportingDeps {
+  db: Database;
+  aiSummarize: (prompt: string) => Promise<string>;
+  sendEmailFn: (options: EmailOptions) => Promise<EmailResult>;
+}
+
+async function defaultAiSummarize(prompt: string): Promise<string> {
+  const client = new Anthropic();
+  const msg = await client.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 1024,
+    messages: [{ role: "user", content: prompt }],
+  });
+  const block = msg.content[0];
+  if (block.type === "text") return block.text;
+  return "";
+}
+
+function defaultDeps(): ReportingDeps {
+  return {
+    db: prodDb,
+    aiSummarize: defaultAiSummarize,
+    sendEmailFn: defaultSendEmail,
+  };
+}
+
+function resolveDeps(partial?: Partial<ReportingDeps>): ReportingDeps {
+  return { ...defaultDeps(), ...partial };
+}
+
+// ---------------------------------------------------------------------------
+// generateWeeklyReport
+// ---------------------------------------------------------------------------
+
+export async function generateWeeklyReport(
+  learnerId: LearnerId,
+  periodStart: Date,
+  periodEnd: Date,
+  deps?: Partial<ReportingDeps>,
+): Promise<WeeklyReportData & { reportId: string }> {
+  const { db: database, aiSummarize } = resolveDeps(deps);
+
+  // 1. Get completed sessions in the period
+  const sessions = await database
+    .select()
+    .from(studySessions)
+    .where(
+      and(
+        eq(studySessions.learnerId, learnerId),
+        gte(studySessions.startedAt, periodStart),
+        lte(studySessions.startedAt, periodEnd),
+        eq(studySessions.status, "completed"),
+      ),
+    );
+
+  const sessionsCompleted = sessions.length;
+  const totalStudyMinutes = sessions.reduce(
+    (sum, s) => sum + (s.totalDurationMinutes ?? 0),
+    0,
+  );
+
+  // 2. Collect unique topic IDs from sessions
+  const topicIdSet = new Set<string>();
+  for (const session of sessions) {
+    if (session.topicsCovered) {
+      for (const tid of session.topicsCovered) {
+        if (tid) topicIdSet.add(tid);
+      }
+    }
+  }
+  const topicsReviewed = topicIdSet.size;
+  const reviewedTopicIds = Array.from(topicIdSet);
+
+  // 3. Current mastery for reviewed topics
+  let currentMastery: Array<{
+    topicId: string;
+    topicName: string;
+    masteryLevel: string;
+    confidence: string;
+    nextReviewAt: Date | null;
+    streak: number;
+  }> = [];
+
+  if (reviewedTopicIds.length > 0) {
+    currentMastery = await database
+      .select({
+        topicId: learnerTopicState.topicId,
+        topicName: topics.name,
+        masteryLevel: learnerTopicState.masteryLevel,
+        confidence: learnerTopicState.confidence,
+        nextReviewAt: learnerTopicState.nextReviewAt,
+        streak: learnerTopicState.streak,
+      })
+      .from(learnerTopicState)
+      .innerJoin(topics, eq(learnerTopicState.topicId, topics.id))
+      .where(
+        and(
+          eq(learnerTopicState.learnerId, learnerId),
+          inArray(learnerTopicState.topicId, reviewedTopicIds),
+        ),
+      );
+  }
+
+  // 4. Get previous report for baseline mastery
+  const [previousReport] = await database
+    .select()
+    .from(weeklyReports)
+    .where(
+      and(
+        eq(weeklyReports.learnerId, learnerId),
+        lte(weeklyReports.periodEnd, periodStart.toISOString().slice(0, 10)),
+      ),
+    )
+    .orderBy(desc(weeklyReports.periodEnd))
+    .limit(1);
+
+  const previousMasteryMap = new Map<string, number>();
+  if (previousReport?.masteryChanges) {
+    const prev = previousReport.masteryChanges as Array<{
+      topicId: string;
+      after: number;
+    }>;
+    for (const entry of prev) {
+      previousMasteryMap.set(entry.topicId, entry.after);
+    }
+  }
+
+  // 5. Compute mastery changes
+  const masteryChanges = currentMastery.map((m) => {
+    const after = Number(m.masteryLevel);
+    const before = previousMasteryMap.get(m.topicId) ?? 0;
+    return {
+      topicId: m.topicId as TopicId,
+      topicName: m.topicName,
+      before,
+      after,
+      delta: Math.round((after - before) * 1000) / 1000,
+    };
+  });
+
+  // 6. Detect flags
+  const flags = await detectFlags(learnerId, 7, deps);
+
+  // 7. Get learner name for the summary prompt
+  const [learnerRow] = await database
+    .select({ displayName: learners.displayName })
+    .from(learners)
+    .where(eq(learners.id, learnerId))
+    .limit(1);
+  const learnerName = learnerRow?.displayName ?? "Student";
+
+  // 8. Generate AI summary
+  const summaryPrompt = buildReportSummaryPrompt({
+    learnerName,
+    periodStart,
+    periodEnd,
+    sessionsCompleted,
+    totalStudyMinutes,
+    topicsReviewed,
+    masteryChanges,
+    flags,
+  });
+  const summary = await aiSummarize(summaryPrompt);
+
+  // 9. Persist report (flags are stored in the report's JSON column;
+  //    the detect-flags cron owns safetyFlags table inserts)
+  const [report] = await database
+    .insert(weeklyReports)
+    .values({
+      learnerId,
+      periodStart: periodStart.toISOString().slice(0, 10),
+      periodEnd: periodEnd.toISOString().slice(0, 10),
+      summary,
+      masteryChanges: masteryChanges as unknown as Record<string, unknown>,
+      sessionsCompleted,
+      totalStudyMinutes,
+      topicsReviewed,
+      flags: flags.map((f) => ({
+        type: f.type,
+        description: f.description,
+        severity: f.severity,
+      })) as unknown as Record<string, unknown>,
+      sentTo: [] as unknown as Record<string, unknown>,
+    })
+    .returning();
+
+  const reportData: WeeklyReportData & { reportId: string } = {
+    reportId: report.id,
+    learnerId,
+    periodStart,
+    periodEnd,
+    sessionsCompleted,
+    totalStudyMinutes,
+    topicsReviewed,
+    masteryChanges,
+    flags: flags.map((f) => ({
+      type: f.type,
+      description: f.description,
+      severity: f.severity,
+    })),
+    summary,
+  };
+
+  return reportData;
+}
+
+// ---------------------------------------------------------------------------
+// detectFlags
+// ---------------------------------------------------------------------------
+
+type FlagSeverity = "low" | "medium" | "high";
+
+export interface DetectedFlag {
+  type: string;
+  description: string;
+  severity: FlagSeverity;
+  evidence: Record<string, unknown>;
+}
+
+export async function detectFlags(
+  learnerId: LearnerId,
+  lookbackDays = 7,
+  deps?: Partial<ReportingDeps>,
+): Promise<DetectedFlag[]> {
+  const { db: database } = resolveDeps(deps);
+  const flags: DetectedFlag[] = [];
+  const now = new Date();
+  const lookbackDate = new Date(now.getTime() - lookbackDays * 24 * 60 * 60 * 1000);
+
+  // --- 1. Sudden disengagement: no completed sessions for N days ---
+  const recentSessions = await database
+    .select({ id: studySessions.id })
+    .from(studySessions)
+    .where(
+      and(
+        eq(studySessions.learnerId, learnerId),
+        gte(studySessions.startedAt, lookbackDate),
+        eq(studySessions.status, "completed"),
+      ),
+    )
+    .limit(1);
+
+  if (recentSessions.length === 0) {
+    const lastSession = await database
+      .select({ startedAt: studySessions.startedAt })
+      .from(studySessions)
+      .where(
+        and(
+          eq(studySessions.learnerId, learnerId),
+          eq(studySessions.status, "completed"),
+        ),
+      )
+      .orderBy(desc(studySessions.startedAt))
+      .limit(1);
+
+    const daysSinceLastSession = lastSession.length > 0
+      ? Math.floor((now.getTime() - lastSession[0].startedAt.getTime()) / (24 * 60 * 60 * 1000))
+      : lookbackDays;
+
+    const severity: FlagSeverity = daysSinceLastSession >= 7 ? "high" : daysSinceLastSession >= 3 ? "medium" : "low";
+
+    flags.push({
+      type: "disengagement",
+      description: `No study sessions in the last ${daysSinceLastSession} days.`,
+      severity,
+      evidence: { daysSinceLastSession, lookbackDays },
+    });
+  }
+
+  // --- 2. Chronic avoidance: topics overdue for review ---
+  const overdueTopics = await database
+    .select({
+      topicId: learnerTopicState.topicId,
+      topicName: topics.name,
+      nextReviewAt: learnerTopicState.nextReviewAt,
+    })
+    .from(learnerTopicState)
+    .innerJoin(topics, eq(learnerTopicState.topicId, topics.id))
+    .where(
+      and(
+        eq(learnerTopicState.learnerId, learnerId),
+        lte(learnerTopicState.nextReviewAt, now),
+      ),
+    );
+
+  if (overdueTopics.length >= 5) {
+    const severity: FlagSeverity = overdueTopics.length >= 10 ? "high" : "medium";
+    const topicNames = overdueTopics.slice(0, 5).map((t) => t.topicName);
+    flags.push({
+      type: "avoidance",
+      description: `${overdueTopics.length} topics are overdue for review, including: ${topicNames.join(", ")}.`,
+      severity,
+      evidence: {
+        overdueCount: overdueTopics.length,
+        topicNames,
+      },
+    });
+  }
+
+  // --- 3. Rapid mastery decay: topics with recent forgotten retention ---
+  const decayedTopics = await database
+    .select({
+      topicId: learnerTopicState.topicId,
+      topicName: topics.name,
+      masteryLevel: learnerTopicState.masteryLevel,
+    })
+    .from(learnerTopicState)
+    .innerJoin(topics, eq(learnerTopicState.topicId, topics.id))
+    .where(
+      and(
+        eq(learnerTopicState.learnerId, learnerId),
+        lte(learnerTopicState.masteryLevel, "0.300"),
+        gte(learnerTopicState.reviewCount, 3),
+      ),
+    );
+
+  if (decayedTopics.length >= 3) {
+    const severity: FlagSeverity = decayedTopics.length >= 6 ? "high" : "medium";
+    const topicNames = decayedTopics.slice(0, 5).map((t) => t.topicName);
+    flags.push({
+      type: "distress",
+      description: `Rapid mastery decay detected in ${decayedTopics.length} topics despite multiple reviews: ${topicNames.join(", ")}.`,
+      severity,
+      evidence: {
+        decayedCount: decayedTopics.length,
+        topicNames,
+      },
+    });
+  }
+
+  // --- 4. Repeated misconception clusters ---
+  const misconceptionClusters = await database
+    .select({
+      topicId: misconceptionEvents.topicId,
+      topicName: topics.name,
+      count: sql<number>`count(*)::int`.as("count"),
+    })
+    .from(misconceptionEvents)
+    .innerJoin(topics, eq(misconceptionEvents.topicId, topics.id))
+    .where(
+      and(
+        eq(misconceptionEvents.learnerId, learnerId),
+        gte(misconceptionEvents.createdAt, lookbackDate),
+        eq(misconceptionEvents.resolved, false),
+      ),
+    )
+    .groupBy(misconceptionEvents.topicId, topics.name)
+    .having(sql`count(*) >= 3`);
+
+  if (misconceptionClusters.length > 0) {
+    const severity: FlagSeverity = misconceptionClusters.some((c) => c.count >= 5) ? "high" : "medium";
+    const details = misconceptionClusters.map((c) => `${c.topicName} (${c.count}x)`);
+    flags.push({
+      type: "distress",
+      description: `Repeated misconceptions detected: ${details.join(", ")}.`,
+      severity,
+      evidence: {
+        clusters: misconceptionClusters.map((c) => ({
+          topicId: c.topicId,
+          topicName: c.topicName,
+          count: c.count,
+        })),
+      },
+    });
+  }
+
+  return flags;
+}
+
+// ---------------------------------------------------------------------------
+// sendWeeklyReport
+// ---------------------------------------------------------------------------
+
+export async function sendWeeklyReport(
+  reportId: string,
+  deps?: Partial<ReportingDeps>,
+): Promise<{ sentTo: Array<{ userId: string; channel: string }> }> {
+  const { db: database, sendEmailFn } = resolveDeps(deps);
+
+  // 1. Look up the report
+  const [report] = await database
+    .select()
+    .from(weeklyReports)
+    .where(eq(weeklyReports.id, reportId))
+    .limit(1);
+
+  if (!report) {
+    throw new Error(`Report not found: ${reportId}`);
+  }
+
+  // 2. Get learner info
+  const [learnerRow] = await database
+    .select({ displayName: learners.displayName })
+    .from(learners)
+    .where(eq(learners.id, report.learnerId))
+    .limit(1);
+  const learnerName = learnerRow?.displayName ?? "Student";
+
+  // 3. Get guardians who receive weekly reports
+  const guardians = await database
+    .select({
+      guardianUserId: guardianLinks.guardianUserId,
+      email: users.email,
+      name: users.name,
+    })
+    .from(guardianLinks)
+    .innerJoin(users, eq(guardianLinks.guardianUserId, users.id))
+    .where(
+      and(
+        eq(guardianLinks.learnerId, report.learnerId),
+        eq(guardianLinks.receivesWeeklyReport, true),
+      ),
+    );
+
+  // 4. Check existing sentTo for idempotency on retry
+  const existingSentTo = (report.sentTo ?? []) as Array<{
+    userId: string;
+    channel: string;
+    sentAt: string;
+  }>;
+  const alreadySentUserIds = new Set(existingSentTo.map((s) => s.userId));
+  const allSentTo = [...existingSentTo];
+  const sentTo: Array<{ userId: string; channel: string }> = [];
+
+  // 5. Reconstruct WeeklyReportData for the email template
+  const reportData: WeeklyReportData = {
+    learnerId: report.learnerId as LearnerId,
+    periodStart: new Date(report.periodStart),
+    periodEnd: new Date(report.periodEnd),
+    sessionsCompleted: report.sessionsCompleted,
+    totalStudyMinutes: report.totalStudyMinutes,
+    topicsReviewed: report.topicsReviewed,
+    masteryChanges: (report.masteryChanges ?? []) as WeeklyReportData["masteryChanges"],
+    flags: (report.flags ?? []) as WeeklyReportData["flags"],
+    summary: report.summary,
+  };
+
+  // 6. Send emails (skip guardians already sent to on a previous attempt)
+  for (const guardian of guardians) {
+    if (alreadySentUserIds.has(guardian.guardianUserId)) {
+      sentTo.push({ userId: guardian.guardianUserId, channel: "email" });
+      continue;
+    }
+
+    const html = renderWeeklyReportEmail({
+      data: reportData,
+      learnerName,
+    });
+
+    const subject = `${learnerName}'s Weekly Study Report - ${reportData.periodStart.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} to ${reportData.periodEnd.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`;
+
+    await sendEmailFn({
+      to: guardian.email,
+      subject,
+      html,
+    });
+
+    // Record notification event
+    await database.insert(notificationEvents).values({
+      userId: guardian.guardianUserId,
+      type: "weekly_report",
+      channel: "email",
+      subject,
+      payload: { reportId, learnerId: report.learnerId } as Record<string, unknown>,
+      sentAt: new Date(),
+    });
+
+    const entry = {
+      userId: guardian.guardianUserId,
+      channel: "email",
+      sentAt: new Date().toISOString(),
+    };
+    allSentTo.push(entry);
+    sentTo.push({ userId: guardian.guardianUserId, channel: "email" });
+
+    // Persist sentTo incrementally so retries skip already-sent guardians
+    await database
+      .update(weeklyReports)
+      .set({ sentTo: allSentTo as unknown as Record<string, unknown> })
+      .where(eq(weeklyReports.id, reportId));
+  }
+
+  return { sentTo };
+}
+
+// ---------------------------------------------------------------------------
+// generateTeacherInsight
+// ---------------------------------------------------------------------------
+
+export async function generateTeacherInsight(
+  learnerId: LearnerId,
+  requestedByUserId: UserId,
+  deps?: Partial<ReportingDeps>,
+): Promise<{
+  summary: string;
+  strengths: string[];
+  concerns: string[];
+  recommendations: string[];
+  topicBreakdown: TopicMastery[];
+}> {
+  const { db: database, aiSummarize } = resolveDeps(deps);
+
+  // 1. Get learner info
+  const [learnerRow] = await database
+    .select({ displayName: learners.displayName })
+    .from(learners)
+    .where(eq(learners.id, learnerId))
+    .limit(1);
+  const learnerName = learnerRow?.displayName ?? "Student";
+
+  // 2. Get all topic mastery for this learner
+  const masteryData = await database
+    .select({
+      topicId: learnerTopicState.topicId,
+      topicName: topics.name,
+      masteryLevel: learnerTopicState.masteryLevel,
+      confidence: learnerTopicState.confidence,
+      nextReviewAt: learnerTopicState.nextReviewAt,
+      streak: learnerTopicState.streak,
+    })
+    .from(learnerTopicState)
+    .innerJoin(topics, eq(learnerTopicState.topicId, topics.id))
+    .where(eq(learnerTopicState.learnerId, learnerId));
+
+  const now = new Date();
+  const topicBreakdown: TopicMastery[] = masteryData.map((m) => ({
+    topicId: m.topicId as TopicId,
+    topicName: m.topicName,
+    masteryLevel: Number(m.masteryLevel),
+    confidence: Number(m.confidence),
+    nextReviewAt: m.nextReviewAt,
+    streak: m.streak,
+    isOverdue: m.nextReviewAt !== null && m.nextReviewAt < now,
+  }));
+
+  // 3. Get recent session stats (last 30 days) via aggregate
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const [sessionStats] = await database
+    .select({
+      count: sql<number>`count(*)::int`,
+      totalMinutes: sql<number>`coalesce(sum(${studySessions.totalDurationMinutes}), 0)::int`,
+    })
+    .from(studySessions)
+    .where(
+      and(
+        eq(studySessions.learnerId, learnerId),
+        gte(studySessions.startedAt, thirtyDaysAgo),
+        eq(studySessions.status, "completed"),
+      ),
+    );
+
+  // 4. Get recent misconceptions
+  const recentMisconceptions = await database
+    .select({
+      topicName: topics.name,
+      description: misconceptionEvents.description,
+      severity: misconceptionEvents.severity,
+      resolved: misconceptionEvents.resolved,
+    })
+    .from(misconceptionEvents)
+    .innerJoin(topics, eq(misconceptionEvents.topicId, topics.id))
+    .where(
+      and(
+        eq(misconceptionEvents.learnerId, learnerId),
+        gte(misconceptionEvents.createdAt, thirtyDaysAgo),
+      ),
+    );
+
+  // 5. Build prompt for AI
+  const insightPrompt = buildTeacherInsightPrompt({
+    learnerName,
+    topicBreakdown,
+    sessionsLast30Days: sessionStats?.count ?? 0,
+    totalMinutesLast30Days: sessionStats?.totalMinutes ?? 0,
+    misconceptions: recentMisconceptions.map((m) => ({
+      topicName: m.topicName,
+      description: m.description,
+      severity: m.severity,
+      resolved: m.resolved,
+    })),
+  });
+
+  const aiResponse = await aiSummarize(insightPrompt);
+  const parsed = parseTeacherInsightResponse(aiResponse);
+
+  return {
+    summary: parsed.summary,
+    strengths: parsed.strengths,
+    concerns: parsed.concerns,
+    recommendations: parsed.recommendations,
+    topicBreakdown,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Prompt loading
+// ---------------------------------------------------------------------------
+
+function loadPrompt(filename: string, variables: Record<string, string>): string {
+  const filePath = path.join(process.cwd(), "src", "ai", "prompts", filename);
+  let template = fs.readFileSync(filePath, "utf-8");
+  for (const [key, value] of Object.entries(variables)) {
+    template = template.replaceAll(`{{${key}}}`, value);
+  }
+  return template;
+}
+
+// ---------------------------------------------------------------------------
+// Prompt builders
+// ---------------------------------------------------------------------------
+
+interface ReportSummaryInput {
+  learnerName: string;
+  periodStart: Date;
+  periodEnd: Date;
+  sessionsCompleted: number;
+  totalStudyMinutes: number;
+  topicsReviewed: number;
+  masteryChanges: Array<{
+    topicName: string;
+    before: number;
+    after: number;
+    delta: number;
+  }>;
+  flags: Array<{
+    type: string;
+    description: string;
+    severity: string;
+  }>;
+}
+
+function buildReportSummaryPrompt(input: ReportSummaryInput): string {
+  const improvements = input.masteryChanges
+    .filter((m) => m.delta > 0)
+    .map((m) => `${m.topicName}: +${Math.round(m.delta * 100)}%`);
+  const declines = input.masteryChanges
+    .filter((m) => m.delta < 0)
+    .map((m) => `${m.topicName}: ${Math.round(m.delta * 100)}%`);
+
+  return loadPrompt("report-summary.md", {
+    learnerName: input.learnerName,
+    periodRange: `${input.periodStart.toLocaleDateString("en-GB")} to ${input.periodEnd.toLocaleDateString("en-GB")}`,
+    sessionsCompleted: String(input.sessionsCompleted),
+    totalStudyMinutes: String(input.totalStudyMinutes),
+    topicsReviewed: String(input.topicsReviewed),
+    improvementsSection:
+      improvements.length > 0
+        ? `Improvements:\n${improvements.map((i) => `- ${i}`).join("\n")}`
+        : "No mastery improvements this week.",
+    declinesSection:
+      declines.length > 0
+        ? `Areas needing attention:\n${declines.map((d) => `- ${d}`).join("\n")}`
+        : "",
+    flagsSection:
+      input.flags.length > 0
+        ? `Flags:\n${input.flags.map((f) => `- ${f.type} (${f.severity}): ${f.description}`).join("\n")}`
+        : "No concerns flagged this week.",
+  });
+}
+
+interface TeacherInsightInput {
+  learnerName: string;
+  topicBreakdown: TopicMastery[];
+  sessionsLast30Days: number;
+  totalMinutesLast30Days: number;
+  misconceptions: Array<{
+    topicName: string;
+    description: string;
+    severity: number;
+    resolved: boolean;
+  }>;
+}
+
+function buildTeacherInsightPrompt(input: TeacherInsightInput): string {
+  const strongTopics = input.topicBreakdown
+    .filter((t) => t.masteryLevel >= 0.7)
+    .map((t) => `${t.topicName} (${Math.round(t.masteryLevel * 100)}%)`);
+
+  const weakTopics = input.topicBreakdown
+    .filter((t) => t.masteryLevel < 0.4)
+    .map((t) => `${t.topicName} (${Math.round(t.masteryLevel * 100)}%)`);
+
+  const unresolvedMisconceptions = input.misconceptions
+    .filter((m) => !m.resolved)
+    .map((m) => `${m.topicName}: ${m.description}`);
+
+  return loadPrompt("teacher-insight.md", {
+    learnerName: input.learnerName,
+    sessionsLast30Days: String(input.sessionsLast30Days),
+    totalMinutesLast30Days: String(input.totalMinutesLast30Days),
+    topicsTracked: String(input.topicBreakdown.length),
+    strongTopicsSection:
+      strongTopics.length > 0
+        ? `Strong topics: ${strongTopics.join(", ")}`
+        : "No topics above 70% mastery.",
+    weakTopicsSection:
+      weakTopics.length > 0
+        ? `Weak topics: ${weakTopics.join(", ")}`
+        : "No topics below 40% mastery.",
+    misconceptionsSection:
+      unresolvedMisconceptions.length > 0
+        ? `Unresolved misconceptions:\n${unresolvedMisconceptions.map((m) => `- ${m}`).join("\n")}`
+        : "No unresolved misconceptions.",
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function parseTeacherInsightResponse(response: string): {
+  summary: string;
+  strengths: string[];
+  concerns: string[];
+  recommendations: string[];
+} {
+  try {
+    const parsed = JSON.parse(response) as {
+      summary: string;
+      strengths: string[];
+      concerns: string[];
+      recommendations: string[];
+    };
+    return {
+      summary: typeof parsed.summary === "string" ? parsed.summary : String(parsed.summary ?? ""),
+      strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
+      concerns: Array.isArray(parsed.concerns) ? parsed.concerns : [],
+      recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : [],
+    };
+  } catch {
+    return {
+      summary: response,
+      strengths: [],
+      concerns: [],
+      recommendations: [],
+    };
+  }
+}
+
+type FlagTypeEnum = "disengagement" | "avoidance" | "distress" | "overreliance";
+
+export function mapFlagTypeToEnum(type: string): FlagTypeEnum {
+  const validTypes: FlagTypeEnum[] = ["disengagement", "avoidance", "distress", "overreliance"];
+  if (validTypes.includes(type as FlagTypeEnum)) {
+    return type as FlagTypeEnum;
+  }
+  return "distress";
+}
