@@ -726,7 +726,7 @@ function parseTeacherInsightResponse(response: string): {
       recommendations: string[];
     };
     return {
-      summary: parsed.summary ?? "",
+      summary: typeof parsed.summary === "string" ? parsed.summary : String(parsed.summary ?? ""),
       strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
       concerns: Array.isArray(parsed.concerns) ? parsed.concerns : [],
       recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : [],
