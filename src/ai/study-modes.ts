@@ -41,12 +41,24 @@ function getPromptsDir(): string {
   return path.resolve(process.cwd(), "src/ai/prompts");
 }
 
+const promptCache = new Map<BlockType, string>();
+
 export async function loadPromptTemplate(
   blockType: BlockType
 ): Promise<string> {
+  const cached = promptCache.get(blockType);
+  if (cached) {
+    return cached;
+  }
   const filename = BLOCK_TYPE_TO_FILENAME[blockType];
   const filePath = path.join(getPromptsDir(), filename);
-  return readFile(filePath, "utf-8");
+  const content = await readFile(filePath, "utf-8");
+  promptCache.set(blockType, content);
+  return content;
+}
+
+export function clearPromptCache(): void {
+  promptCache.clear();
 }
 
 function formatPolicies(policies: PolicyValue[]): string {

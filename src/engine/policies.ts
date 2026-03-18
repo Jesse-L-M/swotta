@@ -1,4 +1,4 @@
-import { eq, and, isNull, inArray } from "drizzle-orm";
+import { eq, and, or, isNull, inArray, sql } from "drizzle-orm";
 import type { Database } from "@/lib/db";
 import {
   policies,
@@ -76,20 +76,47 @@ export async function getLearnerScopes(
   return scopes;
 }
 
-export async function resolvePolicy(
+async function getMatchingPolicies(
   learnerId: LearnerId,
-  key: string,
-  db: Database
-): Promise<PolicyValue | null> {
+  db: Database,
+  keyFilter?: string
+): Promise<
+  Array<{
+    scopeType: string;
+    scopeId: string | null;
+    key: string;
+    value: unknown;
+  }>
+> {
   const scopes = await getLearnerScopes(learnerId, db);
 
   const scopeIds = scopes
     .filter((s) => s.scopeId !== null)
     .map((s) => s.scopeId as string);
 
-  const hasGlobal = scopes.some((s) => s.scopeType === "global");
+  if (scopeIds.length === 0) {
+    const globalRows = await db
+      .select({
+        scopeType: policies.scopeType,
+        scopeId: policies.scopeId,
+        key: policies.key,
+        value: policies.value,
+      })
+      .from(policies)
+      .where(
+        and(
+          eq(policies.scopeType, "global"),
+          isNull(policies.scopeId),
+          keyFilter ? eq(policies.key, keyFilter) : undefined
+        )
+      );
+    return globalRows;
+  }
 
-  const conditions = [eq(policies.key, key)];
+  const conditions = or(
+    and(eq(policies.scopeType, "global"), isNull(policies.scopeId)),
+    inArray(policies.scopeId, scopeIds)
+  );
 
   const rows = await db
     .select({
@@ -99,31 +126,36 @@ export async function resolvePolicy(
       value: policies.value,
     })
     .from(policies)
-    .where(and(...conditions));
+    .where(
+      keyFilter ? and(conditions, eq(policies.key, keyFilter)) : conditions
+    );
 
-  const matching = rows.filter((row) => {
-    if (row.scopeType === "global" && row.scopeId === null && hasGlobal) {
+  return rows.filter((row) => {
+    if (row.scopeType === "global" && row.scopeId === null) {
       return true;
     }
-    return (
-      row.scopeId !== null &&
-      scopeIds.includes(row.scopeId) &&
-      scopes.some(
-        (s) => s.scopeType === row.scopeType && s.scopeId === row.scopeId
-      )
+    return scopes.some(
+      (s) => s.scopeType === row.scopeType && s.scopeId === row.scopeId
     );
   });
+}
 
+function pickMostSpecific(
+  matching: Array<{
+    scopeType: string;
+    scopeId: string | null;
+    key: string;
+    value: unknown;
+  }>
+): PolicyValue | null {
   if (matching.length === 0) {
     return null;
   }
-
   matching.sort((a, b) => {
     const aPriority = SCOPE_PRIORITY[a.scopeType] ?? 999;
     const bPriority = SCOPE_PRIORITY[b.scopeType] ?? 999;
     return aPriority - bPriority;
   });
-
   const best = matching[0];
   return {
     scopeType: best.scopeType as PolicyValue["scopeType"],
@@ -133,39 +165,20 @@ export async function resolvePolicy(
   };
 }
 
+export async function resolvePolicy(
+  learnerId: LearnerId,
+  key: string,
+  db: Database
+): Promise<PolicyValue | null> {
+  const matching = await getMatchingPolicies(learnerId, db, key);
+  return pickMostSpecific(matching);
+}
+
 export async function resolveAllPolicies(
   learnerId: LearnerId,
   db: Database
 ): Promise<PolicyValue[]> {
-  const scopes = await getLearnerScopes(learnerId, db);
-
-  const scopeIds = scopes
-    .filter((s) => s.scopeId !== null)
-    .map((s) => s.scopeId as string);
-
-  const hasGlobal = scopes.some((s) => s.scopeType === "global");
-
-  const rows = await db
-    .select({
-      scopeType: policies.scopeType,
-      scopeId: policies.scopeId,
-      key: policies.key,
-      value: policies.value,
-    })
-    .from(policies);
-
-  const matching = rows.filter((row) => {
-    if (row.scopeType === "global" && row.scopeId === null && hasGlobal) {
-      return true;
-    }
-    return (
-      row.scopeId !== null &&
-      scopeIds.includes(row.scopeId) &&
-      scopes.some(
-        (s) => s.scopeType === row.scopeType && s.scopeId === row.scopeId
-      )
-    );
-  });
+  const matching = await getMatchingPolicies(learnerId, db);
 
   const byKey = new Map<string, typeof matching>();
   for (const row of matching) {
@@ -179,18 +192,10 @@ export async function resolveAllPolicies(
 
   const result: PolicyValue[] = [];
   for (const [, entries] of byKey) {
-    entries.sort((a, b) => {
-      const aPriority = SCOPE_PRIORITY[a.scopeType] ?? 999;
-      const bPriority = SCOPE_PRIORITY[b.scopeType] ?? 999;
-      return aPriority - bPriority;
-    });
-    const best = entries[0];
-    result.push({
-      scopeType: best.scopeType as PolicyValue["scopeType"],
-      scopeId: best.scopeId,
-      key: best.key,
-      value: best.value,
-    });
+    const best = pickMostSpecific(entries);
+    if (best) {
+      result.push(best);
+    }
   }
 
   return result;

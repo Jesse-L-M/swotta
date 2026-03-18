@@ -106,27 +106,30 @@ export async function startSession(
   const initialMessage =
     response.content[0].type === "text" ? response.content[0].text : "";
 
-  const [session] = await db
-    .insert(studySessions)
-    .values({
-      learnerId: block.learnerId,
-      blockId: block.id,
-      status: "active",
-      topicsCovered: [block.topicId],
-    })
-    .returning();
+  const session = await db.transaction(async (tx) => {
+    const [sess] = await tx
+      .insert(studySessions)
+      .values({
+        learnerId: block.learnerId,
+        blockId: block.id,
+        status: "active",
+        topicsCovered: [block.topicId],
+      })
+      .returning();
 
-  await db
-    .insert(blockAttempts)
-    .values({
-      blockId: block.id,
-    })
-    .returning();
+    await tx
+      .insert(blockAttempts)
+      .values({
+        blockId: block.id,
+      });
 
-  await db
-    .update(studyBlocks)
-    .set({ status: "active", updatedAt: new Date() })
-    .where(eq(studyBlocks.id, block.id));
+    await tx
+      .update(studyBlocks)
+      .set({ status: "active", updatedAt: new Date() })
+      .where(eq(studyBlocks.id, block.id));
+
+    return sess;
+  });
 
   return {
     sessionId: session.id as SessionId,
@@ -302,47 +305,49 @@ export async function endSession(
     (endedAt.getTime() - startedAt.getTime()) / 60000
   );
 
-  await db
-    .update(studySessions)
-    .set({
-      status: reason === "completed" ? "completed" : reason,
-      endedAt,
-      summary: extracted.summary,
-      totalDurationMinutes: durationMinutes,
-    })
-    .where(eq(studySessions.id, sessionId));
-
   const blockId = session.blockId as BlockId | null;
 
-  if (blockId) {
-    const existingAttempts = await db
-      .select({ id: blockAttempts.id })
-      .from(blockAttempts)
-      .where(eq(blockAttempts.blockId, blockId));
+  await db.transaction(async (tx) => {
+    await tx
+      .update(studySessions)
+      .set({
+        status: reason === "completed" ? "completed" : reason,
+        endedAt,
+        summary: extracted.summary,
+        totalDurationMinutes: durationMinutes,
+      })
+      .where(eq(studySessions.id, sessionId));
 
-    if (existingAttempts.length > 0) {
-      await db
-        .update(blockAttempts)
-        .set({
-          completedAt: endedAt,
-          score: extracted.score?.toString() ?? null,
-          confidenceBefore: null,
-          confidenceAfter: null,
-          helpRequested: extracted.helpRequested,
-          helpTiming: extracted.helpTiming,
-          misconceptionsDetected: extracted.misconceptions.length,
-          notes: extracted.summary,
-          rawInteraction: { messages },
-        })
-        .where(eq(blockAttempts.id, existingAttempts[0].id));
+    if (blockId) {
+      const existingAttempts = await tx
+        .select({ id: blockAttempts.id })
+        .from(blockAttempts)
+        .where(eq(blockAttempts.blockId, blockId));
+
+      if (existingAttempts.length > 0) {
+        await tx
+          .update(blockAttempts)
+          .set({
+            completedAt: endedAt,
+            score: extracted.score?.toString() ?? null,
+            confidenceBefore: null,
+            confidenceAfter: null,
+            helpRequested: extracted.helpRequested,
+            helpTiming: extracted.helpTiming,
+            misconceptionsDetected: extracted.misconceptions.length,
+            notes: extracted.summary,
+            rawInteraction: { messages },
+          })
+          .where(eq(blockAttempts.id, existingAttempts[0].id));
+      }
+
+      const blockStatus = reason === "completed" ? "completed" : "pending";
+      await tx
+        .update(studyBlocks)
+        .set({ status: blockStatus, updatedAt: new Date() })
+        .where(eq(studyBlocks.id, blockId));
     }
-
-    const blockStatus = reason === "completed" ? "completed" : "pending";
-    await db
-      .update(studyBlocks)
-      .set({ status: blockStatus, updatedAt: new Date() })
-      .where(eq(studyBlocks.id, blockId));
-  }
+  });
 
   const outcome: AttemptOutcome = {
     blockId: blockId ?? ("" as BlockId),

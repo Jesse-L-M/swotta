@@ -351,6 +351,54 @@ describe("startSession", () => {
 
     expect(result.systemPrompt).toContain("Explanation");
   });
+
+  it("propagates error when Claude API throws", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qual = await createTestQualification();
+    const topicId = qual.topics[1].id;
+    const blockId = await createBlockInDb(learner.id, topicId);
+
+    const mockAnthropicClient = {
+      messages: {
+        create: vi.fn().mockRejectedValue(new Error("API rate limit exceeded")),
+      },
+    };
+    configureSessionRunner({
+      db,
+      anthropic: mockAnthropicClient as unknown as SessionRunnerDeps["anthropic"],
+      retrieveChunks: createMockRetrieveChunks(),
+    });
+
+    const block = makeBlock(learner.id, topicId, blockId);
+    await expect(startSession(block, makeLearnerContext())).rejects.toThrow(
+      "API rate limit exceeded"
+    );
+  });
+
+  it("propagates error when retrieveChunks throws", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qual = await createTestQualification();
+    const topicId = qual.topics[1].id;
+    const blockId = await createBlockInDb(learner.id, topicId);
+
+    const mockAnthropicClient = createMockAnthropicClient(["Hello!"]);
+    const failingRetrieveChunks = vi
+      .fn()
+      .mockRejectedValue(new Error("Ingestion service unavailable"));
+
+    configureSessionRunner({
+      db,
+      anthropic: mockAnthropicClient as unknown as SessionRunnerDeps["anthropic"],
+      retrieveChunks: failingRetrieveChunks,
+    });
+
+    const block = makeBlock(learner.id, topicId, blockId);
+    await expect(startSession(block, makeLearnerContext())).rejects.toThrow(
+      "Ingestion service unavailable"
+    );
+  });
 });
 
 describe("continueSession", () => {
@@ -464,6 +512,27 @@ describe("continueSession", () => {
 
     expect(result.isComplete).toBe(false);
     expect(result.reply).toBe("Let me explain further...");
+  });
+
+  it("propagates error when Claude API throws", async () => {
+    const mockAnthropicClient = {
+      messages: {
+        create: vi.fn().mockRejectedValue(new Error("Claude timeout")),
+      },
+    };
+    configureSessionRunner({
+      db,
+      anthropic: mockAnthropicClient as unknown as SessionRunnerDeps["anthropic"],
+      retrieveChunks: createMockRetrieveChunks(),
+    });
+
+    await expect(
+      continueSession(
+        "s" as SessionId,
+        [{ role: "user", content: "hi" }],
+        "prompt"
+      )
+    ).rejects.toThrow("Claude timeout");
   });
 });
 
@@ -809,6 +878,49 @@ describe("endSession", () => {
         "completed"
       )
     ).rejects.toThrow("Session not found");
+  });
+
+  it("propagates error when Claude API throws during outcome extraction", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qual = await createTestQualification();
+    const topicId = qual.topics[1].id;
+    const blockId = await createBlockInDb(learner.id, topicId);
+
+    const startMock = createMockAnthropicClient(["Welcome!"]);
+    configureSessionRunner({
+      db,
+      anthropic: startMock as unknown as SessionRunnerDeps["anthropic"],
+      retrieveChunks: createMockRetrieveChunks(),
+    });
+
+    const block = makeBlock(learner.id, topicId, blockId);
+    const { sessionId } = await startSession(block, makeLearnerContext());
+
+    const failingMock = {
+      messages: {
+        create: vi
+          .fn()
+          .mockRejectedValue(new Error("Claude service unavailable")),
+      },
+    };
+    configureSessionRunner({
+      db,
+      anthropic: failingMock as unknown as SessionRunnerDeps["anthropic"],
+      retrieveChunks: createMockRetrieveChunks(),
+    });
+
+    await expect(
+      endSession(
+        sessionId,
+        [
+          { role: "assistant", content: "Q" },
+          { role: "user", content: "A" },
+        ],
+        "SP",
+        "completed"
+      )
+    ).rejects.toThrow("Claude service unavailable");
   });
 
   it("handles JSON wrapped in markdown code fences", async () => {
