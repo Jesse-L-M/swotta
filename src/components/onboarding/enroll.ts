@@ -63,15 +63,17 @@ export async function enrollInQualifications(
         })
         .onConflictDoNothing();
     }
+
+    for (const enrollment of enrollments) {
+      await initTopicStates(
+        learnerId as LearnerId,
+        enrollment.qualificationVersionId as QualificationVersionId,
+        tx as unknown as Database
+      );
+    }
   });
 
   for (const enrollment of enrollments) {
-    await initTopicStates(
-      learnerId as LearnerId,
-      enrollment.qualificationVersionId as QualificationVersionId,
-      db
-    );
-
     structuredLog("onboarding.qualification_enrolled", {
       learnerId,
       qualificationVersionId: enrollment.qualificationVersionId,
