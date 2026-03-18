@@ -49,7 +49,7 @@ jobs:
       - run: npm ci
 
       - name: Lint
-        run: npm run lint
+        run: npx eslint src/
 
       - name: Typecheck
         run: npx tsc --noEmit
