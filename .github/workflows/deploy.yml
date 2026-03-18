@@ -1,0 +1,86 @@
+name: CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+env:
+  NODE_VERSION: "20"
+  REGION: europe-west2
+  CLOUD_RUN_SERVICE: swotta-app-production
+  ARTIFACT_REPO: swotta
+
+jobs:
+  # ---------- CI: runs on every PR ----------
+  ci:
+    name: Lint, Typecheck, Test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: swotta
+          POSTGRES_PASSWORD: swotta_test
+          POSTGRES_DB: swotta_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U swotta -d swotta_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://swotta:swotta_test@localhost:5433/swotta_test
+      DATABASE_TEST_URL: postgresql://swotta:swotta_test@localhost:5433/swotta_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm run test:run
+
+  # ---------- CD: runs on merge to main ----------
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Submit build to Cloud Build
+        run: |
+          gcloud builds submit \
+            --config cloudbuild.yaml \
+            --project ${{ secrets.GCP_PROJECT_ID }} \
+            --substitutions="_REGION=${REGION},_CLOUD_RUN_SERVICE=${CLOUD_RUN_SERVICE},_ARTIFACT_REPO=${ARTIFACT_REPO},_NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }},_NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in,_NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up,_DB_INSTANCE=${{ secrets.GCP_DB_INSTANCE_CONNECTION_NAME }}"

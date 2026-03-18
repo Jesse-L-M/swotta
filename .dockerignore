@@ -1,0 +1,10 @@
+node_modules
+.git
+.next
+.env*
+!.env.production
+terraform
+.github
+*.md
+.context
+.claude
