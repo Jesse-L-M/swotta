@@ -1,1 +1,17 @@
-// Global test setup — extended in src/test/setup.ts for DB tests
+import {
+  setupTestDatabase,
+  cleanupTestDatabase,
+  teardownTestDatabase,
+} from "@/test/setup";
+
+beforeAll(async () => {
+  await setupTestDatabase();
+});
+
+afterEach(async () => {
+  await cleanupTestDatabase();
+});
+
+afterAll(async () => {
+  await teardownTestDatabase();
+});
