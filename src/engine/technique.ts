@@ -1,3 +1,5 @@
+import { readFile } from "fs/promises";
+import path from "path";
 import { eq, and, inArray, desc } from "drizzle-orm";
 import type { Database } from "@/lib/db";
 import {
@@ -118,12 +120,16 @@ export async function getTechniqueMastery(
 
   const commandWordAttempts = new Map<string, AttemptWithMeta[]>();
 
+  const wordPatterns = new Map<string, RegExp>();
+  for (const [key] of deduped) {
+    wordPatterns.set(key, new RegExp(`\\b${key}\\b`, "i"));
+  }
+
   for (const row of attemptRows) {
     if (!row.notes) continue;
-    const notesLower = row.notes.toLowerCase();
 
     for (const [key] of deduped) {
-      if (notesLower.includes(key)) {
+      if (wordPatterns.get(key)!.test(row.notes)) {
         const existing = commandWordAttempts.get(key) ?? [];
         existing.push({ score: row.score, createdAt: row.createdAt });
         commandWordAttempts.set(key, existing);
@@ -177,54 +183,49 @@ export async function getCommandWordsForQualification(
   return rows;
 }
 
-export function formatCommandWordSection(
+const DEPTH_LABELS: Record<number, string> = {
+  1: "recall",
+  2: "application",
+  3: "analysis",
+  4: "evaluation",
+};
+
+let coachingTemplateCache: string | null = null;
+
+async function loadCoachingTemplate(): Promise<string> {
+  if (coachingTemplateCache) {
+    return coachingTemplateCache;
+  }
+  const filePath = path.resolve(
+    process.cwd(),
+    "src/ai/prompts/command-word-coaching.md"
+  );
+  const content = await readFile(filePath, "utf-8");
+  coachingTemplateCache = content;
+  return content;
+}
+
+export function clearCoachingTemplateCache(): void {
+  coachingTemplateCache = null;
+}
+
+function buildCommandWordTable(words: CommandWordContext[]): string {
+  return words
+    .map((w) => {
+      const depth = DEPTH_LABELS[w.expectedDepth] ?? `level ${w.expectedDepth}`;
+      return `| ${w.word} | ${w.definition} | ${depth} |`;
+    })
+    .join("\n");
+}
+
+export async function formatCommandWordSection(
   words: CommandWordContext[]
-): string {
+): Promise<string> {
   if (words.length === 0) {
     return "";
   }
 
-  const depthLabels: Record<number, string> = {
-    1: "recall",
-    2: "application",
-    3: "analysis",
-    4: "evaluation",
-  };
-
-  const lines = [
-    "## Command Word Definitions",
-    "",
-    "When you use a command word in a question, explicitly coach the student on what it requires.",
-    'For example: "This says \'evaluate\' — that means weigh up both sides and reach a judgement."',
-    "",
-    "| Command Word | Definition | Depth |",
-    "|---|---|---|",
-  ];
-
-  for (const w of words) {
-    const depth = depthLabels[w.expectedDepth] ?? `level ${w.expectedDepth}`;
-    lines.push(`| ${w.word} | ${w.definition} | ${depth} |`);
-  }
-
-  lines.push("");
-  lines.push("## Mark Scheme Coaching");
-  lines.push("");
-  lines.push("When setting questions, always state the marks available and coach the student on mark allocation:");
-  lines.push("");
-  lines.push("- A 1-mark question wants one clear point.");
-  lines.push('- A 2-mark "describe" question wants two distinct points.');
-  lines.push('- A 4-mark "explain" question wants 2 points, each with a reason (point + reason = 2 marks each).');
-  lines.push('- A 6-mark "evaluate" question requires evidence for AND against, plus a justified conclusion.');
-  lines.push("- Extended response (6+ marks): look for logical structure, specialist terminology, and a clear line of reasoning.");
-  lines.push("");
-  lines.push("## Timed Practice Awareness");
-  lines.push("");
-  lines.push("When the session involves timed practice or exam-style questions:");
-  lines.push("");
-  lines.push("- State the recommended time per question based on marks (roughly 1 minute per mark, plus reading time).");
-  lines.push('- For example: "You have about 5 minutes for this 4-mark question."');
-  lines.push("- If the student is spending too long, gently prompt them to move on.");
-  lines.push("- After the session, reflect on pacing: did they manage time well?");
-
-  return lines.join("\n");
+  const template = await loadCoachingTemplate();
+  const table = buildCommandWordTable(words);
+  return template.replace("{{COMMAND_WORD_TABLE}}", table);
 }

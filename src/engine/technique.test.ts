@@ -445,17 +445,17 @@ describe("getCommandWordsForQualification", () => {
 });
 
 describe("formatCommandWordSection", () => {
-  it("returns empty string when no command words", () => {
-    expect(formatCommandWordSection([])).toBe("");
+  it("returns empty string when no command words", async () => {
+    expect(await formatCommandWordSection([])).toBe("");
   });
 
-  it("formats command words into a markdown table", () => {
+  it("formats command words into a markdown table", async () => {
     const words: CommandWordContext[] = [
       { word: "Describe", definition: "Give an account.", expectedDepth: 1 },
       { word: "Explain", definition: "State the reasons.", expectedDepth: 3 },
     ];
 
-    const result = formatCommandWordSection(words);
+    const result = await formatCommandWordSection(words);
 
     expect(result).toContain("## Command Word Definitions");
     expect(result).toContain("| Describe | Give an account. | recall |");
@@ -464,31 +464,31 @@ describe("formatCommandWordSection", () => {
     expect(result).toContain("## Timed Practice Awareness");
   });
 
-  it("includes mark scheme coaching guidance", () => {
+  it("includes mark scheme coaching guidance", async () => {
     const words: CommandWordContext[] = [
       { word: "Explain", definition: "State the reasons.", expectedDepth: 3 },
     ];
 
-    const result = formatCommandWordSection(words);
+    const result = await formatCommandWordSection(words);
 
     expect(result).toContain('A 4-mark "explain" question wants 2 points');
     expect(result).toContain('A 6-mark "evaluate" question requires evidence for AND against');
     expect(result).toContain("A 1-mark question wants one clear point");
   });
 
-  it("includes timed practice guidance", () => {
+  it("includes timed practice guidance", async () => {
     const words: CommandWordContext[] = [
       { word: "Calculate", definition: "Determine the value.", expectedDepth: 2 },
     ];
 
-    const result = formatCommandWordSection(words);
+    const result = await formatCommandWordSection(words);
 
     expect(result).toContain("roughly 1 minute per mark");
     expect(result).toContain("5 minutes for this 4-mark question");
     expect(result).toContain("gently prompt them to move on");
   });
 
-  it("maps expectedDepth to correct labels", () => {
+  it("maps expectedDepth to correct labels", async () => {
     const words: CommandWordContext[] = [
       { word: "Name", definition: "Identify.", expectedDepth: 1 },
       { word: "Calculate", definition: "Determine.", expectedDepth: 2 },
@@ -496,7 +496,7 @@ describe("formatCommandWordSection", () => {
       { word: "Evaluate", definition: "Judge.", expectedDepth: 4 },
     ];
 
-    const result = formatCommandWordSection(words);
+    const result = await formatCommandWordSection(words);
 
     expect(result).toContain("| Name | Identify. | recall |");
     expect(result).toContain("| Calculate | Determine. | application |");
@@ -504,21 +504,21 @@ describe("formatCommandWordSection", () => {
     expect(result).toContain("| Evaluate | Judge. | evaluation |");
   });
 
-  it("handles unknown depth levels gracefully", () => {
+  it("handles unknown depth levels gracefully", async () => {
     const words: CommandWordContext[] = [
       { word: "Synthesise", definition: "Combine ideas.", expectedDepth: 5 },
     ];
 
-    const result = formatCommandWordSection(words);
+    const result = await formatCommandWordSection(words);
     expect(result).toContain("| Synthesise | Combine ideas. | level 5 |");
   });
 
-  it("includes coaching instruction text", () => {
+  it("includes coaching instruction text", async () => {
     const words: CommandWordContext[] = [
       { word: "Evaluate", definition: "Judge.", expectedDepth: 4 },
     ];
 
-    const result = formatCommandWordSection(words);
+    const result = await formatCommandWordSection(words);
 
     expect(result).toContain(
       "explicitly coach the student on what it requires"
