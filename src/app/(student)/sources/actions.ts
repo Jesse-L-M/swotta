@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, and, desc, inArray, count, sql } from "drizzle-orm";
+import { eq, and, desc, count } from "drizzle-orm";
 import { db, type Database } from "@/lib/db";
 import {
   sourceCollections,
@@ -60,6 +60,7 @@ export async function getCollections(
 }
 
 export async function getFiles(
+  learnerId: string,
   collectionId: string,
   database: Database = db
 ): Promise<SourceFileInfo[]> {
@@ -77,7 +78,8 @@ export async function getFiles(
       createdAt: sourceFiles.createdAt,
     })
     .from(sourceFiles)
-    .where(eq(sourceFiles.collectionId, collectionId))
+    .innerJoin(sourceCollections, eq(sourceFiles.collectionId, sourceCollections.id))
+    .where(and(eq(sourceFiles.collectionId, collectionId), eq(sourceCollections.learnerId, learnerId)))
     .orderBy(desc(sourceFiles.createdAt));
 
   return rows.map((r) => ({
@@ -126,6 +128,7 @@ export async function createCollection(
 export async function registerUpload(
   userId: string,
   orgId: string,
+  learnerId: string,
   input: UploadFileInput,
   database: Database = db
 ): Promise<{
@@ -140,6 +143,20 @@ export async function registerUpload(
   }
 
   try {
+    const [collection] = await database
+      .select({ id: sourceCollections.id })
+      .from(sourceCollections)
+      .where(
+        and(
+          eq(sourceCollections.id, parsed.data.collectionId),
+          eq(sourceCollections.learnerId, learnerId)
+        )
+      );
+
+    if (!collection) {
+      return { success: false, error: "Collection not found" };
+    }
+
     const fileId = crypto.randomUUID();
     const storagePath = buildStoragePath(
       orgId,
@@ -177,10 +194,11 @@ export async function registerUpload(
 }
 
 export async function getTopicMappings(
+  learnerId: string,
   fileId: string,
   database: Database = db
 ): Promise<TopicMapping[]> {
-  // Single query: chunks -> mappings -> topics, aggregated by topic
+  // Single query: chunks -> mappings -> topics, with ownership check via files -> collections
   const mappings = await database
     .select({
       topicId: sourceMappings.topicId,
@@ -190,7 +208,9 @@ export async function getTopicMappings(
     .from(sourceChunks)
     .innerJoin(sourceMappings, eq(sourceChunks.id, sourceMappings.chunkId))
     .innerJoin(topics, eq(sourceMappings.topicId, topics.id))
-    .where(eq(sourceChunks.fileId, fileId));
+    .innerJoin(sourceFiles, eq(sourceChunks.fileId, sourceFiles.id))
+    .innerJoin(sourceCollections, eq(sourceFiles.collectionId, sourceCollections.id))
+    .where(and(eq(sourceChunks.fileId, fileId), eq(sourceCollections.learnerId, learnerId)));
 
   if (mappings.length === 0) return [];
 

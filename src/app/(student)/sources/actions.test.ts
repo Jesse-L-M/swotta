@@ -105,7 +105,7 @@ describe("source actions", () => {
         db
       );
 
-      const files = await getFiles(col.collectionId!, db);
+      const files = await getFiles(learnerId, col.collectionId!, db);
       expect(files).toEqual([]);
     });
 
@@ -120,6 +120,7 @@ describe("source actions", () => {
       await registerUpload(
         userId,
         orgId,
+        learnerId,
         {
           collectionId: col.collectionId!,
           filename: "notes.pdf",
@@ -129,7 +130,7 @@ describe("source actions", () => {
         db
       );
 
-      const files = await getFiles(col.collectionId!, db);
+      const files = await getFiles(learnerId, col.collectionId!, db);
       expect(files).toHaveLength(1);
       expect(files[0].filename).toBe("notes.pdf");
       expect(files[0].status).toBe("pending");
@@ -149,6 +150,7 @@ describe("source actions", () => {
       const result = await registerUpload(
         userId,
         orgId,
+        learnerId,
         {
           collectionId: col.collectionId!,
           filename: "document.pdf",
@@ -175,6 +177,7 @@ describe("source actions", () => {
       const result = await registerUpload(
         userId,
         orgId,
+        learnerId,
         {
           collectionId: col.collectionId!,
           filename: "image.png",
@@ -199,6 +202,7 @@ describe("source actions", () => {
       const result = await registerUpload(
         userId,
         orgId,
+        learnerId,
         {
           collectionId: col.collectionId!,
           filename: "",
@@ -222,6 +226,7 @@ describe("source actions", () => {
       const result = await registerUpload(
         userId,
         orgId,
+        learnerId,
         {
           collectionId: col.collectionId!,
           filename: "empty.pdf",
@@ -237,7 +242,7 @@ describe("source actions", () => {
 
   describe("getTopicMappings", () => {
     it("returns empty array when file has no chunks", async () => {
-      const result = await getTopicMappings(crypto.randomUUID(), db);
+      const result = await getTopicMappings(learnerId, crypto.randomUUID(), db);
       expect(result).toEqual([]);
     });
 
@@ -251,6 +256,7 @@ describe("source actions", () => {
       const upload = await registerUpload(
         userId,
         orgId,
+        learnerId,
         {
           collectionId: col.collectionId!,
           filename: "mapped.pdf",
@@ -299,7 +305,7 @@ describe("source actions", () => {
         },
       ]);
 
-      const mappings = await getTopicMappings(upload.fileId!, db);
+      const mappings = await getTopicMappings(learnerId, upload.fileId!, db);
       expect(mappings).toHaveLength(1);
       expect(mappings[0].topicId).toBe(topicId);
       expect(mappings[0].chunkCount).toBe(2);
@@ -320,11 +326,11 @@ describe("source actions", () => {
       expect(result.error).toBe("Failed to create collection");
     });
 
-    it("registerUpload returns error on DB failure", async () => {
-      // Non-existent collection_id triggers FK violation
+    it("registerUpload returns error for non-owned collection", async () => {
       const result = await registerUpload(
         userId,
         orgId,
+        learnerId,
         {
           collectionId: crypto.randomUUID(),
           filename: "fail.pdf",
@@ -334,7 +340,7 @@ describe("source actions", () => {
         db
       );
       expect(result.success).toBe(false);
-      expect(result.error).toBe("Failed to register upload");
+      expect(result.error).toBe("Collection not found");
     });
 
     it("createCollection handles non-Error thrown value", async () => {
@@ -356,7 +362,7 @@ describe("source actions", () => {
 
     it("registerUpload handles non-Error thrown value", async () => {
       const failingDb = {
-        insert: () => {
+        select: () => {
           throw "string error";
         },
       } as unknown as Database;
@@ -371,6 +377,7 @@ describe("source actions", () => {
       const result = await registerUpload(
         userId,
         orgId,
+        learnerId,
         {
           collectionId: col.collectionId!,
           filename: "fail.pdf",
