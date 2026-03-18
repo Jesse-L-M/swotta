@@ -1,6 +1,7 @@
 import type { ExamPhaseName } from "@/engine/proximity";
 import type { StudyBlock, BlockType } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { getBlockTypeLabel as getBlockLabel } from "./utils";
 import {
   BookOpen,
   Brain,
@@ -88,19 +89,7 @@ export function getBlockTypeIcon(type: BlockType): React.ElementType {
   return icons[type];
 }
 
-export function getBlockTypeLabel(type: BlockType): string {
-  const labels: Record<BlockType, string> = {
-    retrieval_drill: "Retrieval Drill",
-    explanation: "Explanation",
-    worked_example: "Worked Example",
-    timed_problems: "Timed Problems",
-    essay_planning: "Essay Planning",
-    source_analysis: "Source Analysis",
-    mistake_review: "Mistake Review",
-    reentry: "Re-entry",
-  };
-  return labels[type];
-}
+export { getBlockLabel as getBlockTypeLabel };
 
 // --- Components ---
 
@@ -203,7 +192,7 @@ export function StudyNowCard({ block }: StudyNowCardProps) {
             {block.topicName}
           </p>
           <p className="text-sm text-[#5C5950]">
-            {getBlockTypeLabel(block.blockType)} &middot;{" "}
+            {getBlockLabel(block.blockType)} &middot;{" "}
             {block.durationMinutes}m
           </p>
         </div>
