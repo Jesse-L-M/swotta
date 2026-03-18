@@ -53,7 +53,8 @@ export interface StudySessionApi {
     sessionId: string,
     messages: Array<{ role: "user" | "assistant"; content: string }>,
     systemPrompt: string,
-    reason: "completed" | "abandoned" | "timeout"
+    reason: "completed" | "abandoned" | "timeout",
+    confidence?: { before: number | null; after: number | null }
   ) => Promise<{ outcome: AttemptOutcome; summary: string }>;
   fetchBlock: (blockId: string) => Promise<SessionBlockInfo>;
 }
@@ -95,11 +96,11 @@ function defaultApi(): StudySessionApi {
         throw new Error("No response body for streaming");
       return res.body;
     },
-    async endSession(sessionId, messages, systemPrompt, reason) {
+    async endSession(sessionId, messages, systemPrompt, reason, confidence) {
       const res = await fetch(`/api/sessions/${sessionId}/end`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages, systemPrompt, reason }),
+        body: JSON.stringify({ messages, systemPrompt, reason, confidence }),
       });
       if (!res.ok) throw new Error(`Failed to end session: ${res.status}`);
       const { data } = (await res.json()) as {
@@ -110,14 +111,8 @@ function defaultApi(): StudySessionApi {
   };
 }
 
-let messageCounter = 0;
 function nextMessageId(): string {
-  messageCounter += 1;
-  return `msg-${messageCounter}-${Date.now()}`;
-}
-
-export function resetMessageCounter(): void {
-  messageCounter = 0;
+  return crypto.randomUUID();
 }
 
 export interface UseStudySessionOptions {
@@ -165,6 +160,12 @@ export function useStudySession({
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const messagesRef = useRef<SessionMessage[]>([]);
+
+  // Keep messagesRef in sync with messages state
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   // Load block info on mount
   useEffect(() => {
@@ -271,7 +272,8 @@ export function useStudySession({
       ]);
 
       try {
-        const apiMessages = [...messages, userMsg].map((m) => ({
+        const currentMessages = messagesRef.current;
+        const apiMessages = [...currentMessages, userMsg].map((m) => ({
           role: m.role,
           content: m.content,
         }));
@@ -320,7 +322,7 @@ export function useStudySession({
           setPhase("completing");
           try {
             const allMessages = [
-              ...messages,
+              ...currentMessages,
               userMsg,
               { id: assistantMsgId, role: "assistant" as const, content: cleanText, timestamp: new Date() },
             ].map((m) => ({
@@ -331,7 +333,8 @@ export function useStudySession({
               sessionId,
               allMessages,
               systemPrompt,
-              "completed"
+              "completed",
+              { before: confidenceBefore, after: null }
             );
             setResult(endResult);
             setPhase("confidence-after");
@@ -356,7 +359,7 @@ export function useStudySession({
         abortRef.current = null;
       }
     },
-    [sessionId, systemPrompt, isStreaming, messages]
+    [sessionId, systemPrompt, isStreaming, confidenceBefore]
   );
 
   const submitConfidenceAfter = useCallback(
@@ -376,7 +379,7 @@ export function useStudySession({
 
     setPhase("completing");
     try {
-      const apiMessages = messages.map((m) => ({
+      const apiMessages = messagesRef.current.map((m) => ({
         role: m.role,
         content: m.content,
       }));
@@ -384,7 +387,8 @@ export function useStudySession({
         sessionId,
         apiMessages,
         systemPrompt,
-        "abandoned"
+        "abandoned",
+        { before: confidenceBefore, after: confidenceAfter }
       );
       setResult(endResult);
       setPhase("complete");
@@ -394,7 +398,7 @@ export function useStudySession({
       );
       setPhase("error");
     }
-  }, [sessionId, systemPrompt, messages]);
+  }, [sessionId, systemPrompt, confidenceBefore, confidenceAfter]);
 
   return {
     phase,

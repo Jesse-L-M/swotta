@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import {
   useStudySession,
-  resetMessageCounter,
   type StudySessionApi,
   type SessionBlockInfo,
 } from "./use-study-session";
@@ -71,9 +70,6 @@ function makeMockApi(
   };
 }
 
-beforeEach(() => {
-  resetMessageCounter();
-});
 
 describe("useStudySession", () => {
   it("starts in loading phase and transitions to confidence-before after fetching block", async () => {
@@ -365,7 +361,8 @@ describe("useStudySession", () => {
       "session-1",
       expect.any(Array),
       "You are Swotta...",
-      "abandoned"
+      "abandoned",
+      { before: 0.5, after: null }
     );
   });
 

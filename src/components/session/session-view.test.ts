@@ -4,7 +4,6 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { createElement } from "react";
 import { SessionView, BLOCK_TYPE_LABELS, type SessionViewProps } from "./session-view";
 import {
-  resetMessageCounter,
   type StudySessionApi,
   type SessionBlockInfo,
 } from "./use-study-session";
@@ -68,9 +67,6 @@ function h(props: SessionViewProps) {
   return createElement(SessionView, props);
 }
 
-beforeEach(() => {
-  resetMessageCounter();
-});
 
 describe("BLOCK_TYPE_LABELS", () => {
   it("has labels for all 8 block types", () => {
