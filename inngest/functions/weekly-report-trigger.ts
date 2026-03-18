@@ -6,12 +6,12 @@ import { eq, sql } from "drizzle-orm";
 const inngest = new Inngest({ id: "swotta" });
 
 /**
- * Cron: Sunday 18:00 UTC
+ * Cron: Monday 00:05 UTC (runs after the Sunday reporting period closes)
  * Queries all active learners and emits one `report.generate` event per learner.
  */
 export const weeklyReportTrigger = inngest.createFunction(
   { id: "reporting/weekly-report-trigger" },
-  { cron: "0 18 * * 0" },
+  { cron: "5 0 * * 1" },
   async ({ step }) => {
     // Get all learners with at least one active qualification
     const activeLearnerIds = await step.run("get-active-learners", async () => {
@@ -26,7 +26,8 @@ export const weeklyReportTrigger = inngest.createFunction(
       return { processed: 0 };
     }
 
-    // Compute the reporting period (previous Monday to Sunday)
+    // Compute the reporting period (previous Monday 00:00 to Sunday 23:59:59 UTC)
+    // Runs on Monday, so dayOfWeek=1 → periodEnd = yesterday (Sunday)
     const now = new Date();
     const dayOfWeek = now.getUTCDay();
     const periodEnd = new Date(now);

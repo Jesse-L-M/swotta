@@ -14,7 +14,6 @@ import {
   learnerTopicState,
   misconceptionEvents,
   weeklyReports,
-  safetyFlags,
   notificationEvents,
 } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
@@ -300,8 +299,7 @@ describe("generateWeeklyReport", () => {
     expect(change!.after).toBe(0.5);
   });
 
-  it("persists safety flags to the database", async () => {
-    const db = getTestDb();
+  it("includes detected flags in the report data", async () => {
     const org = await createTestOrg();
     const learner = await createTestLearner(org.id);
 
@@ -314,13 +312,7 @@ describe("generateWeeklyReport", () => {
     );
 
     expect(result.flags.length).toBeGreaterThan(0);
-
-    const storedFlags = await db
-      .select()
-      .from(safetyFlags)
-      .where(eq(safetyFlags.learnerId, learner.id));
-    expect(storedFlags.length).toBeGreaterThan(0);
-    expect(storedFlags[0].flagType).toBe("disengagement");
+    expect(result.flags[0].type).toBe("disengagement");
   });
 
   it("excludes non-completed sessions from counts", async () => {

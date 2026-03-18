@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { db as prodDb, type Database } from "@/lib/db";
 import type {
   LearnerId,
@@ -11,7 +13,6 @@ import {
   learnerTopicState,
   misconceptionEvents,
   weeklyReports,
-  safetyFlags,
   notificationEvents,
   guardianLinks,
   topics,
@@ -191,40 +192,27 @@ export async function generateWeeklyReport(
   });
   const summary = await aiSummarize(summaryPrompt);
 
-  // 9. Persist report + safety flags in a single transaction (per INTERFACES.md)
-  const report = await database.transaction(async (tx) => {
-    const [reportRow] = await tx
-      .insert(weeklyReports)
-      .values({
-        learnerId,
-        periodStart: periodStart.toISOString().slice(0, 10),
-        periodEnd: periodEnd.toISOString().slice(0, 10),
-        summary,
-        masteryChanges: masteryChanges as unknown as Record<string, unknown>,
-        sessionsCompleted,
-        totalStudyMinutes,
-        topicsReviewed,
-        flags: flags.map((f) => ({
-          type: f.type,
-          description: f.description,
-          severity: f.severity,
-        })) as unknown as Record<string, unknown>,
-        sentTo: [] as unknown as Record<string, unknown>,
-      })
-      .returning();
-
-    for (const flag of flags) {
-      await tx.insert(safetyFlags).values({
-        learnerId,
-        flagType: mapFlagTypeToEnum(flag.type),
-        severity: flag.severity,
-        description: flag.description,
-        evidence: flag.evidence as Record<string, unknown>,
-      });
-    }
-
-    return reportRow;
-  });
+  // 9. Persist report (flags are stored in the report's JSON column;
+  //    the detect-flags cron owns safetyFlags table inserts)
+  const [report] = await database
+    .insert(weeklyReports)
+    .values({
+      learnerId,
+      periodStart: periodStart.toISOString().slice(0, 10),
+      periodEnd: periodEnd.toISOString().slice(0, 10),
+      summary,
+      masteryChanges: masteryChanges as unknown as Record<string, unknown>,
+      sessionsCompleted,
+      totalStudyMinutes,
+      topicsReviewed,
+      flags: flags.map((f) => ({
+        type: f.type,
+        description: f.description,
+        severity: f.severity,
+      })) as unknown as Record<string, unknown>,
+      sentTo: [] as unknown as Record<string, unknown>,
+    })
+    .returning();
 
   const reportData: WeeklyReportData & { reportId: string } = {
     reportId: report.id,
@@ -269,7 +257,7 @@ export async function detectFlags(
   const now = new Date();
   const lookbackDate = new Date(now.getTime() - lookbackDays * 24 * 60 * 60 * 1000);
 
-  // --- 1. Sudden disengagement: no sessions for N days ---
+  // --- 1. Sudden disengagement: no completed sessions for N days ---
   const recentSessions = await database
     .select({ id: studySessions.id })
     .from(studySessions)
@@ -277,6 +265,7 @@ export async function detectFlags(
       and(
         eq(studySessions.learnerId, learnerId),
         gte(studySessions.startedAt, lookbackDate),
+        eq(studySessions.status, "completed"),
       ),
     )
     .limit(1);
@@ -285,7 +274,12 @@ export async function detectFlags(
     const lastSession = await database
       .select({ startedAt: studySessions.startedAt })
       .from(studySessions)
-      .where(eq(studySessions.learnerId, learnerId))
+      .where(
+        and(
+          eq(studySessions.learnerId, learnerId),
+          eq(studySessions.status, "completed"),
+        ),
+      )
       .orderBy(desc(studySessions.startedAt))
       .limit(1);
 
@@ -448,9 +442,17 @@ export async function sendWeeklyReport(
       ),
     );
 
+  // 4. Check existing sentTo for idempotency on retry
+  const existingSentTo = (report.sentTo ?? []) as Array<{
+    userId: string;
+    channel: string;
+    sentAt: string;
+  }>;
+  const alreadySentUserIds = new Set(existingSentTo.map((s) => s.userId));
+  const allSentTo = [...existingSentTo];
   const sentTo: Array<{ userId: string; channel: string }> = [];
 
-  // 4. Reconstruct WeeklyReportData for the email template
+  // 5. Reconstruct WeeklyReportData for the email template
   const reportData: WeeklyReportData = {
     learnerId: report.learnerId as LearnerId,
     periodStart: new Date(report.periodStart),
@@ -463,8 +465,13 @@ export async function sendWeeklyReport(
     summary: report.summary,
   };
 
-  // 5. Send emails
+  // 6. Send emails (skip guardians already sent to on a previous attempt)
   for (const guardian of guardians) {
+    if (alreadySentUserIds.has(guardian.guardianUserId)) {
+      sentTo.push({ userId: guardian.guardianUserId, channel: "email" });
+      continue;
+    }
+
     const html = renderWeeklyReportEmail({
       data: reportData,
       learnerName,
@@ -488,19 +495,20 @@ export async function sendWeeklyReport(
       sentAt: new Date(),
     });
 
+    const entry = {
+      userId: guardian.guardianUserId,
+      channel: "email",
+      sentAt: new Date().toISOString(),
+    };
+    allSentTo.push(entry);
     sentTo.push({ userId: guardian.guardianUserId, channel: "email" });
-  }
 
-  // 6. Update the report's sentTo field
-  await database
-    .update(weeklyReports)
-    .set({
-      sentTo: sentTo.map((s) => ({
-        ...s,
-        sentAt: new Date().toISOString(),
-      })) as unknown as Record<string, unknown>,
-    })
-    .where(eq(weeklyReports.id, reportId));
+    // Persist sentTo incrementally so retries skip already-sent guardians
+    await database
+      .update(weeklyReports)
+      .set({ sentTo: allSentTo as unknown as Record<string, unknown> })
+      .where(eq(weeklyReports.id, reportId));
+  }
 
   return { sentTo };
 }
@@ -615,6 +623,19 @@ export async function generateTeacherInsight(
 }
 
 // ---------------------------------------------------------------------------
+// Prompt loading
+// ---------------------------------------------------------------------------
+
+function loadPrompt(filename: string, variables: Record<string, string>): string {
+  const filePath = path.join(process.cwd(), "src", "ai", "prompts", filename);
+  let template = fs.readFileSync(filePath, "utf-8");
+  for (const [key, value] of Object.entries(variables)) {
+    template = template.replaceAll(`{{${key}}}`, value);
+  }
+  return template;
+}
+
+// ---------------------------------------------------------------------------
 // Prompt builders
 // ---------------------------------------------------------------------------
 
@@ -646,23 +667,25 @@ function buildReportSummaryPrompt(input: ReportSummaryInput): string {
     .filter((m) => m.delta < 0)
     .map((m) => `${m.topicName}: ${Math.round(m.delta * 100)}%`);
 
-  return `You are writing a weekly study report summary for a parent or guardian about their child's academic progress. Write in a warm, encouraging, but honest tone. Keep it concise (2-3 short paragraphs).
-
-Student: ${input.learnerName}
-Period: ${input.periodStart.toLocaleDateString("en-GB")} to ${input.periodEnd.toLocaleDateString("en-GB")}
-
-Key metrics:
-- Sessions completed: ${input.sessionsCompleted}
-- Total study time: ${input.totalStudyMinutes} minutes
-- Topics reviewed: ${input.topicsReviewed}
-
-${improvements.length > 0 ? `Improvements:\n${improvements.map((i) => `- ${i}`).join("\n")}` : "No mastery improvements this week."}
-
-${declines.length > 0 ? `Areas needing attention:\n${declines.map((d) => `- ${d}`).join("\n")}` : ""}
-
-${input.flags.length > 0 ? `Flags:\n${input.flags.map((f) => `- ${f.type} (${f.severity}): ${f.description}`).join("\n")}` : "No concerns flagged this week."}
-
-Write only the summary text. Do not include greetings, sign-offs, or headers.`;
+  return loadPrompt("report-summary.md", {
+    learnerName: input.learnerName,
+    periodRange: `${input.periodStart.toLocaleDateString("en-GB")} to ${input.periodEnd.toLocaleDateString("en-GB")}`,
+    sessionsCompleted: String(input.sessionsCompleted),
+    totalStudyMinutes: String(input.totalStudyMinutes),
+    topicsReviewed: String(input.topicsReviewed),
+    improvementsSection:
+      improvements.length > 0
+        ? `Improvements:\n${improvements.map((i) => `- ${i}`).join("\n")}`
+        : "No mastery improvements this week.",
+    declinesSection:
+      declines.length > 0
+        ? `Areas needing attention:\n${declines.map((d) => `- ${d}`).join("\n")}`
+        : "",
+    flagsSection:
+      input.flags.length > 0
+        ? `Flags:\n${input.flags.map((f) => `- ${f.type} (${f.severity}): ${f.description}`).join("\n")}`
+        : "No concerns flagged this week.",
+  });
 }
 
 interface TeacherInsightInput {
@@ -691,21 +714,24 @@ function buildTeacherInsightPrompt(input: TeacherInsightInput): string {
     .filter((m) => !m.resolved)
     .map((m) => `${m.topicName}: ${m.description}`);
 
-  return `You are a teaching assistant AI providing a professional insight report about a student to their teacher. Provide structured analysis.
-
-Student: ${input.learnerName}
-Sessions (last 30 days): ${input.sessionsLast30Days}
-Total study time (last 30 days): ${input.totalMinutesLast30Days} minutes
-Topics tracked: ${input.topicBreakdown.length}
-
-${strongTopics.length > 0 ? `Strong topics: ${strongTopics.join(", ")}` : "No topics above 70% mastery."}
-${weakTopics.length > 0 ? `Weak topics: ${weakTopics.join(", ")}` : "No topics below 40% mastery."}
-${unresolvedMisconceptions.length > 0 ? `Unresolved misconceptions:\n${unresolvedMisconceptions.map((m) => `- ${m}`).join("\n")}` : "No unresolved misconceptions."}
-
-Respond in exactly this JSON format (no markdown):
-{"summary": "...", "strengths": ["...", "..."], "concerns": ["...", "..."], "recommendations": ["...", "..."]}
-
-Keep each entry concise (one sentence). Provide 2-4 items per array.`;
+  return loadPrompt("teacher-insight.md", {
+    learnerName: input.learnerName,
+    sessionsLast30Days: String(input.sessionsLast30Days),
+    totalMinutesLast30Days: String(input.totalMinutesLast30Days),
+    topicsTracked: String(input.topicBreakdown.length),
+    strongTopicsSection:
+      strongTopics.length > 0
+        ? `Strong topics: ${strongTopics.join(", ")}`
+        : "No topics above 70% mastery.",
+    weakTopicsSection:
+      weakTopics.length > 0
+        ? `Weak topics: ${weakTopics.join(", ")}`
+        : "No topics below 40% mastery.",
+    misconceptionsSection:
+      unresolvedMisconceptions.length > 0
+        ? `Unresolved misconceptions:\n${unresolvedMisconceptions.map((m) => `- ${m}`).join("\n")}`
+        : "No unresolved misconceptions.",
+  });
 }
 
 // ---------------------------------------------------------------------------
