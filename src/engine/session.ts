@@ -262,7 +262,7 @@ export async function endSession(
     }
   }
 
-  const extractionPrompt = buildOutcomeExtractionPrompt(blockType, topicName);
+  const extractionPrompt = await buildOutcomeExtractionPrompt(blockType, topicName);
 
   const extractionMessages = [
     ...messages,
@@ -288,7 +288,16 @@ export async function endSession(
   let extracted: OutcomeExtractionResult;
   try {
     extracted = parseOutcomeJson(responseText);
-  } catch {
+  } catch (error: unknown) {
+    console.error(
+      JSON.stringify({
+        level: "warn",
+        msg: "Failed to parse outcome JSON",
+        sessionId,
+        reason,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    );
     extracted = {
       score: null,
       misconceptions: [],

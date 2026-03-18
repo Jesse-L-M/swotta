@@ -41,7 +41,7 @@ function getPromptsDir(): string {
   return path.resolve(process.cwd(), "src/ai/prompts");
 }
 
-const promptCache = new Map<BlockType, string>();
+const promptCache = new Map<string, string>();
 
 export async function loadPromptTemplate(
   blockType: BlockType
@@ -54,6 +54,18 @@ export async function loadPromptTemplate(
   const filePath = path.join(getPromptsDir(), filename);
   const content = await readFile(filePath, "utf-8");
   promptCache.set(blockType, content);
+  return content;
+}
+
+async function loadOutcomeExtractionTemplate(): Promise<string> {
+  const cacheKey = "_outcome_extraction";
+  const cached = promptCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+  const filePath = path.join(getPromptsDir(), "outcome-extraction.md");
+  const content = await readFile(filePath, "utf-8");
+  promptCache.set(cacheKey, content);
   return content;
 }
 
@@ -177,30 +189,12 @@ export function parseSessionStatus(reply: string): {
   return { isComplete, cleanReply };
 }
 
-export function buildOutcomeExtractionPrompt(
+export async function buildOutcomeExtractionPrompt(
   blockType: BlockType,
   topicName: string
-): string {
-  return [
-    "You are an assessment analysis system. Analyse the preceding study session conversation and extract a structured outcome.",
-    "",
-    `Session type: ${BLOCK_TYPE_LABELS[blockType]}`,
-    `Topic: ${topicName}`,
-    "",
-    "Respond with ONLY a JSON object (no markdown fences, no explanation) with this exact structure:",
-    "",
-    "{",
-    '  "score": <number 0-100 or null if not assessable>,',
-    '  "misconceptions": [',
-    '    {',
-    '      "description": "<what the student got wrong>",',
-    '      "severity": <1|2|3>',
-    "    }",
-    "  ],",
-    '  "helpRequested": <boolean>,',
-    '  "helpTiming": <"before_attempt"|"after_attempt"|null>,',
-    '  "retentionOutcome": <"remembered"|"partial"|"forgotten"|null>,',
-    '  "summary": "<2-3 sentence summary of the session>"',
-    "}",
-  ].join("\n");
+): Promise<string> {
+  const template = await loadOutcomeExtractionTemplate();
+  return template
+    .replace("{{SESSION_TYPE}}", BLOCK_TYPE_LABELS[blockType])
+    .replace("{{TOPIC}}", topicName);
 }

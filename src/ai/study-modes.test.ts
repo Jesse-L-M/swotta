@@ -374,8 +374,8 @@ describe("parseSessionStatus", () => {
 });
 
 describe("buildOutcomeExtractionPrompt", () => {
-  it("builds a valid extraction prompt", () => {
-    const prompt = buildOutcomeExtractionPrompt(
+  it("builds a valid extraction prompt", async () => {
+    const prompt = await buildOutcomeExtractionPrompt(
       "retrieval_drill",
       "Cell Biology"
     );
@@ -389,8 +389,8 @@ describe("buildOutcomeExtractionPrompt", () => {
     expect(prompt).toContain("JSON");
   });
 
-  it("includes all required fields in the schema", () => {
-    const prompt = buildOutcomeExtractionPrompt("explanation", "Photosynthesis");
+  it("includes all required fields in the schema", async () => {
+    const prompt = await buildOutcomeExtractionPrompt("explanation", "Photosynthesis");
 
     expect(prompt).toContain("score");
     expect(prompt).toContain("misconceptions");
@@ -400,23 +400,23 @@ describe("buildOutcomeExtractionPrompt", () => {
     expect(prompt).toContain("summary");
   });
 
-  it("uses the correct block type label", () => {
+  it("uses the correct block type label", async () => {
     expect(
-      buildOutcomeExtractionPrompt("worked_example", "topic")
+      await buildOutcomeExtractionPrompt("worked_example", "topic")
     ).toContain("Worked Example");
     expect(
-      buildOutcomeExtractionPrompt("essay_planning", "topic")
+      await buildOutcomeExtractionPrompt("essay_planning", "topic")
     ).toContain("Essay Planning");
     expect(
-      buildOutcomeExtractionPrompt("timed_problems", "topic")
+      await buildOutcomeExtractionPrompt("timed_problems", "topic")
     ).toContain("Timed Problems");
     expect(
-      buildOutcomeExtractionPrompt("source_analysis", "topic")
+      await buildOutcomeExtractionPrompt("source_analysis", "topic")
     ).toContain("Source Analysis");
     expect(
-      buildOutcomeExtractionPrompt("mistake_review", "topic")
+      await buildOutcomeExtractionPrompt("mistake_review", "topic")
     ).toContain("Mistake Review");
-    expect(buildOutcomeExtractionPrompt("reentry", "topic")).toContain(
+    expect(await buildOutcomeExtractionPrompt("reentry", "topic")).toContain(
       "Re-entry"
     );
   });
