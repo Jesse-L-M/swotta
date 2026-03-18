@@ -42,81 +42,100 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Check if user already exists
-  const existing = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.firebaseUid, decoded.uid))
-    .limit(1);
+  try {
+    const result = await db.transaction(async (tx) => {
+      // Check inside transaction to prevent TOCTOU race
+      const existing = await tx
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.firebaseUid, decoded.uid))
+        .limit(1);
 
-  if (existing.length > 0) {
-    return NextResponse.json(
-      { error: { code: "USER_EXISTS", message: "User already exists" } },
-      { status: 409 }
-    );
-  }
+      if (existing.length > 0) {
+        return { duplicate: true as const };
+      }
 
-  const result = await db.transaction(async (tx) => {
-    // Create user
-    const [user] = await tx
-      .insert(users)
-      .values({
-        firebaseUid: decoded.uid,
-        email: decoded.email ?? "",
-        name,
-        avatarUrl: decoded.picture ?? null,
-      })
-      .returning();
-
-    // Create household organization
-    const orgName = `${name}'s Household`;
-    const [org] = await tx
-      .insert(organizations)
-      .values({
-        name: orgName,
-        type: "household",
-        slug: generateSlug(orgName),
-      })
-      .returning();
-
-    // Create membership
-    await tx.insert(memberships).values({
-      userId: user.id,
-      orgId: org.id,
-      role,
-    });
-
-    // Create org_owner membership
-    await tx.insert(memberships).values({
-      userId: user.id,
-      orgId: org.id,
-      role: "org_owner",
-    });
-
-    let learnerId: string | null = null;
-
-    // If learner, create learner record
-    if (role === "learner") {
-      const [learner] = await tx
-        .insert(learners)
+      // Create user
+      const [user] = await tx
+        .insert(users)
         .values({
-          userId: user.id,
-          orgId: org.id,
-          displayName: name,
+          firebaseUid: decoded.uid,
+          email: decoded.email ?? "",
+          name,
+          avatarUrl: decoded.picture ?? null,
         })
         .returning();
-      learnerId = learner.id;
+
+      // Create household organization
+      const orgName = `${name}'s Household`;
+      const [org] = await tx
+        .insert(organizations)
+        .values({
+          name: orgName,
+          type: "household",
+          slug: generateSlug(orgName),
+        })
+        .returning();
+
+      // Create membership
+      await tx.insert(memberships).values({
+        userId: user.id,
+        orgId: org.id,
+        role,
+      });
+
+      // Create org_owner membership
+      await tx.insert(memberships).values({
+        userId: user.id,
+        orgId: org.id,
+        role: "org_owner",
+      });
+
+      let learnerId: string | null = null;
+
+      // If learner, create learner record
+      if (role === "learner") {
+        const [learner] = await tx
+          .insert(learners)
+          .values({
+            userId: user.id,
+            orgId: org.id,
+            displayName: name,
+          })
+          .returning();
+        learnerId = learner.id;
+      }
+
+      return { duplicate: false as const, userId: user.id, orgId: org.id, learnerId };
+    });
+
+    if (result.duplicate) {
+      return NextResponse.json(
+        { error: { code: "USER_EXISTS", message: "User already exists" } },
+        { status: 409 }
+      );
     }
 
-    return { userId: user.id, orgId: org.id, learnerId };
-  });
+    structuredLog("auth.signup", {
+      userId: result.userId,
+      orgId: result.orgId,
+      role,
+      firebaseUid: decoded.uid,
+    });
 
-  structuredLog("auth.signup", {
-    userId: result.userId,
-    orgId: result.orgId,
-    role,
-    firebaseUid: decoded.uid,
-  });
-
-  return NextResponse.json({ data: result }, { status: 201 });
+    return NextResponse.json(
+      { data: { userId: result.userId, orgId: result.orgId, learnerId: result.learnerId } },
+      { status: 201 }
+    );
+  } catch (error: unknown) {
+    // Handle unique constraint violation from concurrent signup
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes("unique") || msg.includes("duplicate")) {
+      return NextResponse.json(
+        { error: { code: "USER_EXISTS", message: "User already exists" } },
+        { status: 409 }
+      );
+    }
+    throw error;
+  }
 }

@@ -7,7 +7,7 @@ import { eq, and } from "drizzle-orm";
 import { structuredLog } from "@/lib/logger";
 
 const linkSchema = z.object({
-  inviteCode: z.string().min(1),
+  inviteCode: z.string().uuid("Invalid invite code format"),
   relationship: z.string().min(1).max(50).default("parent"),
 });
 

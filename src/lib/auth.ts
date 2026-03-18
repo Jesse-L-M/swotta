@@ -35,7 +35,11 @@ export async function verifySessionCookie(
     const app = getFirebaseAdmin();
     const auth = getAuth(app);
     return await auth.verifySessionCookie(sessionCookie, true);
-  } catch {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    process.stderr.write(
+      JSON.stringify({ event: "auth.session-cookie-invalid", error: msg, ts: new Date().toISOString() }) + "\n"
+    );
     return null;
   }
 }
@@ -47,7 +51,11 @@ export async function verifyIdToken(
     const app = getFirebaseAdmin();
     const auth = getAuth(app);
     return await auth.verifyIdToken(idToken);
-  } catch {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    process.stderr.write(
+      JSON.stringify({ event: "auth.id-token-invalid", error: msg, ts: new Date().toISOString() }) + "\n"
+    );
     return null;
   }
 }

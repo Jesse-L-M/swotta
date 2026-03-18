@@ -578,7 +578,7 @@ All Phase 1 agents must use these shared fixtures. Do not create per-module test
 
 | Path | Source | Purpose |
 |------|--------|---------|
-| `/api/webhooks/clerk` | Clerk | User/org sync |
+| `/api/auth/session` | Firebase Auth | Session cookie management |
 | `/api/inngest` | Inngest | Background job dispatch |
 
 ---
