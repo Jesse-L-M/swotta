@@ -6,6 +6,7 @@ import { weeklyReportTrigger } from "./functions/weekly-report-trigger";
 import { weeklyReportGenerate } from "./functions/weekly-report-generate";
 import { detectFlagsCron } from "./functions/detect-flags";
 import { sendNotificationsCron } from "./functions/send-notifications";
+import { studentWeeklyTrigger } from "./functions/student-weekly-trigger";
 
 /**
  * All Inngest functions registered in the application.
@@ -22,6 +23,7 @@ import { sendNotificationsCron } from "./functions/send-notifications";
  *     - reporting/weekly-report-trigger → Monday 00:05 UTC
  *     - reporting/detect-flags       → daily 06:00 UTC
  *     - notifications/daily-check    → daily 17:00 UTC
+ *     - student/weekly-email        → Monday 07:00 UK time
  */
 export const functions = [
   processFileFunction,
@@ -32,4 +34,5 @@ export const functions = [
   weeklyReportGenerate,
   detectFlagsCron,
   sendNotificationsCron,
+  studentWeeklyTrigger,
 ];
