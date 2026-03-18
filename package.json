@@ -25,6 +25,7 @@
     "drizzle-orm": "^0.38.0",
     "firebase": "^12.10.0",
     "firebase-admin": "^13.7.0",
+    "framer-motion": "^12.38.0",
     "inngest": "^3.29.0",
     "lucide-react": "^0.577.0",
     "mammoth": "^1.12.0",
