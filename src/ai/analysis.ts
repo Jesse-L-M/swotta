@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { readFileSync } from "fs";
 import path from "path";
 import type { TopicId } from "@/lib/types";
+import { structuredLog } from "@/lib/logger";
 
 export interface TopicInfo {
   id: TopicId;
@@ -54,13 +55,18 @@ export async function classifyChunks(
     .map((t) => `${t.code ?? t.id}: ${t.name}`)
     .join("\n");
 
+  const codeToId = new Map<string, TopicId>();
+  for (const topic of topics) {
+    codeToId.set(topic.code ?? topic.id, topic.id);
+  }
+
   const results: ChunkClassification[] = [];
 
   for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
     const batch = chunks.slice(i, i + BATCH_SIZE);
     const batchResults = await Promise.all(
       batch.map((chunk) =>
-        classifySingleChunk(anthropic, chunk, topicList, topics)
+        classifySingleChunk(anthropic, chunk, topicList, codeToId)
       )
     );
     results.push(...batchResults);
@@ -73,13 +79,8 @@ async function classifySingleChunk(
   client: Anthropic,
   chunk: { index: number; content: string },
   topicList: string,
-  topics: TopicInfo[]
+  codeToId: Map<string, TopicId>
 ): Promise<ChunkClassification> {
-  const codeToId = new Map<string, TopicId>();
-  for (const topic of topics) {
-    codeToId.set(topic.code ?? topic.id, topic.id);
-  }
-
   try {
     const response = await client.messages.create({
       model: "claude-sonnet-4-20250514",
@@ -120,8 +121,7 @@ async function classifySingleChunk(
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "Unknown classification error";
-    const logger = { error: structuredLog };
-    logger.error("chunk_classification_failed", {
+    structuredLog("chunk_classification_failed", {
       chunkIndex: chunk.index,
       error: message,
     });
@@ -129,8 +129,3 @@ async function classifySingleChunk(
   }
 }
 
-function structuredLog(event: string, data: Record<string, unknown>): void {
-  if (process.env.NODE_ENV !== "test") {
-    process.stderr.write(JSON.stringify({ event, ...data, ts: new Date().toISOString() }) + "\n");
-  }
-}

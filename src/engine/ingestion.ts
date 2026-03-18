@@ -8,9 +8,11 @@ import {
 } from "@/db/schema/sources";
 import { topics } from "@/db/schema/curriculum";
 import { learners, enrollments, classes, learnerQualifications } from "@/db/schema/identity";
-import type { Database } from "@/lib/db";
+import { db as defaultDbInstance, type Database } from "@/lib/db";
 import type { LearnerId, TopicId, QualificationVersionId, ChunkId, ScopeType, RetrievalResult } from "@/lib/types";
 import { classifyChunks, type TopicInfo } from "@/ai/analysis";
+import { structuredLog } from "@/lib/logger";
+import { getEnv } from "@/lib/env";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -152,10 +154,7 @@ async function defaultExtractText(
     };
   };
   const storage = new gcs.Storage();
-  const bucketName = process.env.GCS_BUCKET_NAME;
-  if (!bucketName) {
-    throw new IngestionError("CONFIG_ERROR", "GCS_BUCKET_NAME not set");
-  }
+  const bucketName = getEnv().GCS_BUCKET_NAME;
   const [buffer] = await storage.bucket(bucketName).file(storagePath).download();
 
   if (mimeType === "application/pdf") {
@@ -181,13 +180,12 @@ async function defaultExtractText(
   );
 }
 
-async function defaultGenerateEmbeddings(
-  texts: string[]
+const EMBEDDING_BATCH_SIZE = 64;
+
+async function callVoyageApi(
+  texts: string[],
+  apiKey: string
 ): Promise<number[][]> {
-  const apiKey = process.env.VOYAGE_API_KEY;
-  if (!apiKey) {
-    throw new IngestionError("CONFIG_ERROR", "VOYAGE_API_KEY not set");
-  }
   const response = await fetch("https://api.voyageai.com/v1/embeddings", {
     method: "POST",
     headers: {
@@ -208,21 +206,30 @@ async function defaultGenerateEmbeddings(
   return data.data.map((d) => d.embedding);
 }
 
+async function defaultGenerateEmbeddings(
+  texts: string[]
+): Promise<number[][]> {
+  const apiKey = getEnv().VOYAGE_API_KEY;
+  if (texts.length <= EMBEDDING_BATCH_SIZE) {
+    return callVoyageApi(texts, apiKey);
+  }
+  const results: number[][] = [];
+  for (let i = 0; i < texts.length; i += EMBEDDING_BATCH_SIZE) {
+    const batch = texts.slice(i, i + EMBEDDING_BATCH_SIZE);
+    const batchResults = await callVoyageApi(batch, apiKey);
+    results.push(...batchResults);
+  }
+  return results;
+}
+
 async function defaultGenerateEmbedding(text: string): Promise<number[]> {
   const results = await defaultGenerateEmbeddings([text]);
   return results[0];
 }
 
 function resolveDeps(partial?: Partial<IngestionDeps>): IngestionDeps {
-  let defaultDb: Database | undefined;
-  if (!partial?.db) {
-    // Lazy require to avoid import failures in test environments
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require("@/lib/db") as { db: Database };
-    defaultDb = mod.db;
-  }
   return {
-    db: partial?.db ?? defaultDb!,
+    db: partial?.db ?? defaultDbInstance,
     extractText: partial?.extractText ?? defaultExtractText,
     generateEmbeddings: partial?.generateEmbeddings ?? defaultGenerateEmbeddings,
     generateEmbedding: partial?.generateEmbedding ?? defaultGenerateEmbedding,
@@ -242,49 +249,72 @@ export function vectorToString(embedding: number[]): number[] {
   return `[${embedding.join(",")}]` as unknown as number[];
 }
 
-function log(event: string, data: Record<string, unknown>): void {
-  if (process.env.NODE_ENV !== "test") {
-    process.stderr.write(
-      JSON.stringify({ event, ...data, ts: new Date().toISOString() }) + "\n"
-    );
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function uuidArrayLiteral(ids: string[]) {
+  for (const id of ids) {
+    if (!UUID_RE.test(id)) {
+      throw new IngestionError("INVALID_ID", `Invalid UUID: ${id}`);
+    }
   }
+  return sql.raw(`ARRAY[${ids.map((id) => `'${id}'`).join(",")}]::uuid[]`);
 }
+
 
 async function getTopicsForFile(
   db: Database,
-  fileId: string
+  fileId: string,
+  qualificationVersionId?: string
 ): Promise<TopicInfo[]> {
-  const fileRow = await db
-    .select({
-      learnerId: sourceCollections.learnerId,
-      classId: sourceCollections.classId,
-    })
-    .from(sourceFiles)
-    .innerJoin(
-      sourceCollections,
-      eq(sourceFiles.collectionId, sourceCollections.id)
-    )
-    .where(eq(sourceFiles.id, fileId))
-    .limit(1);
-
-  if (!fileRow[0]) return [];
-
-  const { learnerId, classId } = fileRow[0];
   let qualVersionIds: string[] = [];
 
-  if (learnerId) {
-    const rows = await db
-      .select({ qvId: learnerQualifications.qualificationVersionId })
-      .from(learnerQualifications)
-      .where(eq(learnerQualifications.learnerId, learnerId));
-    qualVersionIds = rows.map((r) => r.qvId);
-  } else if (classId) {
-    const rows = await db
-      .select({ qvId: classes.qualificationVersionId })
-      .from(classes)
-      .where(eq(classes.id, classId))
+  // If an explicit qualification version was provided, use it directly
+  if (qualificationVersionId) {
+    qualVersionIds = [qualificationVersionId];
+  } else {
+    const fileRow = await db
+      .select({
+        learnerId: sourceCollections.learnerId,
+        classId: sourceCollections.classId,
+        orgId: sourceCollections.orgId,
+        scope: sourceCollections.scope,
+      })
+      .from(sourceFiles)
+      .innerJoin(
+        sourceCollections,
+        eq(sourceFiles.collectionId, sourceCollections.id)
+      )
+      .where(eq(sourceFiles.id, fileId))
       .limit(1);
-    if (rows[0]?.qvId) qualVersionIds = [rows[0].qvId];
+
+    if (!fileRow[0]) return [];
+
+    const { learnerId, classId, orgId, scope } = fileRow[0];
+
+    if (learnerId) {
+      const rows = await db
+        .select({ qvId: learnerQualifications.qualificationVersionId })
+        .from(learnerQualifications)
+        .where(eq(learnerQualifications.learnerId, learnerId));
+      qualVersionIds = rows.map((r) => r.qvId);
+    } else if (classId) {
+      const rows = await db
+        .select({ qvId: classes.qualificationVersionId })
+        .from(classes)
+        .where(eq(classes.id, classId))
+        .limit(1);
+      if (rows[0]?.qvId) qualVersionIds = [rows[0].qvId];
+    } else if (orgId && (scope === "household" || scope === "org")) {
+      // For org-scoped collections, find qualification versions via classes in this org
+      const rows = await db
+        .select({ qvId: classes.qualificationVersionId })
+        .from(classes)
+        .where(eq(classes.orgId, orgId));
+      qualVersionIds = rows
+        .map((r) => r.qvId)
+        .filter((id): id is string => id !== null);
+    }
+    // system-scoped collections require an explicit qualificationVersionId
   }
 
   if (qualVersionIds.length === 0) return [];
@@ -310,20 +340,21 @@ async function resolveAccessibleCollections(
   learnerId: LearnerId,
   scopes?: ScopeType[]
 ): Promise<string[]> {
-  const learnerRow = await db
-    .select({ orgId: learners.orgId })
+  // Single query: get learner's orgId and all enrolled classIds
+  const learnerWithEnrollments = await db
+    .select({
+      orgId: learners.orgId,
+      classId: enrollments.classId,
+    })
     .from(learners)
-    .where(eq(learners.id, learnerId))
-    .limit(1);
+    .leftJoin(enrollments, eq(learners.id, enrollments.learnerId))
+    .where(eq(learners.id, learnerId));
 
-  if (!learnerRow[0]) return [];
-  const orgId = learnerRow[0].orgId;
-
-  const enrollmentRows = await db
-    .select({ classId: enrollments.classId })
-    .from(enrollments)
-    .where(eq(enrollments.learnerId, learnerId));
-  const classIds = enrollmentRows.map((r) => r.classId);
+  if (learnerWithEnrollments.length === 0) return [];
+  const orgId = learnerWithEnrollments[0].orgId;
+  const classIds = learnerWithEnrollments
+    .map((r) => r.classId)
+    .filter((id): id is string => id !== null);
 
   const allowedScopes = scopes ?? [
     "private",
@@ -382,7 +413,8 @@ async function resolveAccessibleCollections(
 
 export async function processFile(
   fileId: string,
-  deps?: Partial<IngestionDeps>
+  deps?: Partial<IngestionDeps>,
+  options?: { qualificationVersionId?: string }
 ): Promise<ProcessFileResult> {
   const d = resolveDeps(deps);
 
@@ -449,7 +481,11 @@ export async function processFile(
     );
 
     // Step 6: Get topics for classification
-    const fileTopics = await getTopicsForFile(d.db, fileId);
+    const fileTopics = await getTopicsForFile(
+      d.db,
+      fileId,
+      options?.qualificationVersionId
+    );
 
     // Step 7: Classify chunks and store mappings
     let mappingsCreated = 0;
@@ -494,7 +530,7 @@ export async function processFile(
       .set({ status: "ready", processedAt: new Date() })
       .where(eq(sourceFiles.id, fileId));
 
-    log("file_processed", {
+    structuredLog("file_processed", {
       fileId,
       chunksCreated: insertedChunks.length,
       embeddingsCreated: insertedChunks.length,
@@ -510,12 +546,22 @@ export async function processFile(
   } catch (error: unknown) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown processing error";
-    await d.db
-      .update(sourceFiles)
-      .set({ status: "failed", errorMessage })
-      .where(eq(sourceFiles.id, fileId));
+    try {
+      await d.db
+        .update(sourceFiles)
+        .set({ status: "failed", errorMessage })
+        .where(eq(sourceFiles.id, fileId));
+    } catch (dbError: unknown) {
+      const dbMessage =
+        dbError instanceof Error ? dbError.message : "Unknown DB error";
+      structuredLog("file_status_update_failed", {
+        fileId,
+        originalError: errorMessage,
+        dbError: dbMessage,
+      });
+    }
 
-    log("file_processing_failed", { fileId, error: errorMessage });
+    structuredLog("file_processing_failed", { fileId, error: errorMessage });
     throw error;
   }
 }
@@ -551,17 +597,13 @@ export async function retrieveChunks(
   // Build the vector literal as raw SQL (values are safe - all floats from our own function)
   const vecLiteral = sql.raw(`'[${queryEmbedding.join(",")}]'::vector`);
 
-  const collectionArray = sql.raw(
-    `ARRAY[${collectionIds.map((id) => `'${id}'`).join(",")}]::uuid[]`
-  );
+  const collectionArray = uuidArrayLiteral(collectionIds);
 
   let topicJoin = sql``;
   let topicFilter = sql``;
 
   if (options?.topicIds && options.topicIds.length > 0) {
-    const topicArray = sql.raw(
-      `ARRAY[${(options.topicIds as string[]).map((id) => `'${id}'`).join(",")}]::uuid[]`
-    );
+    const topicArray = uuidArrayLiteral(options.topicIds as string[]);
     topicJoin = sql`JOIN source_mappings sm ON sc.id = sm.chunk_id`;
     topicFilter = sql`AND sm.topic_id = ANY(${topicArray}) AND CAST(sm.confidence AS numeric) >= ${minConfidence}`;
   }
@@ -638,22 +680,26 @@ export async function getCoverageReport(
     }));
   }
 
-  const collectionArray = sql.raw(
-    `ARRAY[${collectionIds.map((id) => `'${id}'`).join(",")}]::uuid[]`
-  );
+  const collectionArray = uuidArrayLiteral(collectionIds);
 
+  // Use a CTE to pre-filter accessible chunks, then left join topics against it.
+  // This prevents counting chunks from inaccessible collections.
   const rows = await d.db.execute(sql`
+    WITH accessible_chunks AS (
+      SELECT sm.topic_id, sm.chunk_id, sm.confidence
+      FROM source_mappings sm
+      JOIN source_chunks sc ON sm.chunk_id = sc.id
+      JOIN source_files sf ON sc.file_id = sf.id
+      WHERE sf.collection_id = ANY(${collectionArray})
+        AND sf.status = 'ready'
+    )
     SELECT
       t.id as topic_id,
       t.name as topic_name,
-      COUNT(DISTINCT sm.chunk_id) as chunk_count,
-      COALESCE(AVG(CAST(sm.confidence AS numeric)), 0) as avg_confidence
+      COUNT(DISTINCT ac.chunk_id) as chunk_count,
+      COALESCE(AVG(CAST(ac.confidence AS numeric)), 0) as avg_confidence
     FROM topics t
-    LEFT JOIN source_mappings sm ON t.id = sm.topic_id
-    LEFT JOIN source_chunks sc ON sm.chunk_id = sc.id
-    LEFT JOIN source_files sf ON sc.file_id = sf.id
-      AND sf.collection_id = ANY(${collectionArray})
-      AND sf.status = 'ready'
+    LEFT JOIN accessible_chunks ac ON t.id = ac.topic_id
     WHERE t.qualification_version_id = ${qualificationVersionId}
     GROUP BY t.id, t.name
     ORDER BY t.name
