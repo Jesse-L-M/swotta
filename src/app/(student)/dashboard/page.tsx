@@ -3,12 +3,12 @@ import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { users } from "@/db/schema";
-import { getNextBlocks } from "@/engine/scheduler";
 import {
   loadLearnerByUserId,
   loadQualifications,
   loadDashboardStats,
   loadMasteryTopics,
+  loadTodayQueue,
 } from "@/components/dashboard/data";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { TodayQueue } from "@/components/dashboard/today-queue";
@@ -22,7 +22,6 @@ import {
   nextExam,
   getMasteryState,
 } from "@/components/dashboard/utils";
-import type { LearnerId } from "@/lib/types";
 
 export default async function DashboardPage() {
   const { userId: clerkId } = await auth();
@@ -48,7 +47,7 @@ export default async function DashboardPage() {
   const [stats, masteryTopics, todayQueue] = await Promise.all([
     loadDashboardStats(learner.id, db),
     loadMasteryTopics(learner.id, db),
-    getNextBlocks(learner.id as LearnerId, db),
+    loadTodayQueue(learner.id, db),
   ]);
 
   const closest = nextExam(qualifications);

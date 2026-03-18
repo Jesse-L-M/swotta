@@ -7,12 +7,13 @@ import {
   createTestQualification,
   enrollLearnerInQualification,
 } from "@/test/fixtures";
-import { learnerTopicState, studySessions } from "@/db/schema";
+import { learnerTopicState, studySessions, studyBlocks } from "@/db/schema";
 import {
   loadLearnerByUserId,
   loadQualifications,
   loadDashboardStats,
   loadMasteryTopics,
+  loadTodayQueue,
 } from "./data";
 
 describe("loadLearnerByUserId", () => {
@@ -251,5 +252,91 @@ describe("loadMasteryTopics", () => {
     const result = await loadMasteryTopics(learner.id, db);
     expect(typeof result[0].masteryLevel).toBe("number");
     expect(result[0].masteryLevel).toBe(0.333);
+  });
+});
+
+describe("loadTodayQueue", () => {
+  test("returns existing pending blocks without creating new ones", async () => {
+    const db = getTestDb();
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qual = await createTestQualification();
+
+    await db.insert(studyBlocks).values({
+      learnerId: learner.id,
+      topicId: qual.topics[0].id,
+      blockType: "retrieval_drill",
+      durationMinutes: 10,
+      priority: 1,
+      status: "pending",
+    });
+
+    const result = await loadTodayQueue(learner.id, db);
+    expect(result.length).toBe(1);
+    expect(result[0].topicName).toBe(qual.topics[0].name);
+    expect(result[0].blockType).toBe("retrieval_drill");
+
+    const secondResult = await loadTodayQueue(learner.id, db);
+    expect(secondResult.length).toBe(1);
+    expect(secondResult[0].id).toBe(result[0].id);
+  });
+
+  test("returns empty for learner with no blocks or topic state", async () => {
+    const db = getTestDb();
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+
+    const result = await loadTodayQueue(learner.id, db);
+    expect(result.length).toBe(0);
+  });
+
+  test("orders blocks by priority", async () => {
+    const db = getTestDb();
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qual = await createTestQualification();
+
+    await db.insert(studyBlocks).values([
+      {
+        learnerId: learner.id,
+        topicId: qual.topics[0].id,
+        blockType: "explanation",
+        durationMinutes: 15,
+        priority: 5,
+        status: "pending",
+      },
+      {
+        learnerId: learner.id,
+        topicId: qual.topics[1].id,
+        blockType: "retrieval_drill",
+        durationMinutes: 10,
+        priority: 1,
+        status: "pending",
+      },
+    ]);
+
+    const result = await loadTodayQueue(learner.id, db);
+    expect(result.length).toBe(2);
+    expect(result[0].priority).toBe(1);
+    expect(result[1].priority).toBe(5);
+  });
+
+  test("ignores completed blocks", async () => {
+    const db = getTestDb();
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qual = await createTestQualification();
+
+    await db.insert(studyBlocks).values({
+      learnerId: learner.id,
+      topicId: qual.topics[0].id,
+      blockType: "retrieval_drill",
+      durationMinutes: 10,
+      priority: 1,
+      status: "completed",
+    });
+
+    const result = await loadTodayQueue(learner.id, db);
+    expect(result.length).toBe(0);
   });
 });

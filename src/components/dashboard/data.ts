@@ -1,4 +1,4 @@
-import { eq, and, sql, count, sum } from "drizzle-orm";
+import { eq, and, sql, count, sum, asc } from "drizzle-orm";
 import {
   learners,
   learnerQualifications,
@@ -8,9 +8,11 @@ import {
   subjects,
   learnerTopicState,
   studySessions,
+  studyBlocks,
   topics,
 } from "@/db/schema";
 import type { Database } from "@/lib/db";
+import type { StudyBlock, LearnerId, BlockId, TopicId, BlockType } from "@/lib/types";
 import type {
   DashboardQualification,
   DashboardStats,
@@ -133,6 +135,47 @@ export async function loadDashboardStats(
     topicsTotal,
     currentStreak: maxStreak,
   };
+}
+
+export async function loadTodayQueue(
+  learnerId: string,
+  db: Database
+): Promise<StudyBlock[]> {
+  const existing = await db
+    .select({
+      id: studyBlocks.id,
+      learnerId: studyBlocks.learnerId,
+      topicId: studyBlocks.topicId,
+      topicName: topics.name,
+      blockType: studyBlocks.blockType,
+      durationMinutes: studyBlocks.durationMinutes,
+      priority: studyBlocks.priority,
+    })
+    .from(studyBlocks)
+    .innerJoin(topics, eq(studyBlocks.topicId, topics.id))
+    .where(
+      and(
+        eq(studyBlocks.learnerId, learnerId),
+        eq(studyBlocks.status, "pending")
+      )
+    )
+    .orderBy(asc(studyBlocks.priority));
+
+  if (existing.length > 0) {
+    return existing.map((b) => ({
+      id: b.id as BlockId,
+      learnerId: b.learnerId as LearnerId,
+      topicId: b.topicId as TopicId,
+      topicName: b.topicName,
+      blockType: b.blockType as BlockType,
+      durationMinutes: b.durationMinutes,
+      priority: b.priority,
+      reason: "Scheduled review",
+    }));
+  }
+
+  const { getNextBlocks } = await import("@/engine/scheduler");
+  return getNextBlocks(learnerId as LearnerId, db);
 }
 
 export async function loadMasteryTopics(
