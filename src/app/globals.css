@@ -107,6 +107,23 @@
 @theme inline {
     --font-sans: var(--font-sans);
     --font-serif: var(--font-serif);
+    --font-mono: "JetBrains Mono", monospace;
+
+    /* Swotta design system — DESIGN.md */
+    --color-cream-50: #FAF6F0;
+    --color-cream-100: #F0ECE4;
+    --color-cream-200: #E5E0D6;
+    --color-teal: #2D7A6E;
+    --color-teal-dark: #256860;
+    --color-teal-light: #4DAFA0;
+    --color-coral: #D4654A;
+    --color-coral-light: #E8836A;
+    --color-stone-750: #1A1917;
+    --color-stone-650: #5C5950;
+    --color-stone-550: #949085;
+    --color-stone-450: #A09B90;
+
+    /* shadcn compatibility */
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
