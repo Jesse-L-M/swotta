@@ -1,0 +1,824 @@
+{
+  "subject": { "name": "Biology", "slug": "biology" },
+  "examBoard": { "name": "AQA", "code": "AQA" },
+  "level": "GCSE",
+  "versionCode": "8461",
+  "firstExamYear": 2018,
+  "specUrl": "https://www.aqa.org.uk/subjects/science/gcse/biology-8461",
+  "components": [
+    {
+      "name": "Paper 1: Cell Biology; Organisation; Infection and Response; Bioenergetics",
+      "code": "8461/1H",
+      "weightPercent": 50,
+      "durationMinutes": 105,
+      "totalMarks": 100,
+      "isExam": true
+    },
+    {
+      "name": "Paper 2: Homeostasis and Response; Inheritance, Variation and Evolution; Ecology",
+      "code": "8461/2H",
+      "weightPercent": 50,
+      "durationMinutes": 105,
+      "totalMarks": 100,
+      "isExam": true
+    }
+  ],
+  "topics": [
+    {
+      "name": "Cell Biology",
+      "code": "4.1",
+      "description": "Cell structure, transport, and division",
+      "estimatedHours": 20,
+      "children": [
+        {
+          "name": "Cell Structure",
+          "code": "4.1.1",
+          "description": "Eukaryotic and prokaryotic cells, animal and plant cells, cell specialisation",
+          "estimatedHours": 6,
+          "children": [
+            {
+              "name": "Eukaryotes and Prokaryotes",
+              "code": "4.1.1.1",
+              "description": "Structure of eukaryotic and prokaryotic cells",
+              "estimatedHours": 2
+            },
+            {
+              "name": "Animal and Plant Cells",
+              "code": "4.1.1.2",
+              "description": "Similarities and differences between animal and plant cells",
+              "estimatedHours": 2
+            },
+            {
+              "name": "Cell Specialisation",
+              "code": "4.1.1.3",
+              "description": "How cells become specialised for particular functions",
+              "estimatedHours": 2
+            }
+          ]
+        },
+        {
+          "name": "Cell Division",
+          "code": "4.1.2",
+          "description": "Mitosis, the cell cycle, and stem cells",
+          "estimatedHours": 6,
+          "edges": [
+            { "toCode": "4.1.1", "type": "prerequisite" }
+          ],
+          "children": [
+            {
+              "name": "Chromosomes",
+              "code": "4.1.2.1",
+              "description": "Structure and role of chromosomes in cell division",
+              "estimatedHours": 1.5
+            },
+            {
+              "name": "Mitosis and the Cell Cycle",
+              "code": "4.1.2.2",
+              "description": "Stages of mitosis and the importance of the cell cycle",
+              "estimatedHours": 2.5
+            },
+            {
+              "name": "Stem Cells",
+              "code": "4.1.2.3",
+              "description": "Embryonic and adult stem cells, therapeutic uses",
+              "estimatedHours": 2
+            }
+          ]
+        },
+        {
+          "name": "Transport in Cells",
+          "code": "4.1.3",
+          "description": "Diffusion, osmosis, and active transport",
+          "estimatedHours": 8,
+          "edges": [
+            { "toCode": "4.1.1", "type": "prerequisite" }
+          ],
+          "children": [
+            {
+              "name": "Diffusion",
+              "code": "4.1.3.1",
+              "description": "Simple and facilitated diffusion across membranes",
+              "estimatedHours": 2
+            },
+            {
+              "name": "Osmosis",
+              "code": "4.1.3.2",
+              "description": "Water movement across partially permeable membranes",
+              "estimatedHours": 3
+            },
+            {
+              "name": "Active Transport",
+              "code": "4.1.3.3",
+              "description": "Movement against the concentration gradient",
+              "estimatedHours": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Organisation",
+      "code": "4.2",
+      "description": "Cells, tissues, organs, and organ systems",
+      "estimatedHours": 22,
+      "children": [
+        {
+          "name": "Principles of Organisation",
+          "code": "4.2.1",
+          "description": "Cells to tissues to organs to organ systems to organisms",
+          "estimatedHours": 3,
+          "edges": [
+            { "toCode": "4.1.1", "type": "prerequisite" }
+          ]
+        },
+        {
+          "name": "The Digestive System",
+          "code": "4.2.2",
+          "description": "Enzymes, digestion, and the alimentary canal",
+          "estimatedHours": 6,
+          "edges": [
+            { "toCode": "4.2.1", "type": "builds_on" }
+          ],
+          "children": [
+            {
+              "name": "The Human Digestive System",
+              "code": "4.2.2.1",
+              "description": "Organs of the digestive system and their functions",
+              "estimatedHours": 2
+            },
+            {
+              "name": "Enzymes",
+              "code": "4.2.2.2",
+              "description": "Biological catalysts, lock and key model, factors affecting enzyme action",
+              "estimatedHours": 4
+            }
+          ]
+        },
+        {
+          "name": "Organising the Blood and the Heart",
+          "code": "4.2.3",
+          "description": "The circulatory system, blood vessels, and blood",
+          "estimatedHours": 5,
+          "edges": [
+            { "toCode": "4.2.1", "type": "builds_on" }
+          ]
+        },
+        {
+          "name": "Organising Plants",
+          "code": "4.2.4",
+          "description": "Plant organ system, transpiration, and translocation",
+          "estimatedHours": 4,
+          "edges": [
+            { "toCode": "4.2.1", "type": "builds_on" },
+            { "toCode": "4.1.3", "type": "prerequisite" }
+          ]
+        },
+        {
+          "name": "Non-communicable Diseases",
+          "code": "4.2.5",
+          "description": "Cancer, cardiovascular disease, and lifestyle risk factors (also in section 4.3)",
+          "estimatedHours": 4
+        }
+      ]
+    },
+    {
+      "name": "Infection and Response",
+      "code": "4.3",
+      "description": "Communicable diseases, immune system, and medical treatments",
+      "estimatedHours": 18,
+      "children": [
+        {
+          "name": "Communicable Diseases",
+          "code": "4.3.1",
+          "description": "Pathogens and disease: bacteria, viruses, fungi, and protists",
+          "estimatedHours": 6,
+          "children": [
+            {
+              "name": "Pathogens and Disease",
+              "code": "4.3.1.1",
+              "description": "Types of pathogens and how they cause disease",
+              "estimatedHours": 2
+            },
+            {
+              "name": "Viral Diseases",
+              "code": "4.3.1.2",
+              "description": "Measles, HIV, TMV",
+              "estimatedHours": 1.5
+            },
+            {
+              "name": "Bacterial Diseases",
+              "code": "4.3.1.3",
+              "description": "Salmonella, gonorrhoea",
+              "estimatedHours": 1.5
+            },
+            {
+              "name": "Fungal and Protist Diseases",
+              "code": "4.3.1.4",
+              "description": "Rose black spot, malaria",
+              "estimatedHours": 1
+            }
+          ]
+        },
+        {
+          "name": "Preventing and Treating Disease",
+          "code": "4.3.2",
+          "description": "Vaccination, antibiotics, and drug development",
+          "estimatedHours": 6,
+          "edges": [
+            { "toCode": "4.3.1", "type": "prerequisite" }
+          ],
+          "children": [
+            {
+              "name": "Vaccination",
+              "code": "4.3.2.1",
+              "description": "How vaccines work, herd immunity",
+              "estimatedHours": 2
+            },
+            {
+              "name": "Antibiotics and Painkillers",
+              "code": "4.3.2.2",
+              "description": "Drug treatments and antibiotic resistance",
+              "estimatedHours": 2
+            },
+            {
+              "name": "Drug Development",
+              "code": "4.3.2.3",
+              "description": "Discovery, preclinical and clinical testing",
+              "estimatedHours": 2
+            }
+          ]
+        },
+        {
+          "name": "Monoclonal Antibodies (Higher Tier)",
+          "code": "4.3.3",
+          "description": "Production and uses of monoclonal antibodies",
+          "estimatedHours": 3,
+          "edges": [
+            { "toCode": "4.3.1", "type": "prerequisite" }
+          ]
+        },
+        {
+          "name": "Plant Disease",
+          "code": "4.3.4",
+          "description": "Detection and identification of plant diseases, plant defence",
+          "estimatedHours": 3
+        }
+      ]
+    },
+    {
+      "name": "Bioenergetics",
+      "code": "4.4",
+      "description": "Photosynthesis and respiration",
+      "estimatedHours": 14,
+      "children": [
+        {
+          "name": "Photosynthesis",
+          "code": "4.4.1",
+          "description": "The process and rate of photosynthesis",
+          "estimatedHours": 7,
+          "edges": [
+            { "toCode": "4.1.3", "type": "prerequisite" }
+          ],
+          "children": [
+            {
+              "name": "Photosynthetic Reaction",
+              "code": "4.4.1.1",
+              "description": "Word and symbol equations for photosynthesis",
+              "estimatedHours": 2
+            },
+            {
+              "name": "Rate of Photosynthesis",
+              "code": "4.4.1.2",
+              "description": "Limiting factors: light intensity, temperature, CO2 concentration",
+              "estimatedHours": 3
+            },
+            {
+              "name": "Uses of Glucose",
+              "code": "4.4.1.3",
+              "description": "How plants use glucose from photosynthesis",
+              "estimatedHours": 2
+            }
+          ]
+        },
+        {
+          "name": "Respiration",
+          "code": "4.4.2",
+          "description": "Aerobic and anaerobic respiration",
+          "estimatedHours": 7,
+          "edges": [
+            { "toCode": "4.1.3", "type": "prerequisite" },
+            { "toCode": "4.4.1", "type": "related" }
+          ],
+          "children": [
+            {
+              "name": "Aerobic Respiration",
+              "code": "4.4.2.1",
+              "description": "Aerobic respiration in detail",
+              "estimatedHours": 2.5
+            },
+            {
+              "name": "Anaerobic Respiration",
+              "code": "4.4.2.2",
+              "description": "Anaerobic respiration in muscles and microorganisms",
+              "estimatedHours": 2
+            },
+            {
+              "name": "Response to Exercise",
+              "code": "4.4.2.3",
+              "description": "How the body responds to the demands of exercise",
+              "estimatedHours": 2.5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Homeostasis and Response",
+      "code": "4.5",
+      "description": "Nervous and hormonal control systems",
+      "estimatedHours": 22,
+      "children": [
+        {
+          "name": "Homeostasis",
+          "code": "4.5.1",
+          "description": "The importance of homeostasis and negative feedback",
+          "estimatedHours": 3
+        },
+        {
+          "name": "The Human Nervous System",
+          "code": "4.5.2",
+          "description": "Structure and function of the nervous system, reflex actions",
+          "estimatedHours": 5,
+          "edges": [
+            { "toCode": "4.5.1", "type": "builds_on" }
+          ],
+          "children": [
+            {
+              "name": "Structure of the Nervous System",
+              "code": "4.5.2.1",
+              "description": "CNS, neurons, synapses",
+              "estimatedHours": 2.5
+            },
+            {
+              "name": "Reflex Actions",
+              "code": "4.5.2.2",
+              "description": "The reflex arc and its importance",
+              "estimatedHours": 2.5
+            }
+          ]
+        },
+        {
+          "name": "Hormonal Coordination in Humans",
+          "code": "4.5.3",
+          "description": "Endocrine system, blood glucose control, hormones in reproduction",
+          "estimatedHours": 8,
+          "edges": [
+            { "toCode": "4.5.1", "type": "builds_on" }
+          ],
+          "children": [
+            {
+              "name": "Human Endocrine System",
+              "code": "4.5.3.1",
+              "description": "Pituitary gland, thyroid, adrenal, pancreas",
+              "estimatedHours": 2
+            },
+            {
+              "name": "Control of Blood Glucose",
+              "code": "4.5.3.2",
+              "description": "Insulin, glucagon, Type 1 and Type 2 diabetes",
+              "estimatedHours": 3
+            },
+            {
+              "name": "Hormones in Human Reproduction",
+              "code": "4.5.3.3",
+              "description": "Hormonal control of the menstrual cycle, contraception, IVF",
+              "estimatedHours": 3
+            }
+          ]
+        },
+        {
+          "name": "Plant Hormones (Higher Tier)",
+          "code": "4.5.4",
+          "description": "Auxins, phototropism, gravitropism, and commercial uses",
+          "estimatedHours": 6,
+          "edges": [
+            { "toCode": "4.4.1", "type": "related" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Inheritance, Variation and Evolution",
+      "code": "4.6",
+      "description": "Genetics, natural selection, classification, and evolution",
+      "estimatedHours": 24,
+      "children": [
+        {
+          "name": "Reproduction",
+          "code": "4.6.1",
+          "description": "Sexual and asexual reproduction, meiosis, DNA",
+          "estimatedHours": 8,
+          "edges": [
+            { "toCode": "4.1.2", "type": "prerequisite" }
+          ],
+          "children": [
+            {
+              "name": "Sexual and Asexual Reproduction",
+              "code": "4.6.1.1",
+              "description": "Advantages and disadvantages of sexual vs asexual reproduction",
+              "estimatedHours": 2
+            },
+            {
+              "name": "Meiosis",
+              "code": "4.6.1.2",
+              "description": "Cell division producing gametes",
+              "estimatedHours": 3
+            },
+            {
+              "name": "DNA and the Genome",
+              "code": "4.6.1.3",
+              "description": "DNA structure, the human genome project",
+              "estimatedHours": 3
+            }
+          ]
+        },
+        {
+          "name": "Variation and Evolution",
+          "code": "4.6.2",
+          "description": "Genetic variation, natural selection, selective breeding",
+          "estimatedHours": 8,
+          "edges": [
+            { "toCode": "4.6.1", "type": "prerequisite" }
+          ],
+          "children": [
+            {
+              "name": "Variation",
+              "code": "4.6.2.1",
+              "description": "Genetic and environmental causes of variation",
+              "estimatedHours": 2
+            },
+            {
+              "name": "Evolution by Natural Selection",
+              "code": "4.6.2.2",
+              "description": "Darwin's theory and evidence for evolution",
+              "estimatedHours": 3
+            },
+            {
+              "name": "Selective Breeding",
+              "code": "4.6.2.3",
+              "description": "Artificial selection in plants and animals",
+              "estimatedHours": 3
+            }
+          ]
+        },
+        {
+          "name": "Genetics and Evolution",
+          "code": "4.6.3",
+          "description": "Genetic engineering, cloning, classification, and extinction",
+          "estimatedHours": 8,
+          "edges": [
+            { "toCode": "4.6.2", "type": "builds_on" }
+          ],
+          "children": [
+            {
+              "name": "Genetic Engineering",
+              "code": "4.6.3.1",
+              "description": "Modifying the genome of organisms",
+              "estimatedHours": 3
+            },
+            {
+              "name": "Cloning",
+              "code": "4.6.3.2",
+              "description": "Tissue culture, cuttings, embryo transplants, adult cell cloning",
+              "estimatedHours": 2
+            },
+            {
+              "name": "Classification and Evolution",
+              "code": "4.6.3.3",
+              "description": "Linnaean system, three-domain system, extinction",
+              "estimatedHours": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Ecology",
+      "code": "4.7",
+      "description": "Ecosystems, biodiversity, and human impacts",
+      "estimatedHours": 20,
+      "children": [
+        {
+          "name": "Adaptations, Interdependence and Competition",
+          "code": "4.7.1",
+          "description": "Communities, abiotic and biotic factors, adaptations",
+          "estimatedHours": 5,
+          "children": [
+            {
+              "name": "Communities",
+              "code": "4.7.1.1",
+              "description": "Ecosystems, habitats, populations, and communities",
+              "estimatedHours": 2
+            },
+            {
+              "name": "Abiotic and Biotic Factors",
+              "code": "4.7.1.2",
+              "description": "Factors affecting communities",
+              "estimatedHours": 1.5
+            },
+            {
+              "name": "Adaptations",
+              "code": "4.7.1.3",
+              "description": "Structural, behavioural, and functional adaptations",
+              "estimatedHours": 1.5
+            }
+          ]
+        },
+        {
+          "name": "Organisation of an Ecosystem",
+          "code": "4.7.2",
+          "description": "Feeding relationships, material cycling, and decomposition",
+          "estimatedHours": 6,
+          "edges": [
+            { "toCode": "4.7.1", "type": "builds_on" }
+          ],
+          "children": [
+            {
+              "name": "Feeding Relationships",
+              "code": "4.7.2.1",
+              "description": "Food chains, predator-prey relationships",
+              "estimatedHours": 2
+            },
+            {
+              "name": "Material Cycling",
+              "code": "4.7.2.2",
+              "description": "Carbon cycle, water cycle, decomposition",
+              "estimatedHours": 4
+            }
+          ]
+        },
+        {
+          "name": "Biodiversity and the Effect of Human Interaction on Ecosystems",
+          "code": "4.7.3",
+          "description": "Biodiversity, land use, deforestation, global warming",
+          "estimatedHours": 5,
+          "edges": [
+            { "toCode": "4.7.1", "type": "builds_on" },
+            { "toCode": "4.7.2", "type": "builds_on" }
+          ]
+        },
+        {
+          "name": "Trophic Levels and Biomass (Higher Tier)",
+          "code": "4.7.4",
+          "description": "Pyramids of biomass, transfer of biomass, food security",
+          "estimatedHours": 4,
+          "edges": [
+            { "toCode": "4.7.2", "type": "builds_on" }
+          ]
+        }
+      ]
+    }
+  ],
+  "commandWords": [
+    {
+      "word": "Calculate",
+      "definition": "Determine the value of something from the information given. In some cases, you may need to show working.",
+      "expectedDepth": 2
+    },
+    {
+      "word": "Compare",
+      "definition": "Identify similarities and/or differences between two or more things.",
+      "expectedDepth": 3
+    },
+    {
+      "word": "Define",
+      "definition": "Specify the meaning of a term.",
+      "expectedDepth": 1
+    },
+    {
+      "word": "Describe",
+      "definition": "Give an account of something without explanations or reasons.",
+      "expectedDepth": 1
+    },
+    {
+      "word": "Design",
+      "definition": "Set out how something will be done. Often used for experimental design.",
+      "expectedDepth": 3
+    },
+    {
+      "word": "Determine",
+      "definition": "Use given data or information to obtain an answer.",
+      "expectedDepth": 2
+    },
+    {
+      "word": "Estimate",
+      "definition": "Assign an approximate value.",
+      "expectedDepth": 2
+    },
+    {
+      "word": "Evaluate",
+      "definition": "Judge from available evidence. Use information supplied, as well as knowledge and understanding, to consider evidence for and against.",
+      "expectedDepth": 4
+    },
+    {
+      "word": "Explain",
+      "definition": "Make something clear, or state the reasons for something happening.",
+      "expectedDepth": 3
+    },
+    {
+      "word": "Give",
+      "definition": "Produce an answer from recall or from given information.",
+      "expectedDepth": 1
+    },
+    {
+      "word": "Identify",
+      "definition": "Name or otherwise characterise something.",
+      "expectedDepth": 1
+    },
+    {
+      "word": "Justify",
+      "definition": "Use evidence from the information supplied to support an answer.",
+      "expectedDepth": 4
+    },
+    {
+      "word": "Label",
+      "definition": "Provide appropriate names on a diagram.",
+      "expectedDepth": 1
+    },
+    {
+      "word": "Name",
+      "definition": "Identify using a recognised technical term.",
+      "expectedDepth": 1
+    },
+    {
+      "word": "Plan",
+      "definition": "Write a method for an investigation or practical.",
+      "expectedDepth": 3
+    },
+    {
+      "word": "Plot",
+      "definition": "Mark data points on a graph using given information.",
+      "expectedDepth": 2
+    },
+    {
+      "word": "Predict",
+      "definition": "Give a plausible outcome based on trends or scientific reasoning.",
+      "expectedDepth": 3
+    },
+    {
+      "word": "Sketch",
+      "definition": "Draw approximately, showing the key features.",
+      "expectedDepth": 2
+    },
+    {
+      "word": "State",
+      "definition": "Express clearly and briefly.",
+      "expectedDepth": 1
+    },
+    {
+      "word": "Suggest",
+      "definition": "Apply knowledge and understanding to a new situation. More than one answer may be acceptable.",
+      "expectedDepth": 3
+    },
+    {
+      "word": "Use",
+      "definition": "Apply given information or a specified technique to answer a question.",
+      "expectedDepth": 2
+    },
+    {
+      "word": "Write",
+      "definition": "Produce a piece of text, or an equation/formula.",
+      "expectedDepth": 1
+    }
+  ],
+  "questionTypes": [
+    {
+      "name": "Multiple choice",
+      "description": "Select one answer from four options",
+      "typicalMarks": 1,
+      "markSchemePattern": "1 mark for correct selection"
+    },
+    {
+      "name": "Short answer (1-2 marks)",
+      "description": "Brief factual recall or simple application",
+      "typicalMarks": 2,
+      "markSchemePattern": "1 mark per correct point"
+    },
+    {
+      "name": "Structured question (3-4 marks)",
+      "description": "Multi-part question building on a scenario or data",
+      "typicalMarks": 4,
+      "markSchemePattern": "1 mark per correct point, may require linked reasoning"
+    },
+    {
+      "name": "Calculation",
+      "description": "Mathematical question requiring working to be shown",
+      "typicalMarks": 3,
+      "markSchemePattern": "1 mark for correct substitution, 1 mark for correct calculation, 1 mark for correct unit"
+    },
+    {
+      "name": "Practical-based question",
+      "description": "Questions about required practicals including method, variables, and analysis",
+      "typicalMarks": 4,
+      "markSchemePattern": "Marks for identifying variables, describing method, analysing results, evaluating"
+    },
+    {
+      "name": "6-mark extended response",
+      "description": "Extended writing requiring detailed, logically structured scientific explanation",
+      "typicalMarks": 6,
+      "markSchemePattern": "Level 3 (5-6 marks): detailed, logically structured answer with correct scientific terminology. Level 2 (3-4 marks): mostly correct, some structure, some terminology. Level 1 (1-2 marks): basic, limited detail, little or no structure."
+    },
+    {
+      "name": "Data analysis",
+      "description": "Interpret graphs, tables, or experimental data",
+      "typicalMarks": 3,
+      "markSchemePattern": "Marks for reading data correctly, identifying trends/patterns, drawing conclusions"
+    }
+  ],
+  "misconceptionRules": [
+    {
+      "topicCode": "4.1.1",
+      "description": "Confuses plant and animal cell structures (e.g., thinks animal cells have cell walls or chloroplasts)",
+      "triggerPatterns": ["animal cells have cell walls", "animal cells have chloroplasts", "plant cells don't have a membrane"],
+      "correctionGuidance": "Animal cells have a cell membrane, cytoplasm, nucleus, mitochondria, and ribosomes. Plant cells have all of these PLUS a cell wall, chloroplasts (in green parts), and a permanent vacuole.",
+      "severity": 2
+    },
+    {
+      "topicCode": "4.1.2",
+      "description": "Confuses mitosis with meiosis",
+      "triggerPatterns": ["mitosis produces gametes", "mitosis halves chromosomes", "mitosis makes 4 cells", "meiosis makes identical cells"],
+      "correctionGuidance": "Mitosis produces 2 identical diploid cells for growth and repair. Meiosis produces 4 genetically different haploid gametes for sexual reproduction.",
+      "severity": 3
+    },
+    {
+      "topicCode": "4.1.3",
+      "description": "Thinks osmosis involves the movement of solute molecules rather than water",
+      "triggerPatterns": ["osmosis is the movement of solute", "osmosis moves sugar", "osmosis moves salt", "sugar moves by osmosis"],
+      "correctionGuidance": "Osmosis is the movement of WATER molecules from a dilute solution to a concentrated solution through a partially permeable membrane. The solute molecules do NOT move through the membrane.",
+      "severity": 3
+    },
+    {
+      "topicCode": "4.1.3",
+      "description": "Confuses diffusion and active transport",
+      "triggerPatterns": ["diffusion requires energy", "diffusion goes against concentration", "active transport is passive"],
+      "correctionGuidance": "Diffusion is PASSIVE — no energy needed, particles move from high to low concentration. Active transport REQUIRES energy from respiration — particles move from low to high concentration (against the gradient).",
+      "severity": 2
+    },
+    {
+      "topicCode": "4.2.2",
+      "description": "Thinks enzymes are 'used up' or 'killed' by high temperature",
+      "triggerPatterns": ["enzyme is killed", "enzymes die", "enzyme used up", "enzymes are alive"],
+      "correctionGuidance": "Enzymes are NOT alive — they are biological catalysts (proteins). At high temperatures, enzymes are DENATURED: the active site changes shape so the substrate can no longer fit. They are not 'killed' or 'used up'. They can be reused if not denatured.",
+      "severity": 2
+    },
+    {
+      "topicCode": "4.3.2",
+      "description": "Thinks antibiotics work against viruses",
+      "triggerPatterns": ["antibiotics kill viruses", "antibiotics treat viral", "take antibiotics for flu", "antibiotics for cold"],
+      "correctionGuidance": "Antibiotics only work against BACTERIA. They cannot treat viral infections because viruses reproduce inside host cells, and antibiotics cannot target the virus without destroying the host cell.",
+      "severity": 3
+    },
+    {
+      "topicCode": "4.4.1",
+      "description": "Thinks plants only photosynthesise (and don't respire)",
+      "triggerPatterns": ["plants don't respire", "only animals respire", "plants only photosynth"],
+      "correctionGuidance": "All living organisms respire, including plants. Plants photosynthesise AND respire. During the day, the rate of photosynthesis usually exceeds the rate of respiration. At night, plants only respire.",
+      "severity": 3
+    },
+    {
+      "topicCode": "4.4.2",
+      "description": "Confuses aerobic and anaerobic respiration products",
+      "triggerPatterns": ["aerobic produces lactic acid", "anaerobic produces carbon dioxide in humans", "anaerobic in humans makes CO2"],
+      "correctionGuidance": "Aerobic: glucose + oxygen -> carbon dioxide + water (+ energy). Anaerobic in HUMANS: glucose -> lactic acid. Anaerobic in YEAST: glucose -> ethanol + carbon dioxide (fermentation).",
+      "severity": 2
+    },
+    {
+      "topicCode": "4.5.3",
+      "description": "Confuses the roles of insulin and glucagon",
+      "triggerPatterns": ["insulin increases blood glucose", "glucagon lowers blood sugar", "insulin is made in the liver"],
+      "correctionGuidance": "INSULIN (from beta cells in the pancreas) LOWERS blood glucose by causing cells to take up glucose and the liver to convert glucose to glycogen. GLUCAGON (from alpha cells in the pancreas) RAISES blood glucose by causing the liver to convert glycogen back to glucose.",
+      "severity": 3
+    },
+    {
+      "topicCode": "4.6.1",
+      "description": "Thinks all cells in the body have different DNA",
+      "triggerPatterns": ["each cell has different DNA", "skin cells have different genes from brain cells", "cells have different genomes"],
+      "correctionGuidance": "Almost all cells in the body contain the SAME DNA (the full genome). Cells are different because different genes are EXPRESSED (switched on) in different cell types. This is cell differentiation, not different DNA.",
+      "severity": 2
+    },
+    {
+      "topicCode": "4.6.2",
+      "description": "Thinks organisms choose to evolve or adapt (Lamarckian thinking)",
+      "triggerPatterns": ["evolved to survive", "chose to adapt", "decided to develop", "grew longer necks because"],
+      "correctionGuidance": "Organisms do NOT choose or decide to evolve. Natural selection works because of random variation: individuals with beneficial traits are more likely to survive and reproduce, passing those traits to offspring. Evolution is not directed or intentional.",
+      "severity": 3
+    },
+    {
+      "topicCode": "4.7.2",
+      "description": "Thinks energy is recycled in ecosystems (like materials are)",
+      "triggerPatterns": ["energy is recycled", "energy cycle", "energy goes round in circles"],
+      "correctionGuidance": "MATERIALS (carbon, water, nitrogen) are recycled in ecosystems. ENERGY is NOT recycled — it flows through the ecosystem and is eventually lost to the surroundings as heat through life processes. Energy enters as light and leaves as heat.",
+      "severity": 2
+    }
+  ]
+}
