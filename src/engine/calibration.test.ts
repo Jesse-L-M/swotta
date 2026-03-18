@@ -185,8 +185,15 @@ describe("generateOverallMessage", () => {
   });
 
   it("includes a self-rating number for underconfident students", () => {
-    const msg = generateOverallMessage(-0.3, "stable", 5);
+    const msg = generateOverallMessage(-0.3, "stable", 5, 0.4);
     expect(msg).toMatch(/\d\/5/);
+    expect(msg).toContain("2/5");
+  });
+
+  it("uses actual avg self-rating, not a hardcoded baseline", () => {
+    // Student rates themselves 0.75 on average but scores higher → underconfident
+    const msg = generateOverallMessage(-0.15, "stable", 5, 0.75);
+    expect(msg).toContain("4/5");
   });
 });
 

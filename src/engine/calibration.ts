@@ -83,7 +83,8 @@ function averageAbsDelta(deltas: number[]): number {
 export function generateOverallMessage(
   score: number,
   trend: "improving" | "stable" | "declining",
-  dataPoints: number
+  dataPoints: number,
+  avgSelfRated?: number
 ): string {
   if (dataPoints === 0) {
     return "Not enough data yet to assess your confidence calibration.";
@@ -93,7 +94,7 @@ export function generateOverallMessage(
 
   let base: string;
   if (underconfident) {
-    const selfRating = Math.round((0.5 + score) * 5);
+    const selfRating = Math.round((avgSelfRated ?? 0.5) * 5);
     const clampedRating = Math.max(1, Math.min(5, selfRating));
     base = `You tend to underestimate yourself — you rated yourself around ${clampedRating}/5 but your actual scores are consistently higher. You know more than you think!`;
   } else if (overconfident) {
@@ -213,7 +214,9 @@ export async function calculateCalibration(
     });
   }
 
-  const message = generateOverallMessage(calibrationScore, trend, rows.length);
+  const avgSelfRated =
+    rows.reduce((acc, r) => acc + Number(r.selfRated), 0) / rows.length;
+  const message = generateOverallMessage(calibrationScore, trend, rows.length, avgSelfRated);
 
   return {
     overconfident,
