@@ -6,6 +6,7 @@ import type {
   PolicyValue,
   RetrievalResult,
 } from "@/lib/types";
+import { BLOCK_TYPE_LABELS } from "@/lib/labels";
 
 export interface LearnerContext {
   masteryLevel: number;
@@ -24,17 +25,6 @@ const BLOCK_TYPE_TO_FILENAME: Record<BlockType, string> = {
   source_analysis: "source-analysis.md",
   mistake_review: "mistake-review.md",
   reentry: "reentry.md",
-};
-
-const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
-  retrieval_drill: "Retrieval Drill",
-  explanation: "Explanation",
-  worked_example: "Worked Example",
-  timed_problems: "Timed Problems",
-  essay_planning: "Essay Planning",
-  source_analysis: "Source Analysis",
-  mistake_review: "Mistake Review",
-  reentry: "Re-entry",
 };
 
 function getPromptsDir(): string {

@@ -1,4 +1,4 @@
-import { eq, and, lte, isNull, asc, sql } from "drizzle-orm";
+import { eq, and, lte, isNull, asc, inArray, sql } from "drizzle-orm";
 import type { Database } from "@/lib/db";
 import {
   learnerTopicState,
@@ -48,7 +48,7 @@ export function calculateTopicPriority(
   return Math.max(1, Math.min(10, Math.round(priority)));
 }
 
-export function selectBlockType(
+function heuristicBlockType(
   masteryLevel: number,
   streak: number,
   daysOverdue: number
@@ -60,6 +60,44 @@ export function selectBlockType(
   if (masteryLevel >= 0.7 && streak >= 3) return "timed_problems";
   return "retrieval_drill";
 }
+
+export async function selectBlockType(
+  topicId: TopicId,
+  masteryLevel: number,
+  streak: number,
+  daysOverdue: number,
+  db: Database
+): Promise<BlockType> {
+  // Look up task_rules for this topic
+  const rules = await db
+    .select({
+      blockType: taskRules.blockType,
+      difficultyMin: taskRules.difficultyMin,
+      difficultyMax: taskRules.difficultyMax,
+    })
+    .from(taskRules)
+    .where(eq(taskRules.topicId, topicId));
+
+  if (rules.length > 0) {
+    // Map mastery to difficulty (1-5 scale)
+    const difficulty = Math.max(1, Math.min(5, Math.round(masteryLevel * 5)));
+
+    // Find a matching rule for the current difficulty
+    const matching = rules.find(
+      (r) => difficulty >= r.difficultyMin && difficulty <= r.difficultyMax
+    );
+
+    if (matching) {
+      return matching.blockType as BlockType;
+    }
+  }
+
+  // Fall back to heuristic
+  return heuristicBlockType(masteryLevel, streak, daysOverdue);
+}
+
+// Keep synchronous version for backward compatibility in tests
+export { heuristicBlockType as selectBlockTypeSync };
 
 export function estimateBlockDuration(blockType: BlockType): number {
   const durations: Record<BlockType, number> = {
@@ -146,7 +184,13 @@ async function buildCandidatePool(
       daysUntilExam,
       config
     );
-    const blockType = selectBlockType(mastery, streak, daysOverdue);
+    const blockType = await selectBlockType(
+      state.topicId as TopicId,
+      mastery,
+      streak,
+      daysOverdue,
+      db
+    );
     const duration = estimateBlockDuration(blockType);
 
     let reason = "Scheduled review";
@@ -223,6 +267,42 @@ export async function getNextBlocks(
 ): Promise<StudyBlock[]> {
   const maxBlocks = options?.maxBlocks ?? config.maxBlocksPerSession;
   const sessionMinutes = options?.sessionMinutes ?? config.defaultSessionMinutes;
+
+  // Idempotency guard: return existing pending blocks instead of creating duplicates
+  const existingPending = await db
+    .select({
+      id: studyBlocks.id,
+      learnerId: studyBlocks.learnerId,
+      topicId: studyBlocks.topicId,
+      blockType: studyBlocks.blockType,
+      durationMinutes: studyBlocks.durationMinutes,
+      priority: studyBlocks.priority,
+      topicName: topics.name,
+    })
+    .from(studyBlocks)
+    .innerJoin(topics, eq(studyBlocks.topicId, topics.id))
+    .where(
+      and(
+        eq(studyBlocks.learnerId, learnerId),
+        eq(studyBlocks.status, "pending"),
+        isNull(studyBlocks.planId)
+      )
+    )
+    .orderBy(asc(studyBlocks.priority))
+    .limit(maxBlocks);
+
+  if (existingPending.length > 0) {
+    return existingPending.map((b) => ({
+      id: b.id as BlockId,
+      learnerId: b.learnerId as LearnerId,
+      topicId: b.topicId as TopicId,
+      topicName: b.topicName,
+      blockType: b.blockType as BlockType,
+      durationMinutes: b.durationMinutes,
+      priority: b.priority,
+      reason: "Scheduled review",
+    }));
+  }
 
   const ctx = await loadQualContext(learnerId, db);
   if (!ctx) return [];

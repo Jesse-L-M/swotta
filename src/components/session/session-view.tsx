@@ -1,6 +1,5 @@
 "use client";
 
-import type { BlockType } from "@/lib/types";
 import {
   useStudySession,
   type StudySessionApi,
@@ -12,17 +11,7 @@ import { ProgressIndicator } from "./progress-indicator";
 import { SessionComplete } from "./session-complete";
 import { AiGuidanceCallout } from "./ai-guidance-callout";
 import { Button } from "@/components/ui/button";
-
-const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
-  retrieval_drill: "Retrieval Drill",
-  explanation: "Explanation",
-  worked_example: "Worked Example",
-  timed_problems: "Timed Problems",
-  essay_planning: "Essay Planning",
-  source_analysis: "Source Analysis",
-  mistake_review: "Mistake Review",
-  reentry: "Re-entry",
-};
+import { BLOCK_TYPE_LABELS } from "@/lib/labels";
 
 export interface SessionViewProps {
   blockId: string;
@@ -199,4 +188,4 @@ export function SessionView({
   );
 }
 
-export { BLOCK_TYPE_LABELS };
+export { BLOCK_TYPE_LABELS } from "@/lib/labels";
