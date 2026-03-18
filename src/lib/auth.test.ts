@@ -84,7 +84,7 @@ describe("auth module", () => {
         verifyIdToken: vi.fn(),
         createSessionCookie: vi.fn(),
       };
-      vi.mocked(getAuth).mockReturnValue(mockAuth as ReturnType<typeof getAuth>);
+      vi.mocked(getAuth).mockReturnValue(mockAuth as unknown as ReturnType<typeof getAuth>);
 
       const { verifySessionCookie } = await import("@/lib/auth");
       const result = await verifySessionCookie("bad-cookie");
@@ -99,7 +99,7 @@ describe("auth module", () => {
         verifyIdToken: vi.fn(),
         createSessionCookie: vi.fn(),
       };
-      vi.mocked(getAuth).mockReturnValue(mockAuth as ReturnType<typeof getAuth>);
+      vi.mocked(getAuth).mockReturnValue(mockAuth as unknown as ReturnType<typeof getAuth>);
 
       const { verifySessionCookie } = await import("@/lib/auth");
       const result = await verifySessionCookie("valid-cookie");
@@ -115,7 +115,7 @@ describe("auth module", () => {
         verifyIdToken: vi.fn().mockRejectedValue(new Error("invalid")),
         createSessionCookie: vi.fn(),
       };
-      vi.mocked(getAuth).mockReturnValue(mockAuth as ReturnType<typeof getAuth>);
+      vi.mocked(getAuth).mockReturnValue(mockAuth as unknown as ReturnType<typeof getAuth>);
 
       const { verifyIdToken } = await import("@/lib/auth");
       const result = await verifyIdToken("bad-token");
@@ -130,7 +130,7 @@ describe("auth module", () => {
         verifyIdToken: vi.fn().mockResolvedValue(decoded),
         createSessionCookie: vi.fn(),
       };
-      vi.mocked(getAuth).mockReturnValue(mockAuth as ReturnType<typeof getAuth>);
+      vi.mocked(getAuth).mockReturnValue(mockAuth as unknown as ReturnType<typeof getAuth>);
 
       const { verifyIdToken } = await import("@/lib/auth");
       const result = await verifyIdToken("valid-token");
@@ -146,7 +146,7 @@ describe("auth module", () => {
         verifyIdToken: vi.fn(),
         createSessionCookie: vi.fn().mockResolvedValue("session-cookie-value"),
       };
-      vi.mocked(getAuth).mockReturnValue(mockAuth as ReturnType<typeof getAuth>);
+      vi.mocked(getAuth).mockReturnValue(mockAuth as unknown as ReturnType<typeof getAuth>);
 
       const { createSessionCookie } = await import("@/lib/auth");
       const cookie = await createSessionCookie("id-token", 60000);
@@ -165,7 +165,7 @@ describe("auth module", () => {
         verifyIdToken: vi.fn().mockRejectedValue(new Error("invalid")),
         createSessionCookie: vi.fn(),
       };
-      vi.mocked(getAuth).mockReturnValue(mockAuth as ReturnType<typeof getAuth>);
+      vi.mocked(getAuth).mockReturnValue(mockAuth as unknown as ReturnType<typeof getAuth>);
 
       const { getAuthContextFromToken } = await import("@/lib/auth");
       const result = await getAuthContextFromToken("bad-token", db);
@@ -179,7 +179,7 @@ describe("auth module", () => {
         verifyIdToken: vi.fn().mockResolvedValue({ uid: "nonexistent-uid" }),
         createSessionCookie: vi.fn(),
       };
-      vi.mocked(getAuth).mockReturnValue(mockAuth as ReturnType<typeof getAuth>);
+      vi.mocked(getAuth).mockReturnValue(mockAuth as unknown as ReturnType<typeof getAuth>);
 
       const { getAuthContextFromToken } = await import("@/lib/auth");
       const result = await getAuthContextFromToken("valid-token", db);
@@ -197,7 +197,7 @@ describe("auth module", () => {
         verifyIdToken: vi.fn().mockResolvedValue({ uid: "test-firebase-uid" }),
         createSessionCookie: vi.fn(),
       };
-      vi.mocked(getAuth).mockReturnValue(mockAuth as ReturnType<typeof getAuth>);
+      vi.mocked(getAuth).mockReturnValue(mockAuth as unknown as ReturnType<typeof getAuth>);
 
       const { getAuthContextFromToken } = await import("@/lib/auth");
       const result = await getAuthContextFromToken("valid-token", db);
@@ -221,7 +221,7 @@ describe("auth module", () => {
         verifyIdToken: vi.fn().mockResolvedValue({ uid: "multi-role-uid" }),
         createSessionCookie: vi.fn(),
       };
-      vi.mocked(getAuth).mockReturnValue(mockAuth as ReturnType<typeof getAuth>);
+      vi.mocked(getAuth).mockReturnValue(mockAuth as unknown as ReturnType<typeof getAuth>);
 
       const { getAuthContextFromToken } = await import("@/lib/auth");
       const result = await getAuthContextFromToken("valid-token", db);
@@ -236,7 +236,7 @@ describe("auth module", () => {
         get: vi.fn().mockReturnValue(undefined),
         set: vi.fn(),
         delete: vi.fn(),
-      } as ReturnType<typeof cookies> extends Promise<infer T> ? T : never);
+      } as unknown as Awaited<ReturnType<typeof cookies>>);
 
       const { requireAuth, AuthError } = await import("@/lib/auth");
       await expect(requireAuth(db)).rejects.toThrow(AuthError);
@@ -255,14 +255,14 @@ describe("auth module", () => {
         verifyIdToken: vi.fn(),
         createSessionCookie: vi.fn(),
       };
-      vi.mocked(getAuth).mockReturnValue(mockAuth as ReturnType<typeof getAuth>);
+      vi.mocked(getAuth).mockReturnValue(mockAuth as unknown as ReturnType<typeof getAuth>);
 
       const { cookies } = await import("next/headers");
       vi.mocked(cookies).mockResolvedValue({
         get: vi.fn().mockReturnValue({ value: "valid-session" }),
         set: vi.fn(),
         delete: vi.fn(),
-      } as ReturnType<typeof cookies> extends Promise<infer T> ? T : never);
+      } as unknown as Awaited<ReturnType<typeof cookies>>);
 
       const { requireRole, AuthError } = await import("@/lib/auth");
       await expect(requireRole("guardian", db)).rejects.toThrow(AuthError);
@@ -281,14 +281,14 @@ describe("auth module", () => {
         verifyIdToken: vi.fn(),
         createSessionCookie: vi.fn(),
       };
-      vi.mocked(getAuth).mockReturnValue(mockAuth as ReturnType<typeof getAuth>);
+      vi.mocked(getAuth).mockReturnValue(mockAuth as unknown as ReturnType<typeof getAuth>);
 
       const { cookies } = await import("next/headers");
       vi.mocked(cookies).mockResolvedValue({
         get: vi.fn().mockReturnValue({ value: "valid-session" }),
         set: vi.fn(),
         delete: vi.fn(),
-      } as ReturnType<typeof cookies> extends Promise<infer T> ? T : never);
+      } as unknown as Awaited<ReturnType<typeof cookies>>);
 
       const { requireLearner, AuthError } = await import("@/lib/auth");
       await expect(requireLearner(db)).rejects.toThrow(AuthError);
@@ -306,14 +306,14 @@ describe("auth module", () => {
         verifyIdToken: vi.fn(),
         createSessionCookie: vi.fn(),
       };
-      vi.mocked(getAuth).mockReturnValue(mockAuth as ReturnType<typeof getAuth>);
+      vi.mocked(getAuth).mockReturnValue(mockAuth as unknown as ReturnType<typeof getAuth>);
 
       const { cookies } = await import("next/headers");
       vi.mocked(cookies).mockResolvedValue({
         get: vi.fn().mockReturnValue({ value: "valid-session" }),
         set: vi.fn(),
         delete: vi.fn(),
-      } as ReturnType<typeof cookies> extends Promise<infer T> ? T : never);
+      } as unknown as Awaited<ReturnType<typeof cookies>>);
 
       const { requireLearner } = await import("@/lib/auth");
       const result = await requireLearner(db);
@@ -336,14 +336,14 @@ describe("auth module", () => {
         verifyIdToken: vi.fn(),
         createSessionCookie: vi.fn(),
       };
-      vi.mocked(getAuth).mockReturnValue(mockAuth as ReturnType<typeof getAuth>);
+      vi.mocked(getAuth).mockReturnValue(mockAuth as unknown as ReturnType<typeof getAuth>);
 
       const { cookies } = await import("next/headers");
       vi.mocked(cookies).mockResolvedValue({
         get: vi.fn().mockReturnValue({ value: "valid-session" }),
         set: vi.fn(),
         delete: vi.fn(),
-      } as ReturnType<typeof cookies> extends Promise<infer T> ? T : never);
+      } as unknown as Awaited<ReturnType<typeof cookies>>);
 
       const { requireGuardian } = await import("@/lib/auth");
       const result = await requireGuardian(db);

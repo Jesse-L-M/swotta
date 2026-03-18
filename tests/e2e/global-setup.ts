@@ -1,10 +1,8 @@
-import { clerkSetup } from "@clerk/testing/playwright";
-
 /**
  * Playwright global setup.
- * Configures Clerk testing tokens so E2E tests can authenticate.
- * Requires CLERK_SECRET_KEY env var (from .env.local or CI secrets).
+ * Firebase Auth doesn't need a testing token setup like Clerk did.
+ * E2E tests use session cookies set directly via the API.
  */
 export default async function globalSetup() {
-  await clerkSetup();
+  // No-op — Firebase Auth session cookies are set per-test via API calls
 }

@@ -60,7 +60,7 @@ describe("auth API routes", () => {
         uid: "new-learner-uid",
         email: "learner@example.com",
         picture: "https://example.com/photo.jpg",
-      } as ReturnType<typeof mockAuth.verifyIdToken> extends Promise<infer T> ? T : never);
+      } as unknown as Awaited<ReturnType<typeof mockAuth.verifyIdToken>>);
 
       const { POST } = await import("@/app/api/auth/signup/route");
       const request = new Request("http://localhost/api/auth/signup", {
@@ -125,7 +125,7 @@ describe("auth API routes", () => {
       vi.mocked(mockAuth.verifyIdToken).mockResolvedValue({
         uid: "new-guardian-uid",
         email: "parent@example.com",
-      } as ReturnType<typeof mockAuth.verifyIdToken> extends Promise<infer T> ? T : never);
+      } as unknown as Awaited<ReturnType<typeof mockAuth.verifyIdToken>>);
 
       const { POST } = await import("@/app/api/auth/signup/route");
       const request = new Request("http://localhost/api/auth/signup", {
@@ -154,7 +154,7 @@ describe("auth API routes", () => {
       vi.mocked(mockAuth.verifyIdToken).mockResolvedValue({
         uid: "existing-uid",
         email: "test@example.com",
-      } as ReturnType<typeof mockAuth.verifyIdToken> extends Promise<infer T> ? T : never);
+      } as unknown as Awaited<ReturnType<typeof mockAuth.verifyIdToken>>);
 
       const { POST } = await import("@/app/api/auth/signup/route");
       const request = new Request("http://localhost/api/auth/signup", {
@@ -215,14 +215,14 @@ describe("auth API routes", () => {
       const mockAuth = vi.mocked(getAuth)();
       vi.mocked(mockAuth.verifySessionCookie).mockResolvedValue({
         uid: "guardian-link-uid",
-      } as ReturnType<typeof mockAuth.verifySessionCookie> extends Promise<infer T> ? T : never);
+      } as unknown as Awaited<ReturnType<typeof mockAuth.verifySessionCookie>>);
 
       const { cookies } = await import("next/headers");
       vi.mocked(cookies).mockResolvedValue({
         get: vi.fn().mockReturnValue({ value: "valid-session" }),
         set: vi.fn(),
         delete: vi.fn(),
-      } as ReturnType<typeof cookies> extends Promise<infer T> ? T : never);
+      } as unknown as Awaited<ReturnType<typeof cookies>>);
 
       const { POST } = await import("@/app/api/auth/link-guardian/route");
       const request = new Request("http://localhost/api/auth/link-guardian", {
@@ -260,14 +260,14 @@ describe("auth API routes", () => {
       const mockAuth = vi.mocked(getAuth)();
       vi.mocked(mockAuth.verifySessionCookie).mockResolvedValue({
         uid: "dup-link-uid",
-      } as ReturnType<typeof mockAuth.verifySessionCookie> extends Promise<infer T> ? T : never);
+      } as unknown as Awaited<ReturnType<typeof mockAuth.verifySessionCookie>>);
 
       const { cookies } = await import("next/headers");
       vi.mocked(cookies).mockResolvedValue({
         get: vi.fn().mockReturnValue({ value: "valid-session" }),
         set: vi.fn(),
         delete: vi.fn(),
-      } as ReturnType<typeof cookies> extends Promise<infer T> ? T : never);
+      } as unknown as Awaited<ReturnType<typeof cookies>>);
 
       const { POST } = await import("@/app/api/auth/link-guardian/route");
       const request = new Request("http://localhost/api/auth/link-guardian", {
@@ -292,14 +292,14 @@ describe("auth API routes", () => {
       const mockAuth = vi.mocked(getAuth)();
       vi.mocked(mockAuth.verifySessionCookie).mockResolvedValue({
         uid: "bad-code-uid",
-      } as ReturnType<typeof mockAuth.verifySessionCookie> extends Promise<infer T> ? T : never);
+      } as unknown as Awaited<ReturnType<typeof mockAuth.verifySessionCookie>>);
 
       const { cookies } = await import("next/headers");
       vi.mocked(cookies).mockResolvedValue({
         get: vi.fn().mockReturnValue({ value: "valid-session" }),
         set: vi.fn(),
         delete: vi.fn(),
-      } as ReturnType<typeof cookies> extends Promise<infer T> ? T : never);
+      } as unknown as Awaited<ReturnType<typeof cookies>>);
 
       const { POST } = await import("@/app/api/auth/link-guardian/route");
       const request = new Request("http://localhost/api/auth/link-guardian", {
