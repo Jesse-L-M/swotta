@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Database } from "@/lib/db";
-import { studySessions, blockAttempts, studyBlocks } from "@/db/schema";
+import { studySessions, blockAttempts, studyBlocks, topics } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import {
   buildSystemPrompt,
@@ -17,6 +17,7 @@ import type {
   TopicId,
   ScopeType,
   BlockId,
+  BlockType,
 } from "@/lib/types";
 
 export type RetrieveChunksFn = (
@@ -236,21 +237,29 @@ export async function endSession(
   const session = sessionRows[0];
 
   let topicName = "Unknown Topic";
+  let blockType: BlockType = "retrieval_drill";
   if (session.blockId) {
     const blockRows = await db
-      .select({ topicId: studyBlocks.topicId, blockType: studyBlocks.blockType })
+      .select({
+        topicId: studyBlocks.topicId,
+        blockType: studyBlocks.blockType,
+      })
       .from(studyBlocks)
       .where(eq(studyBlocks.id, session.blockId));
 
     if (blockRows.length > 0) {
-      topicName = blockRows[0].topicId;
+      blockType = blockRows[0].blockType as BlockType;
+      const topicRows = await db
+        .select({ name: topics.name })
+        .from(topics)
+        .where(eq(topics.id, blockRows[0].topicId));
+      if (topicRows.length > 0) {
+        topicName = topicRows[0].name;
+      }
     }
   }
 
-  const extractionPrompt = buildOutcomeExtractionPrompt(
-    "retrieval_drill",
-    topicName
-  );
+  const extractionPrompt = buildOutcomeExtractionPrompt(blockType, topicName);
 
   const extractionMessages = [
     ...messages,
