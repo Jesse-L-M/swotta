@@ -21,8 +21,8 @@ function SummaryStatRow({
       className="flex items-center justify-between border-b border-[#EFEBE4] py-3 last:border-b-0"
       data-testid={testId}
     >
-      <span className="text-sm text-[#5C5950]">{label}</span>
-      <span className="font-[family-name:var(--font-jetbrains-mono)] text-sm font-medium text-[#1A1917]">
+      <span className="text-sm text-[#A09B90]">{label}</span>
+      <span className="font-[family-name:var(--font-jetbrains-mono)] text-sm font-medium text-[#F0ECE4]">
         {value}
       </span>
     </div>
@@ -42,8 +42,8 @@ function TopicList({
 }) {
   if (topicList.length === 0) return null;
 
-  const dotColor = accent === "teal" ? "bg-[#2D7A6E]" : "bg-[#D4654A]";
-  const textColor = accent === "teal" ? "text-[#2D7A6E]" : "text-[#D4654A]";
+  const dotColor = accent === "teal" ? "bg-[#4DAFA0]" : "bg-[#E8836A]";
+  const textColor = accent === "teal" ? "text-[#4DAFA0]" : "text-[#E8836A]";
 
   return (
     <div data-testid={testId}>
@@ -53,7 +53,7 @@ function TopicList({
       <ul className="space-y-1.5">
         {topicList.map((t, i) => (
           <li key={i} className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-2 text-[#1A1917]">
+            <span className="flex items-center gap-2 text-[#F0ECE4]">
               <span
                 className={`inline-block h-1.5 w-1.5 rounded-full ${dotColor}`}
               />

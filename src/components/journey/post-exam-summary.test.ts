@@ -98,7 +98,7 @@ describe("TopicList", () => {
       })
     );
     const el = screen.getByTestId("topic-list");
-    expect(el.innerHTML).toContain("bg-[#2D7A6E]");
+    expect(el.innerHTML).toContain("bg-[#4DAFA0]");
   });
 
   it("renders coral dot for coral accent", () => {
@@ -111,7 +111,7 @@ describe("TopicList", () => {
       })
     );
     const el = screen.getByTestId("topic-list");
-    expect(el.innerHTML).toContain("bg-[#D4654A]");
+    expect(el.innerHTML).toContain("bg-[#E8836A]");
   });
 });
 
