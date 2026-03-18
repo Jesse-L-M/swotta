@@ -389,19 +389,15 @@ export async function buildWeeklyPlan(
 
     let dayMinutes = 0;
     let dayOrder = 0;
+    const dayTopicIds = new Set<string>();
 
     for (const topic of topicPool) {
-      if (dayMinutes + topic.duration > dailyMinutes) break;
-
-      const alreadyScheduled = allBlocks.some(
-        (b) =>
-          b.topicId === topic.topicId &&
-          b.blockType === topic.blockType
-      );
-      if (alreadyScheduled) continue;
+      if (dayTopicIds.has(topic.topicId)) continue;
+      if (dayMinutes + topic.duration > dailyMinutes) continue;
 
       dayOrder++;
       dayMinutes += topic.duration;
+      dayTopicIds.add(topic.topicId);
 
       const [block] = await db
         .insert(studyBlocks)

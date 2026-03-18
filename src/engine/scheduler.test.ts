@@ -531,6 +531,97 @@ describe("buildWeeklyPlan", () => {
     }
   });
 
+  it("schedules topics on multiple days", async () => {
+    const { db, learner } = await setupPlanData();
+    const weekStart = new Date("2026-03-16");
+
+    const result = await buildWeeklyPlan(
+      learner.id as LearnerId,
+      weekStart,
+      db,
+      { dailyMinutes: 60 }
+    );
+
+    // With per-day dedup, the same topic should appear on more than one day
+    const topicDays = new Map<string, Set<string>>();
+    const dbBlocks = await db
+      .select()
+      .from(studyBlocks)
+      .where(eq(studyBlocks.planId, result.planId));
+
+    for (const block of dbBlocks) {
+      const days = topicDays.get(block.topicId) ?? new Set();
+      days.add(block.scheduledDate!);
+      topicDays.set(block.topicId, days);
+    }
+
+    const repeatedTopics = [...topicDays.values()].filter((d) => d.size > 1);
+    expect(repeatedTopics.length).toBeGreaterThan(0);
+  });
+
+  it("skips large blocks and still schedules smaller ones that fit", async () => {
+    const { db, learner, qual } = await setupPlanData();
+    const weekStart = new Date("2026-03-16");
+
+    // Set one topic to high mastery + streak so it becomes timed_problems (20 min)
+    // and another to medium mastery so it becomes retrieval_drill (10 min)
+    const states = await db
+      .select()
+      .from(learnerTopicState)
+      .where(eq(learnerTopicState.learnerId, learner.id));
+
+    if (states.length >= 2) {
+      // First topic: timed_problems (mastery >= 0.7, streak >= 3) → 20 min
+      await db
+        .update(learnerTopicState)
+        .set({
+          masteryLevel: "0.80",
+          streak: 4,
+          easeFactor: "2.50",
+          intervalDays: 10,
+        })
+        .where(eq(learnerTopicState.id, states[0].id));
+
+      // Second topic: retrieval_drill (mastery 0.4-0.7) → 10 min
+      await db
+        .update(learnerTopicState)
+        .set({
+          masteryLevel: "0.50",
+          streak: 1,
+          easeFactor: "2.50",
+          intervalDays: 5,
+        })
+        .where(eq(learnerTopicState.id, states[1].id));
+    }
+
+    // dailyMinutes = 15: too small for timed_problems (20), but fits retrieval_drill (10)
+    const result = await buildWeeklyPlan(
+      learner.id as LearnerId,
+      weekStart,
+      db,
+      { dailyMinutes: 15 }
+    );
+
+    // Should still have blocks (the 10-min retrieval_drill should be scheduled)
+    expect(result.blocks.length).toBeGreaterThan(0);
+
+    // No block should exceed the daily limit
+    const dbBlocks = await db
+      .select()
+      .from(studyBlocks)
+      .where(eq(studyBlocks.planId, result.planId));
+
+    const dayTotals = new Map<string | null, number>();
+    for (const block of dbBlocks) {
+      const current = dayTotals.get(block.scheduledDate) ?? 0;
+      dayTotals.set(block.scheduledDate, current + block.durationMinutes);
+    }
+
+    for (const [, minutes] of dayTotals) {
+      expect(minutes).toBeLessThanOrEqual(15);
+    }
+  });
+
   it("applies exam date overrides from options", async () => {
     const { db, learner, qual } = await setupPlanData();
     const weekStart = new Date("2026-03-16");
