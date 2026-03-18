@@ -5,6 +5,7 @@ import { decayCheckFunction } from "./functions/decay-check";
 import { weeklyReportTrigger } from "./functions/weekly-report-trigger";
 import { weeklyReportGenerate } from "./functions/weekly-report-generate";
 import { detectFlagsCron } from "./functions/detect-flags";
+import { studentWeeklyTrigger } from "./functions/student-weekly-trigger";
 
 /**
  * All Inngest functions registered in the application.
@@ -20,6 +21,7 @@ import { detectFlagsCron } from "./functions/detect-flags";
  *     - mastery/decay-check          → daily 00:00 UTC
  *     - reporting/weekly-report-trigger → Monday 00:05 UTC
  *     - reporting/detect-flags       → daily 06:00 UTC
+ *     - student/weekly-email        → Monday 07:00 UK time
  */
 export const functions = [
   processFileFunction,
@@ -29,4 +31,5 @@ export const functions = [
   weeklyReportTrigger,
   weeklyReportGenerate,
   detectFlagsCron,
+  studentWeeklyTrigger,
 ];
