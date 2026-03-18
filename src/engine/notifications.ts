@@ -13,10 +13,10 @@ import {
   qualifications,
   qualificationVersions,
 } from "@/db/schema";
-import type { LearnerId, TopicId, QualificationVersionId } from "@/lib/types";
+import type { LearnerId, TopicId } from "@/lib/types";
 import { sendEmail as defaultSendEmail, type EmailOptions, type EmailResult } from "@/email/send";
 import { structuredLog } from "@/lib/logger";
-import { getExamPhase, calculateDaysToExam, type ExamPhaseName } from "@/engine/proximity";
+import { determinePhase, calculateDaysToExam, type ExamPhaseName } from "@/engine/proximity";
 
 // ---------------------------------------------------------------------------
 // Dependency injection
@@ -192,37 +192,14 @@ async function processStudentNudge(
     return { sent, skipped };
   }
 
-  // Record in-app notification
-  const [inAppNotif] = await db
-    .insert(notificationEvents)
-    .values({
-      userId: data.learnerUserId,
-      type: notifType,
-      channel: "in_app",
-      subject,
-      payload: buildNudgePayload(data, notifType) as Record<string, unknown>,
-      createdAt: now,
-    })
-    .returning({ id: notificationEvents.id });
-
-  // Record email notification
-  const [emailNotif] = await db
-    .insert(notificationEvents)
-    .values({
-      userId: data.learnerUserId,
-      type: notifType,
-      channel: "email",
-      subject,
-      payload: buildNudgePayload(data, notifType) as Record<string, unknown>,
-      sentAt: now,
-      createdAt: now,
-    })
-    .returning({ id: notificationEvents.id });
-
-  sent.push(
-    { notificationId: inAppNotif.id, type: notifType, channel: "in_app", recipientUserId: data.learnerUserId },
-    { notificationId: emailNotif.id, type: notifType, channel: "email", recipientUserId: data.learnerUserId },
-  );
+  const entries = await recordNotificationPair(db, {
+    userId: data.learnerUserId,
+    type: notifType,
+    subject,
+    payload: buildNudgePayload(data, notifType),
+    now,
+  });
+  sent.push(...entries);
 
   return { sent, skipped };
 }
@@ -281,7 +258,7 @@ async function processParentAlerts(
       continue;
     }
 
-    const { subject, body } = buildParentAlertContent(data, guardian.name);
+    const { subject, body } = buildParentAlertContent(data, guardian.name, now);
 
     try {
       await sendEmailFn({ to: guardian.email, subject, html: body });
@@ -296,40 +273,62 @@ async function processParentAlerts(
       continue;
     }
 
-    // Record in-app notification
-    const [inAppNotif] = await db
-      .insert(notificationEvents)
-      .values({
-        userId: guardian.guardianUserId,
-        type: "parent_alert",
-        channel: "in_app",
-        subject,
-        payload: buildParentPayload(data) as Record<string, unknown>,
-        createdAt: now,
-      })
-      .returning({ id: notificationEvents.id });
-
-    // Record email notification
-    const [emailNotif] = await db
-      .insert(notificationEvents)
-      .values({
-        userId: guardian.guardianUserId,
-        type: "parent_alert",
-        channel: "email",
-        subject,
-        payload: buildParentPayload(data) as Record<string, unknown>,
-        sentAt: now,
-        createdAt: now,
-      })
-      .returning({ id: notificationEvents.id });
-
-    sent.push(
-      { notificationId: inAppNotif.id, type: "parent_alert", channel: "in_app", recipientUserId: guardian.guardianUserId },
-      { notificationId: emailNotif.id, type: "parent_alert", channel: "email", recipientUserId: guardian.guardianUserId },
-    );
+    const entries = await recordNotificationPair(db, {
+      userId: guardian.guardianUserId,
+      type: "parent_alert",
+      subject,
+      payload: buildParentPayload(data),
+      now,
+    });
+    sent.push(...entries);
   }
 
   return { sent, skipped };
+}
+
+// ---------------------------------------------------------------------------
+// Shared notification recording
+// ---------------------------------------------------------------------------
+
+async function recordNotificationPair(
+  db: Database,
+  opts: {
+    userId: string;
+    type: NotificationType;
+    subject: string;
+    payload: Record<string, unknown>;
+    now: Date;
+  },
+): Promise<NotificationResult["sent"]> {
+  const [inAppNotif] = await db
+    .insert(notificationEvents)
+    .values({
+      userId: opts.userId,
+      type: opts.type,
+      channel: "in_app",
+      subject: opts.subject,
+      payload: opts.payload,
+      createdAt: opts.now,
+    })
+    .returning({ id: notificationEvents.id });
+
+  const [emailNotif] = await db
+    .insert(notificationEvents)
+    .values({
+      userId: opts.userId,
+      type: opts.type,
+      channel: "email",
+      subject: opts.subject,
+      payload: opts.payload,
+      sentAt: opts.now,
+      createdAt: opts.now,
+    })
+    .returning({ id: notificationEvents.id });
+
+  return [
+    { notificationId: inAppNotif.id, type: opts.type, channel: "in_app" as const, recipientUserId: opts.userId },
+    { notificationId: emailNotif.id, type: opts.type, channel: "email" as const, recipientUserId: opts.userId },
+  ];
 }
 
 // ---------------------------------------------------------------------------
@@ -500,15 +499,10 @@ async function getClosestExamProximity(
     if (daysToExam < 0) continue;
 
     if (!closest || daysToExam < closest.daysToExam) {
-      const phase = await getExamPhase(
-        db, learnerId as LearnerId,
-        enrollment.qualVersionId as QualificationVersionId,
-        now,
-      );
       closest = {
         qualName: enrollment.qualName,
         daysToExam,
-        phase: phase.phase,
+        phase: determinePhase(daysToExam),
       };
     }
   }
@@ -695,13 +689,15 @@ ${data.decayingTopics.length > 0
 export function buildParentAlertContent(
   data: NudgeTriggerData,
   guardianName: string,
+  now?: Date,
 ): { subject: string; body: string } {
   const firstName = data.learnerName.split(" ")[0];
   const guardianFirstName = guardianName.split(" ")[0];
+  const referenceDate = now ?? new Date();
 
   let concern = "";
   if (data.daysSinceLastSession >= INACTIVITY_DAYS_THRESHOLD) {
-    concern += `<p><strong>${firstName}</strong> hasn't studied since ${getDayDescription(data.daysSinceLastSession)}.</p>`;
+    concern += `<p><strong>${firstName}</strong> hasn't studied since ${getDayDescription(data.daysSinceLastSession, referenceDate)}.</p>`;
   }
   if (data.decayingTopics.length > 0) {
     const topicNames = data.decayingTopics.slice(0, 3).map((t) => t.topicName);
@@ -749,11 +745,11 @@ function buildParentPayload(data: NudgeTriggerData): Record<string, unknown> {
   };
 }
 
-function getDayDescription(daysAgo: number): string {
+function getDayDescription(daysAgo: number, now: Date): string {
   if (daysAgo <= 1) return "yesterday";
   if (daysAgo <= 6) {
     const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const d = new Date();
+    const d = new Date(now);
     d.setDate(d.getDate() - daysAgo);
     return days[d.getDay()];
   }
