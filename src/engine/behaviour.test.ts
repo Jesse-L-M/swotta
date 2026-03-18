@@ -591,6 +591,74 @@ describe("detectPatterns", () => {
       expect(report.engagementTrend.direction).toBe("stable");
     });
 
+    it("tracks confidence trend from block attempts", async () => {
+      const db = getTestDb() as unknown as Database;
+      const org = await createTestOrg();
+      const learner = await createTestLearner(org.id);
+      const qual = await createTestQualification();
+      const topicId = qual.topics[1].id;
+
+      const plan = await createPlanForLearner(db, learner.id);
+
+      // Earlier period: low confidence
+      for (let i = 0; i < 3; i++) {
+        const block = await createBlock(db, {
+          planId: plan.id,
+          learnerId: learner.id,
+          topicId,
+          status: "completed",
+        });
+        await createAttempt(db, {
+          blockId: block.id,
+          startedAt: daysAgo(20 + i),
+          confidenceAfter: 0.3,
+          score: 50,
+        });
+      }
+
+      // Recent period: high confidence
+      for (let i = 0; i < 3; i++) {
+        const block = await createBlock(db, {
+          planId: plan.id,
+          learnerId: learner.id,
+          topicId,
+          status: "completed",
+        });
+        await createAttempt(db, {
+          blockId: block.id,
+          startedAt: daysAgo(3 + i),
+          confidenceAfter: 0.8,
+          score: 80,
+        });
+      }
+
+      // Add sessions so the engagement trend doesn't confound
+      await createSession(db, {
+        learnerId: learner.id,
+        startedAt: daysAgo(20),
+        totalDurationMinutes: 20,
+      });
+      await createSession(db, {
+        learnerId: learner.id,
+        startedAt: daysAgo(18),
+        totalDurationMinutes: 20,
+      });
+      await createSession(db, {
+        learnerId: learner.id,
+        startedAt: daysAgo(5),
+        totalDurationMinutes: 20,
+      });
+      await createSession(db, {
+        learnerId: learner.id,
+        startedAt: daysAgo(3),
+        totalDurationMinutes: 20,
+      });
+
+      const report = await detectPatterns(db, learner.id as LearnerId);
+
+      expect(report.engagementTrend.confidenceTrend).toBeGreaterThan(0);
+    });
+
     it("handles learner with no sessions gracefully", async () => {
       const db = getTestDb() as unknown as Database;
       const org = await createTestOrg();

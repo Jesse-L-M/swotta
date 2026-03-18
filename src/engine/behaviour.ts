@@ -17,11 +17,7 @@ import { BLOCK_TYPE_LABELS } from "@/lib/labels";
 // ---------------------------------------------------------------------------
 
 export interface ReintroductionStrategy {
-  approach:
-    | "connect_to_strength"
-    | "reduce_difficulty"
-    | "change_block_type"
-    | "pair_with_preferred";
+  approach: "connect_to_strength" | "reduce_difficulty" | "change_block_type";
   suggestedBlockType: BlockType;
   rationale: string;
 }
@@ -191,101 +187,127 @@ async function detectAvoidedTopics(
         row.skippedCount + row.abandonedCount >= AVOIDANCE_MIN_SKIPPED,
     );
 
-  // Build reintroduction strategies for each avoided topic
-  const avoidedTopics: AvoidedTopic[] = [];
-  for (const candidate of candidates) {
-    const strategy = await buildReintroductionStrategy(
-      db,
-      learnerId,
-      candidate.topicId as TopicId,
+  if (candidates.length === 0) return [];
+
+  const candidateTopicIds = candidates.map((c) => c.topicId);
+
+  // Batch-load all data needed for reintroduction strategies in 3 queries
+  const [allEdges, allMastery, allSkippedTypes] = await Promise.all([
+    // All topic edges involving any candidate topic
+    db
+      .select({
+        fromTopicId: topicEdges.fromTopicId,
+        toTopicId: topicEdges.toTopicId,
+      })
+      .from(topicEdges)
+      .where(
+        or(
+          inArray(topicEdges.fromTopicId, candidateTopicIds),
+          inArray(topicEdges.toTopicId, candidateTopicIds),
+        ),
+      ),
+    // All learner mastery states (for connecting to strengths)
+    db
+      .select({
+        topicId: learnerTopicState.topicId,
+        topicName: topics.name,
+        masteryLevel: learnerTopicState.masteryLevel,
+      })
+      .from(learnerTopicState)
+      .innerJoin(topics, eq(learnerTopicState.topicId, topics.id))
+      .where(eq(learnerTopicState.learnerId, learnerId)),
+    // Skipped block types per candidate topic
+    db
+      .select({
+        topicId: studyBlocks.topicId,
+        blockType: studyBlocks.blockType,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(studyBlocks)
+      .where(
+        and(
+          eq(studyBlocks.learnerId, learnerId),
+          inArray(studyBlocks.topicId, candidateTopicIds),
+          eq(studyBlocks.status, "skipped"),
+        ),
+      )
+      .groupBy(studyBlocks.topicId, studyBlocks.blockType),
+  ]);
+
+  // Index mastery by topicId for fast lookup
+  const masteryByTopicId = new Map(
+    allMastery.map((m) => [m.topicId, { topicName: m.topicName, masteryLevel: Number(m.masteryLevel) }]),
+  );
+
+  // Index skipped block types by topicId
+  const skippedTypesByTopicId = new Map<string, Array<{ blockType: string; count: number }>>();
+  for (const row of allSkippedTypes) {
+    const existing = skippedTypesByTopicId.get(row.topicId) ?? [];
+    existing.push({ blockType: row.blockType, count: row.count });
+    skippedTypesByTopicId.set(row.topicId, existing);
+  }
+
+  // Build reintroduction strategies for each avoided topic (in-memory, no queries)
+  const avoidedTopics: AvoidedTopic[] = candidates.map((candidate) => {
+    const strategy = buildReintroductionStrategy(
+      candidate.topicId,
+      allEdges,
+      masteryByTopicId,
+      skippedTypesByTopicId.get(candidate.topicId) ?? [],
     );
-    avoidedTopics.push({
+    return {
       topicId: candidate.topicId as TopicId,
       topicName: candidate.topicName,
       scheduledCount: candidate.scheduledCount,
       skippedCount: candidate.skippedCount + candidate.abandonedCount,
       lastScheduledAt: candidate.lastScheduledAt,
       reintroductionStrategy: strategy,
-    });
-  }
+    };
+  });
 
   return avoidedTopics;
 }
 
 // ---------------------------------------------------------------------------
-// Reintroduction strategy
+// Reintroduction strategy (pure, no DB queries)
 // ---------------------------------------------------------------------------
 
-async function buildReintroductionStrategy(
-  db: Database,
-  learnerId: LearnerId,
-  avoidedTopicId: TopicId,
-): Promise<ReintroductionStrategy> {
+function buildReintroductionStrategy(
+  avoidedTopicId: string,
+  allEdges: Array<{ fromTopicId: string; toTopicId: string }>,
+  masteryByTopicId: Map<string, { topicName: string; masteryLevel: number }>,
+  skippedBlockTypes: Array<{ blockType: string; count: number }>,
+): ReintroductionStrategy {
   // 1. Find related topics via topic_edges
-  const edges = await db
-    .select({
-      fromTopicId: topicEdges.fromTopicId,
-      toTopicId: topicEdges.toTopicId,
-    })
-    .from(topicEdges)
-    .where(
-      or(
-        eq(topicEdges.fromTopicId, avoidedTopicId),
-        eq(topicEdges.toTopicId, avoidedTopicId),
-      ),
+  const relatedTopicIds = allEdges
+    .filter(
+      (e) =>
+        e.fromTopicId === avoidedTopicId || e.toTopicId === avoidedTopicId,
+    )
+    .map((e) =>
+      e.fromTopicId === avoidedTopicId ? e.toTopicId : e.fromTopicId,
     );
 
-  const relatedTopicIds = edges.map((e) =>
-    e.fromTopicId === avoidedTopicId ? e.toTopicId : e.fromTopicId,
-  );
-
   // 2. Check for related topics with strong mastery
-  if (relatedTopicIds.length > 0) {
-    const relatedMastery = await db
-      .select({
-        topicName: topics.name,
-        masteryLevel: learnerTopicState.masteryLevel,
-      })
-      .from(learnerTopicState)
-      .innerJoin(topics, eq(learnerTopicState.topicId, topics.id))
-      .where(
-        and(
-          eq(learnerTopicState.learnerId, learnerId),
-          inArray(learnerTopicState.topicId, relatedTopicIds),
-        ),
-      );
+  const strongRelated = relatedTopicIds
+    .map((id) => masteryByTopicId.get(id))
+    .filter(
+      (m): m is { topicName: string; masteryLevel: number } =>
+        m !== undefined && m.masteryLevel >= 0.6,
+    )
+    .sort((a, b) => b.masteryLevel - a.masteryLevel);
 
-    const strongRelated = relatedMastery
-      .filter((m) => Number(m.masteryLevel) >= 0.6)
-      .sort((a, b) => Number(b.masteryLevel) - Number(a.masteryLevel));
-
-    if (strongRelated.length > 0) {
-      return {
-        approach: "connect_to_strength",
-        suggestedBlockType: "worked_example",
-        rationale: `You're doing well with ${strongRelated[0].topicName} — let's use that as a foundation to build confidence here. We'll start with a ${BLOCK_TYPE_LABELS.worked_example} that connects the concepts.`,
-      };
-    }
+  if (strongRelated.length > 0) {
+    return {
+      approach: "connect_to_strength",
+      suggestedBlockType: "worked_example",
+      rationale: `You're doing well with ${strongRelated[0].topicName} — let's use that as a foundation to build confidence here. We'll start with a ${BLOCK_TYPE_LABELS.worked_example} that connects the concepts.`,
+    };
   }
 
   // 3. Check what block types were skipped — suggest a different one
-  const skippedBlockTypes = await db
-    .select({
-      blockType: studyBlocks.blockType,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(studyBlocks)
-    .where(
-      and(
-        eq(studyBlocks.learnerId, learnerId),
-        eq(studyBlocks.topicId, avoidedTopicId),
-        eq(studyBlocks.status, "skipped"),
-      ),
-    )
-    .groupBy(studyBlocks.blockType);
-
   if (skippedBlockTypes.length > 0) {
-    const mostSkipped = skippedBlockTypes.sort(
+    const mostSkipped = [...skippedBlockTypes].sort(
       (a, b) => b.count - a.count,
     )[0];
     const alternatives: BlockType[] = [
