@@ -5,6 +5,7 @@ import { decayCheckFunction } from "./functions/decay-check";
 import { weeklyReportTrigger } from "./functions/weekly-report-trigger";
 import { weeklyReportGenerate } from "./functions/weekly-report-generate";
 import { detectFlagsCron } from "./functions/detect-flags";
+import { sendNotificationsCron } from "./functions/send-notifications";
 import { studentWeeklyTrigger } from "./functions/student-weekly-trigger";
 
 /**
@@ -21,6 +22,7 @@ import { studentWeeklyTrigger } from "./functions/student-weekly-trigger";
  *     - mastery/decay-check          → daily 00:00 UTC
  *     - reporting/weekly-report-trigger → Monday 00:05 UTC
  *     - reporting/detect-flags       → daily 06:00 UTC
+ *     - notifications/daily-check    → daily 17:00 UTC
  *     - student/weekly-email        → Monday 07:00 UK time
  */
 export const functions = [
@@ -31,5 +33,6 @@ export const functions = [
   weeklyReportTrigger,
   weeklyReportGenerate,
   detectFlagsCron,
+  sendNotificationsCron,
   studentWeeklyTrigger,
 ];
