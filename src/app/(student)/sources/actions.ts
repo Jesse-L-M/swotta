@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { eq, and, desc, inArray, count, sql } from "drizzle-orm";
 import { db, type Database } from "@/lib/db";
 import {
   sourceCollections,
@@ -35,29 +35,28 @@ export async function getCollections(
       description: sourceCollections.description,
       scope: sourceCollections.scope,
       createdAt: sourceCollections.createdAt,
+      fileCount: count(sourceFiles.id),
     })
     .from(sourceCollections)
+    .leftJoin(sourceFiles, eq(sourceCollections.id, sourceFiles.collectionId))
     .where(eq(sourceCollections.learnerId, learnerId))
+    .groupBy(
+      sourceCollections.id,
+      sourceCollections.name,
+      sourceCollections.description,
+      sourceCollections.scope,
+      sourceCollections.createdAt
+    )
     .orderBy(desc(sourceCollections.createdAt));
 
-  const collectionsWithCounts: SourceCollectionInfo[] = [];
-  for (const row of rows) {
-    const files = await database
-      .select({ id: sourceFiles.id })
-      .from(sourceFiles)
-      .where(eq(sourceFiles.collectionId, row.id));
-
-    collectionsWithCounts.push({
-      id: row.id,
-      name: row.name,
-      description: row.description,
-      scope: row.scope,
-      fileCount: files.length,
-      createdAt: row.createdAt,
-    });
-  }
-
-  return collectionsWithCounts;
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    scope: row.scope,
+    fileCount: Number(row.fileCount),
+    createdAt: row.createdAt,
+  }));
 }
 
 export async function getFiles(
@@ -181,24 +180,19 @@ export async function getTopicMappings(
   fileId: string,
   database: Database = db
 ): Promise<TopicMapping[]> {
-  const chunks = await database
-    .select({ id: sourceChunks.id })
-    .from(sourceChunks)
-    .where(eq(sourceChunks.fileId, fileId));
-
-  if (chunks.length === 0) return [];
-
-  const chunkIds = chunks.map((c) => c.id);
-
+  // Single query: chunks -> mappings -> topics, aggregated by topic
   const mappings = await database
     .select({
       topicId: sourceMappings.topicId,
       topicName: topics.name,
       confidence: sourceMappings.confidence,
     })
-    .from(sourceMappings)
+    .from(sourceChunks)
+    .innerJoin(sourceMappings, eq(sourceChunks.id, sourceMappings.chunkId))
     .innerJoin(topics, eq(sourceMappings.topicId, topics.id))
-    .where(inArray(sourceMappings.chunkId, chunkIds));
+    .where(eq(sourceChunks.fileId, fileId));
+
+  if (mappings.length === 0) return [];
 
   const byTopic = new Map<
     string,

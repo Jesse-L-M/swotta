@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db, type Database } from "@/lib/db";
 import { learnerPreferences, guardianLinks } from "@/db/schema";
 import { structuredLog } from "@/lib/logger";
@@ -84,7 +84,12 @@ export async function getNotificationConfig(
       receivesFlags: guardianLinks.receivesFlags,
     })
     .from(guardianLinks)
-    .where(eq(guardianLinks.learnerId, learnerId))
+    .where(
+      and(
+        eq(guardianLinks.learnerId, learnerId),
+        eq(guardianLinks.guardianUserId, guardianUserId)
+      )
+    )
     .limit(1);
 
   if (links.length === 0) {
@@ -115,7 +120,12 @@ export async function saveNotificationConfig(
         receivesWeeklyReport: parsed.data.receivesWeeklyReport,
         receivesFlags: parsed.data.receivesFlags,
       })
-      .where(eq(guardianLinks.learnerId, learnerId));
+      .where(
+        and(
+          eq(guardianLinks.learnerId, learnerId),
+          eq(guardianLinks.guardianUserId, guardianUserId)
+        )
+      );
 
     structuredLog("notification_config.saved", {
       guardianUserId,
