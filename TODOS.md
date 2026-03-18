@@ -170,3 +170,21 @@
 **Context:** The notification engine (`src/engine/notifications.ts`) uses dependency injection for the email sender (`sendEmailFn`). A similar pattern could inject a `sendPushFn`. The `notificationChannelEnum` in `src/db/schema/enums.ts` already includes `'push'`. The `processStudentNudge` and `processParentAlerts` functions would need a third delivery path alongside email and in_app.
 
 **Depends on:** Mobile app development (not currently planned). FCM project setup in Firebase console.
+
+---
+
+## Landing page footer: legal links
+
+**Added:** 2026-03-18 | **Source:** Landing page design review
+
+**What:** Add privacy policy, terms of service, and contact email links to the landing page footer (`src/app/page.tsx`). Create stub pages for privacy and terms.
+
+**Why:** Required for launch. GDPR compliance requires a privacy policy link. Parents especially expect to see terms and a way to contact someone before signing up their child.
+
+**Pros:** Legal compliance. Builds trust with parents. Standard expectation for any product handling children's data.
+
+**Cons:** Need actual privacy policy and terms content (legal review).
+
+**Context:** Footer currently has only wordmark + Log in / Sign up links. Structure should be: left = wordmark, center/right = Log in, Sign up, Privacy, Terms, Contact.
+
+**Depends on:** Legal content for privacy policy and terms of service.
