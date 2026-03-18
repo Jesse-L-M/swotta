@@ -116,3 +116,21 @@
 **Context:** The `StudyBlock` interface (`types.ts`) has `reason: string`. The scheduler sets it to "Overdue review", "Low mastery", "Exam approaching", or "Returning after gap" based on topic state. The fix is: (1) add `reason varchar(100)` to `study_blocks`, (2) pass the reason when inserting in `getNextBlocks` and `buildWeeklyPlan`, (3) read it in `loadTodayQueue` instead of hardcoding.
 
 **Depends on:** Schema owner agreement (Phase 0 territory). The scheduler (`scheduler.ts`, Task 1.3) would also need a small update to persist the field.
+
+---
+
+## Add staging environment CD trigger
+
+**Added:** 2026-03-18 | **Source:** Task 3.1 eng review
+
+**What:** Add a staging CD trigger to `.github/workflows/deploy.yml` that deploys to a separate Cloud Run service on push to a `staging` branch or via manual workflow dispatch.
+
+**Why:** Lets you test infrastructure and app changes in a staging environment before they hit production.
+
+**Pros:** Safer deploy workflow. Catches config issues early. Terraform modules already support staging via separate `.tfvars` files.
+
+**Cons:** Requires a second set of GCP resources (second Cloud SQL instance ~$8/mo for db-f1-micro). Adds a second CD job to the workflow.
+
+**Context:** The Terraform modules already parameterize everything via `var.environment`. A staging deploy is mostly duplicating the CD job with `_CLOUD_RUN_SERVICE=swotta-app-staging` and different substitutions. The `terraform/terraform.tfvars.example` shows the staging vs production differences.
+
+**Depends on:** Task 3.1 (GCP deployment) merged. Terraform applied for staging environment.
