@@ -339,4 +339,33 @@ describe("loadTodayQueue", () => {
     const result = await loadTodayQueue(learner.id, db);
     expect(result.length).toBe(0);
   });
+
+  test("falls back to getNextBlocks when no pending blocks but topic state exists", async () => {
+    const db = getTestDb();
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qual = await createTestQualification();
+
+    await enrollLearnerInQualification(
+      learner.id,
+      qual.qualificationVersionId
+    );
+
+    for (const topic of qual.topics) {
+      await db.insert(learnerTopicState).values({
+        learnerId: learner.id,
+        topicId: topic.id,
+        masteryLevel: "0.300",
+      });
+    }
+
+    const result = await loadTodayQueue(learner.id, db);
+    expect(result.length).toBeGreaterThan(0);
+    expect(result[0].topicName).toBeTruthy();
+    expect(result[0].blockType).toBeTruthy();
+
+    const secondResult = await loadTodayQueue(learner.id, db);
+    expect(secondResult.length).toBeGreaterThan(0);
+    expect(secondResult[0].id).toBe(result[0].id);
+  });
 });

@@ -51,17 +51,21 @@ export async function enrollInQualifications(
     return { error: "Learner not found" };
   }
 
-  for (const enrollment of enrollments) {
-    await db
-      .insert(learnerQualifications)
-      .values({
-        learnerId,
-        qualificationVersionId: enrollment.qualificationVersionId,
-        targetGrade: enrollment.targetGrade.trim(),
-        examDate: enrollment.examDate,
-      })
-      .onConflictDoNothing();
+  await db.transaction(async (tx) => {
+    for (const enrollment of enrollments) {
+      await tx
+        .insert(learnerQualifications)
+        .values({
+          learnerId,
+          qualificationVersionId: enrollment.qualificationVersionId,
+          targetGrade: enrollment.targetGrade.trim(),
+          examDate: enrollment.examDate,
+        })
+        .onConflictDoNothing();
+    }
+  });
 
+  for (const enrollment of enrollments) {
     await initTopicStates(
       learnerId as LearnerId,
       enrollment.qualificationVersionId as QualificationVersionId,

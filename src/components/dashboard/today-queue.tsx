@@ -1,7 +1,7 @@
 "use client";
 
 import type { StudyBlock } from "@/lib/types";
-import { getBlockTypeLabel, getBlockTypeDescription } from "./utils";
+import { getBlockTypeLabel } from "./utils";
 import { cn } from "@/lib/utils";
 import {
   BookOpen,

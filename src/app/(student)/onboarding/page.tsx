@@ -48,7 +48,6 @@ export default async function OnboardingPage() {
 
   return (
     <OnboardingWizard
-      learnerId={learner.id}
       subjects={subjectList}
       qualifications={qualificationOptions}
     />

@@ -15,7 +15,6 @@ import { completeOnboarding } from "@/app/(student)/onboarding/actions";
 import { cn } from "@/lib/utils";
 
 interface OnboardingWizardProps {
-  learnerId: string;
   subjects: SubjectOption[];
   qualifications: QualificationOption[];
 }
@@ -23,7 +22,6 @@ interface OnboardingWizardProps {
 const STEPS = ["Subjects", "Qualifications", "Exam dates"];
 
 export function OnboardingWizard({
-  learnerId,
   subjects,
   qualifications,
 }: OnboardingWizardProps) {
@@ -113,7 +111,6 @@ export function OnboardingWizard({
 
     startTransition(async () => {
       const result = await completeOnboarding(
-        learnerId,
         selections.map((s) => ({
           qualificationVersionId: s.qualificationVersionId,
           targetGrade: s.targetGrade,
