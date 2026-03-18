@@ -46,36 +46,44 @@ export async function promoteCandidates(
   db: Database,
   learnerId: LearnerId
 ): Promise<number> {
-  const candidates = await db
-    .select()
-    .from(memoryCandidates)
-    .where(
-      and(
-        eq(memoryCandidates.learnerId, learnerId),
-        gte(memoryCandidates.evidenceCount, MEMORY_PROMOTION_THRESHOLD),
-        isNull(memoryCandidates.promotedAt)
-      )
-    );
-
-  if (candidates.length === 0) {
-    return 0;
-  }
-
-  const now = new Date();
-
   return await db.transaction(async (tx) => {
-    await tx
-      .update(memoryCandidates)
-      .set({ promotedAt: now })
+    const candidates = await tx
+      .select()
+      .from(memoryCandidates)
       .where(
-        inArray(
-          memoryCandidates.id,
-          candidates.map((c) => c.id)
+        and(
+          eq(memoryCandidates.learnerId, learnerId),
+          gte(memoryCandidates.evidenceCount, MEMORY_PROMOTION_THRESHOLD),
+          isNull(memoryCandidates.promotedAt)
         )
       );
 
+    if (candidates.length === 0) {
+      return 0;
+    }
+
+    const now = new Date();
+
+    const promoted = await tx
+      .update(memoryCandidates)
+      .set({ promotedAt: now })
+      .where(
+        and(
+          inArray(
+            memoryCandidates.id,
+            candidates.map((c) => c.id)
+          ),
+          isNull(memoryCandidates.promotedAt)
+        )
+      )
+      .returning();
+
+    if (promoted.length === 0) {
+      return 0;
+    }
+
     await tx.insert(memoryConfirmed).values(
-      candidates.map((c) => ({
+      promoted.map((c) => ({
         learnerId: learnerId as string,
         category: c.category,
         content: c.content,
@@ -84,7 +92,7 @@ export async function promoteCandidates(
       }))
     );
 
-    return candidates.length;
+    return promoted.length;
   });
 }
 
@@ -233,6 +241,7 @@ export async function inferPreferences(
           source: "inferred",
           updatedAt: now,
         },
+        where: eq(learnerPreferences.source, "inferred"),
       });
   }
 
