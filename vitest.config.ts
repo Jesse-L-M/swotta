@@ -9,7 +9,7 @@ export default defineConfig({
     globals: true,
     environment: "node",
     setupFiles: ["./vitest.setup.ts"],
-    include: ["src/**/*.test.ts", "inngest/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx", "inngest/**/*.test.ts"],
     passWithNoTests: true,
   },
   resolve: {
