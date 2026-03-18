@@ -53,21 +53,6 @@
 
 ---
 
-## Scheduler: Create Inngest function wrappers
-
-**Added:** 2026-03-18 | **Source:** Task 1.3 eng review
-
-PLAN.md Task 1.3 owns `inngest/functions/update-queue.ts`, `rebuild-plans.ts`, `decay-check.ts`. These are thin wrappers that call engine functions on cron/event triggers:
-- `update-queue`: on `attempt.completed` event, update review queue
-- `rebuild-plans`: Monday 00:00 UTC cron, call `buildWeeklyPlan` for all active learners
-- `decay-check`: daily 00:00 UTC cron, scan `learner_topic_state` for overdue topics, insert `review_queue` entries
-
-The engine functions are ready. The wrappers need the Inngest client from Task 3.2.
-
-**Depends on:** Task 3.2 (Inngest client config and function registry)
-
----
-
 ## Reconcile test seed with curriculum loader
 
 **What:** Replace the manual `seedGCSEBiology()` implementation in `src/test/seed.ts` with a call to `loadQualification(db, seedJson)` from `src/engine/curriculum.ts`.
