@@ -152,3 +152,21 @@
 **Context:** The integration point is in `buildCandidatePool` (scheduler.ts) where block types and priorities are assigned. Multiply each candidate's priority by the relevant weight from `schedulerWeights`. For block type selection in `selectBlockType`/`selectBlockTypeSync`, use `blockTypeWeights` to bias the selection. The `toneModifiers` are consumed by the session runner (separate TODO), not the scheduler.
 
 **Depends on:** Task 5.5 (proximity engine) merged. Touches `src/engine/scheduler.ts` (Task 1.3 territory).
+
+---
+
+## Add push notification channel to notification engine
+
+**Added:** 2026-03-18 | **Source:** Task 6.1 eng review
+
+**What:** Add push notification support (via Firebase Cloud Messaging or similar) to the notification engine in `src/engine/notifications.ts`. Currently only email (Resend) and in-app (`notification_events` table) channels are supported.
+
+**Why:** Students are more likely to respond to push notifications than email. The `notification_channel` enum already includes `'push'` in the schema, and the `notification_events` table supports it. The engine just needs an additional delivery path.
+
+**Pros:** Higher engagement with nudges. Immediate delivery. Native mobile feel.
+
+**Cons:** Requires a mobile app (React Native or PWA with service worker). Needs device token registration flow. Additional infrastructure (FCM setup, token storage table).
+
+**Context:** The notification engine (`src/engine/notifications.ts`) uses dependency injection for the email sender (`sendEmailFn`). A similar pattern could inject a `sendPushFn`. The `notificationChannelEnum` in `src/db/schema/enums.ts` already includes `'push'`. The `processStudentNudge` and `processParentAlerts` functions would need a third delivery path alongside email and in_app.
+
+**Depends on:** Mobile app development (not currently planned). FCM project setup in Firebase console.
