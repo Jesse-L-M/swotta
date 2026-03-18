@@ -1,11 +1,9 @@
-import { Inngest } from "inngest";
+import { inngest } from "../client";
 import { db } from "@/lib/db";
 import { learnerQualifications, safetyFlags } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { detectFlags, mapFlagTypeToEnum } from "@/engine/reporting";
 import type { LearnerId } from "@/lib/types";
-
-const inngest = new Inngest({ id: "swotta" });
 
 /**
  * Cron: daily 06:00 UTC

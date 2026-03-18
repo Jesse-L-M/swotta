@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
+import { Instrument_Sans } from "next/font/google";
 import "./globals.css";
-import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const instrumentSans = Instrument_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Swotta",
@@ -17,10 +21,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider>
-      <html lang="en" className={cn("font-sans", geist.variable)}>
-        <body>{children}</body>
-      </html>
-    </ClerkProvider>
+    <html lang="en" className={cn("font-sans", instrumentSans.variable)}>
+      <body>{children}</body>
+    </html>
   );
 }

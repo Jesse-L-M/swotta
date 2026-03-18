@@ -39,7 +39,7 @@ export const updateQueueFunction = inngest.createFunction(
     });
 
     const masteryResult = await step.run("process-attempt-outcome", async () => {
-      const result = processAttemptOutcome(attempt, db);
+      const result = await processAttemptOutcome(attempt, db);
       return result;
     });
 

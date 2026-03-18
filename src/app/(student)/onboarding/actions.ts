@@ -1,11 +1,11 @@
 "use server";
 
 import { z } from "zod";
-import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { users, learners } from "@/db/schema";
+import { learners } from "@/db/schema";
+import { getAuthContext } from "@/lib/auth";
 import {
   enrollInQualifications,
   type EnrollmentInput,
@@ -28,21 +28,13 @@ export async function completeOnboarding(
   const parsed = enrollmentSchema.safeParse(enrollments);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
-  const { userId: clerkId } = await auth();
-  if (!clerkId) return { error: "Not authenticated" };
-
-  const [user] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.clerkId, clerkId))
-    .limit(1);
-
-  if (!user) return { error: "User not found" };
+  const ctx = await getAuthContext();
+  if (!ctx) return { error: "Not authenticated" };
 
   const [learner] = await db
     .select({ id: learners.id })
     .from(learners)
-    .where(eq(learners.userId, user.id))
+    .where(eq(learners.userId, ctx.user.id))
     .limit(1);
 
   if (!learner) return { error: "Learner not found" };

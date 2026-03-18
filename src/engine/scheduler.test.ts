@@ -25,7 +25,7 @@ import type {
 import { initTopicStates } from "./mastery";
 import {
   calculateTopicPriority,
-  selectBlockType,
+  selectBlockTypeSync,
   estimateBlockDuration,
   getNextBlocks,
   getReviewQueue,
@@ -91,40 +91,40 @@ describe("calculateTopicPriority", () => {
   });
 });
 
-describe("selectBlockType", () => {
+describe("selectBlockTypeSync (heuristic)", () => {
   it("returns reentry for very overdue topics (>14 days)", () => {
-    expect(selectBlockType(0.5, 0, 15)).toBe("reentry");
-    expect(selectBlockType(0.5, 0, 30)).toBe("reentry");
+    expect(selectBlockTypeSync(0.5, 0, 15)).toBe("reentry");
+    expect(selectBlockTypeSync(0.5, 0, 30)).toBe("reentry");
   });
 
   it("returns explanation for very low mastery (<0.2)", () => {
-    expect(selectBlockType(0.1, 0, 0)).toBe("explanation");
-    expect(selectBlockType(0.0, 0, 0)).toBe("explanation");
+    expect(selectBlockTypeSync(0.1, 0, 0)).toBe("explanation");
+    expect(selectBlockTypeSync(0.0, 0, 0)).toBe("explanation");
   });
 
   it("returns worked_example for low mastery (0.2-0.4)", () => {
-    expect(selectBlockType(0.2, 0, 0)).toBe("worked_example");
-    expect(selectBlockType(0.3, 0, 0)).toBe("worked_example");
+    expect(selectBlockTypeSync(0.2, 0, 0)).toBe("worked_example");
+    expect(selectBlockTypeSync(0.3, 0, 0)).toBe("worked_example");
   });
 
   it("returns retrieval_drill for medium mastery (0.4-0.7)", () => {
-    expect(selectBlockType(0.5, 0, 0)).toBe("retrieval_drill");
-    expect(selectBlockType(0.6, 0, 0)).toBe("retrieval_drill");
+    expect(selectBlockTypeSync(0.5, 0, 0)).toBe("retrieval_drill");
+    expect(selectBlockTypeSync(0.6, 0, 0)).toBe("retrieval_drill");
   });
 
   it("returns timed_problems for high mastery with streak", () => {
-    expect(selectBlockType(0.8, 3, 0)).toBe("timed_problems");
-    expect(selectBlockType(0.7, 5, 0)).toBe("timed_problems");
+    expect(selectBlockTypeSync(0.8, 3, 0)).toBe("timed_problems");
+    expect(selectBlockTypeSync(0.7, 5, 0)).toBe("timed_problems");
   });
 
   it("returns retrieval_drill for high mastery without streak", () => {
-    expect(selectBlockType(0.8, 2, 0)).toBe("retrieval_drill");
-    expect(selectBlockType(0.9, 0, 0)).toBe("retrieval_drill");
+    expect(selectBlockTypeSync(0.8, 2, 0)).toBe("retrieval_drill");
+    expect(selectBlockTypeSync(0.9, 0, 0)).toBe("retrieval_drill");
   });
 
   it("prioritizes reentry over other rules", () => {
-    expect(selectBlockType(0.0, 0, 20)).toBe("reentry");
-    expect(selectBlockType(0.9, 5, 20)).toBe("reentry");
+    expect(selectBlockTypeSync(0.0, 0, 20)).toBe("reentry");
+    expect(selectBlockTypeSync(0.9, 5, 20)).toBe("reentry");
   });
 });
 

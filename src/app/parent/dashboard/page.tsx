@@ -2,7 +2,6 @@ import { db } from "@/lib/db";
 import {
   guardianLinks,
   learners,
-  users,
   weeklyReports,
   safetyFlags,
   learnerQualifications,
@@ -10,17 +9,14 @@ import {
   qualifications,
 } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
+import { getAuthContext } from "@/lib/auth";
 import { LearnerCard } from "@/components/parent/learner-card";
 import { computeExamCountdown } from "@/components/parent/exam-countdown";
 import type { WeeklyReportData, LearnerId, TopicId } from "@/lib/types";
 
-// TODO: Replace with real Clerk auth once Task 2.1 (Auth + Layout) is merged
-async function getGuardianUserId(): Promise<string | null> {
-  return null;
-}
-
 export default async function ParentDashboardPage() {
-  const guardianUserId = await getGuardianUserId();
+  const ctx = await getAuthContext();
+  const guardianUserId = ctx?.user.id ?? null;
 
   if (!guardianUserId) {
     return (

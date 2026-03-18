@@ -1,8 +1,6 @@
-import { Inngest } from "inngest";
+import { inngest } from "../client";
 import { generateWeeklyReport, sendWeeklyReport } from "@/engine/reporting";
 import type { LearnerId } from "@/lib/types";
-
-const inngest = new Inngest({ id: "swotta" });
 
 /**
  * Event: report.generate

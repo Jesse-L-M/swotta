@@ -13,7 +13,7 @@ This document describes the system design. For schema details see `SCHEMA.md`. F
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌───────────────┐   │
 │  │ Student  │  │ Parent   │  │ Admin    │  │ API Routes    │   │
 │  │ App      │  │ View     │  │ View     │  │ (webhooks,    │   │
-│  │ (study,  │  │ (reports,│  │ (school  │  │  Clerk,       │   │
+│  │ (study,  │  │ (reports,│  │ (school  │  │  Firebase,       │   │
 │  │  upload, │  │  flags,  │  │  mgmt)   │  │  Inngest)     │   │
 │  │  plan)   │  │  progress│  │          │  │               │   │
 │  └────┬─────┘  └────┬─────┘  └────┬─────┘  └───────┬───────┘   │
@@ -444,7 +444,7 @@ Claude generates natural-language weekly summaries from structured data (mastery
 
 ## Security model
 
-- **Auth:** Clerk handles authentication. JWTs verified server-side on every request.
+- **Auth:** Firebase Auth handles authentication (Google Sign-In). Session cookies verified server-side on every request.
 - **Authorisation:** Application-level. Every data query is scoped by org + role. No cross-tenant data access.
 - **Policy enforcement:** Five-layer policy hierarchy (global → qualification → org → class → learner). Policies are resolved at query time with most-specific-wins semantics. Used for content boundaries, session constraints, and org-specific rules.
 - **Source scoping:** Enforced at the query layer. Retrieval queries always include scope filters.
@@ -477,7 +477,7 @@ Claude generates natural-language weekly summaries from structured data (mastery
 └─────────────────────┘
 
 ┌─────────────────────┐
-│   Clerk (hosted)     │──▶ Auth + org management
+│   Firebase Auth      │──▶ Authentication (Google Sign-In)
 └─────────────────────┘
 
 ┌─────────────────────┐
@@ -485,4 +485,4 @@ Claude generates natural-language weekly summaries from structured data (mastery
 └─────────────────────┘
 ```
 
-Local development uses Docker Compose for Postgres + pgvector. Everything else connects to hosted services (Clerk dev instance, Inngest dev server).
+Local development uses Docker Compose for Postgres + pgvector. Everything else connects to hosted services (Firebase Auth, Inngest dev server).

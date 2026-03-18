@@ -51,14 +51,14 @@ policy_scope    = 'global' | 'qualification' | 'org' | 'class' | 'learner'
 | Column | Type | Constraints | Notes |
 |--------|------|-------------|-------|
 | id | uuid | PK, default random | |
-| clerk_id | varchar(255) | UNIQUE, NOT NULL | Clerk external ID |
+| firebase_uid | varchar(255) | UNIQUE, NOT NULL | Firebase Auth UID |
 | email | varchar(255) | NOT NULL | |
 | name | varchar(255) | NOT NULL | |
 | avatar_url | text | nullable | |
 | created_at | timestamptz | NOT NULL, default now() | |
 | updated_at | timestamptz | NOT NULL, default now() | |
 
-Index: `users_clerk_id_idx` on clerk_id.
+Index: `users_firebase_uid_idx` on firebase_uid.
 
 ### memberships
 

@@ -1,9 +1,7 @@
-import { Inngest } from "inngest";
+import { inngest } from "../client";
 import { db } from "@/lib/db";
-import { learnerQualifications, learners } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
-
-const inngest = new Inngest({ id: "swotta" });
+import { learnerQualifications } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 /**
  * Cron: Monday 00:05 UTC (runs after the Sunday reporting period closes)

@@ -8,6 +8,7 @@ import {
   buildOutcomeExtractionPrompt,
   type LearnerContext,
 } from "@/ai/study-modes";
+import { processAttemptOutcome } from "@/engine/mastery";
 import type {
   StudyBlock,
   SessionId,
@@ -375,6 +376,25 @@ export async function endSession(
     durationMinutes,
     rawInteraction: { messages },
   };
+
+  // Wire mastery update: update spaced repetition state after session ends.
+  // Best-effort — the Inngest update-queue function also processes this as a background job.
+  if (outcome.blockId && outcome.score !== null) {
+    try {
+      await processAttemptOutcome(outcome, db);
+    } catch (masteryError: unknown) {
+      const msg = masteryError instanceof Error ? masteryError.message : String(masteryError);
+      process.stderr.write(
+        JSON.stringify({
+          event: "session.mastery-update-failed",
+          sessionId,
+          blockId: outcome.blockId,
+          error: msg,
+          ts: new Date().toISOString(),
+        }) + "\n"
+      );
+    }
+  }
 
   return {
     outcome,
