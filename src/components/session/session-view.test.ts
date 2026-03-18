@@ -208,8 +208,9 @@ describe("SessionView", () => {
       return expect(completing !== null || confidenceAfter !== null).toBe(true);
     });
 
-    // Resolve to clean up
-    resolveEnd?.({ outcome: makeOutcome(), summary: "Done" });
+    // Resolve to clean up — TS can't track assignment inside Promise callback
+    type EndResolver = (value: { outcome: AttemptOutcome; summary: string }) => void;
+    (resolveEnd as EndResolver | null)?.({ outcome: makeOutcome(), summary: "Done" });
     await waitFor(() => expect(screen.getByTestId("session-confidence-after")).toBeTruthy());
   });
 });

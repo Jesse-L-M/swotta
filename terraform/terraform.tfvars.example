@@ -1,0 +1,17 @@
+# Copy to terraform.tfvars and fill in values
+# Do NOT commit terraform.tfvars (it is gitignored)
+
+project_id  = "swotta-prod"
+region      = "europe-west2"
+environment = "production"
+github_repo = "your-org/swotta"
+
+# Database
+db_tier = "db-custom-2-8192" # staging: "db-f1-micro"
+
+# Cloud Run scaling
+min_instances = 1  # staging: 0
+max_instances = 10 # staging: 3
+
+# Set after first deploy:
+# cloud_run_image = "europe-west2-docker.pkg.dev/swotta-prod/swotta/swotta:latest"

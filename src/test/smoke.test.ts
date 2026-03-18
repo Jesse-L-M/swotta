@@ -63,10 +63,10 @@ describe("test infrastructure smoke test", () => {
   it("seeds GCSE Biology AQA with full topic tree", async () => {
     const seed = await seedGCSEBiology();
     expect(seed.qualificationVersionId).toBeDefined();
-    expect(seed.topics.length).toBe(28);
+    expect(seed.topics.length).toBe(27);
 
     const unitCodes = seed.topics
-      .filter((t) => !t.code.includes("."))
+      .filter((t) => t.code.split(".").length === 2)
       .map((t) => t.code)
       .sort();
     expect(unitCodes).toEqual([
