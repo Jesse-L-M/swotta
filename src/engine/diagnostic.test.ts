@@ -461,6 +461,7 @@ describe("diagnostic engine", () => {
       const results = await analyseDiagnosticConversation(
         messages,
         topics,
+        "GCSE Biology",
         client
       );
 
@@ -486,6 +487,7 @@ describe("diagnostic engine", () => {
       const results = await analyseDiagnosticConversation(
         messages,
         [topics[0]],
+        "GCSE Biology",
         client
       );
 
@@ -508,6 +510,7 @@ describe("diagnostic engine", () => {
       const results = await analyseDiagnosticConversation(
         messages,
         [topics[0]],
+        "GCSE Biology",
         client
       );
 
@@ -519,7 +522,7 @@ describe("diagnostic engine", () => {
       const client = createMockClient("No JSON here at all");
 
       await expect(
-        analyseDiagnosticConversation(messages, topics, client)
+        analyseDiagnosticConversation(messages, topics, "GCSE Biology", client)
       ).rejects.toThrow("No JSON array found in analysis response");
     });
 
@@ -531,7 +534,7 @@ describe("diagnostic engine", () => {
       } as unknown as import("@anthropic-ai/sdk").default;
 
       await expect(
-        analyseDiagnosticConversation(messages, topics, client)
+        analyseDiagnosticConversation(messages, topics, "GCSE Biology", client)
       ).rejects.toThrow("No text content in analysis response");
     });
 
@@ -548,7 +551,7 @@ describe("diagnostic engine", () => {
         ])
       );
 
-      await analyseDiagnosticConversation(messages, [topics[0]], client);
+      await analyseDiagnosticConversation(messages, [topics[0]], "GCSE Biology", client);
 
       const call = (client.messages.create as ReturnType<typeof vi.fn>).mock
         .calls[0][0];
@@ -840,6 +843,7 @@ describe("diagnostic engine", () => {
       const results = await analyseDiagnosticConversation(
         fakeConversation,
         diagnosticTopics,
+        "GCSE Test Subject",
         client
       );
       expect(results).toHaveLength(diagnosticTopics.length);

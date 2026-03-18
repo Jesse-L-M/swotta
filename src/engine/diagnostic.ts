@@ -12,6 +12,7 @@ import type {
 } from "@/lib/types";
 import { getTopicTree } from "@/engine/curriculum";
 import { processDiagnosticResult, initTopicStates } from "@/engine/mastery";
+import { structuredLog } from "@/lib/logger";
 
 const DIAGNOSTIC_MODEL = "claude-sonnet-4-20250514";
 
@@ -180,7 +181,10 @@ export function parseDiagnosticProgress(reply: string): DiagnosticProgress {
       total: typeof data.total === "number" ? data.total : 0,
       isComplete: false,
     };
-  } catch {
+  } catch (error: unknown) {
+    structuredLog("diagnostic.progress.parse_error", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return { explored: [], current: null, total: 0, isComplete: false };
   }
 }
@@ -230,6 +234,7 @@ export async function sendDiagnosticMessage(
 export async function analyseDiagnosticConversation(
   messages: Array<{ role: "user" | "assistant"; content: string }>,
   diagnosticTopics: DiagnosticTopic[],
+  qualificationName: string,
   client?: Anthropic
 ): Promise<DiagnosticResult[]> {
   const anthropic = client ?? getAnthropicClient();
@@ -248,6 +253,7 @@ export async function analyseDiagnosticConversation(
     .join("\n\n");
 
   const prompt = analysis
+    .replace("{{QUALIFICATION_NAME}}", qualificationName)
     .replace("{{TOPICS}}", topicList)
     .replace("{{CONVERSATION}}", conversationText);
 

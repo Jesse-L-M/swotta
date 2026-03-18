@@ -97,7 +97,10 @@ export default function DiagnosticPage() {
       setQualificationName(data.qualificationName as string);
       setTopics(data.topics as DiagnosticTopic[]);
       setProgress(data.progress as DiagnosticProgress);
-      setMessages([{ role: "assistant", content: data.reply as string }]);
+      setMessages([
+        { role: "user", content: "I'm ready to start the diagnostic." },
+        { role: "assistant", content: data.reply as string },
+      ]);
       setPhase("chat");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to start diagnostic");

@@ -199,14 +199,15 @@ async function handleComplete(
   qualificationVersionId: QualificationVersionId,
   messages: Array<{ role: "user" | "assistant"; content: string }>
 ) {
-  const diagnosticTopics = await getDiagnosticTopics(
-    db,
-    qualificationVersionId
-  );
+  const [diagnosticTopics, qualName] = await Promise.all([
+    getDiagnosticTopics(db, qualificationVersionId),
+    getQualificationName(db, qualificationVersionId),
+  ]);
 
   const results = await analyseDiagnosticConversation(
     messages,
-    diagnosticTopics
+    diagnosticTopics,
+    qualName ?? "Unknown qualification"
   );
 
   const { topicsUpdated } = await completeDiagnostic(
