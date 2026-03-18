@@ -297,6 +297,14 @@ describe("processLearnerNotifications", () => {
     );
 
     expect(result.skipped.some((s) => s.reason.includes("email_failed"))).toBe(true);
+
+    // In-app notification should still be recorded even though email failed
+    const inAppSent = result.sent.filter((s) => s.channel === "in_app");
+    expect(inAppSent.length).toBeGreaterThanOrEqual(1);
+
+    // Email notification should NOT be recorded
+    const emailSent = result.sent.filter((s) => s.channel === "email");
+    expect(emailSent.length).toBe(0);
   });
 });
 

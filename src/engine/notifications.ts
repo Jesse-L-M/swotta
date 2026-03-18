@@ -178,9 +178,21 @@ async function processStudentNudge(
   const notifType = determineStudentNotificationType(data);
   const { subject, body } = buildStudentNudgeContent(data, notifType);
 
-  // Send email
+  const payload = buildNudgePayload(data, notifType);
+
+  // Record in-app notification unconditionally
+  const inAppEntry = await recordInAppNotification(db, {
+    userId: data.learnerUserId, type: notifType, subject, payload, now,
+  });
+  sent.push(inAppEntry);
+
+  // Attempt email (best-effort)
   try {
     await sendEmailFn({ to: data.learnerEmail, subject, html: body });
+    const emailEntry = await recordEmailNotification(db, {
+      userId: data.learnerUserId, type: notifType, subject, payload, now,
+    });
+    sent.push(emailEntry);
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
     structuredLog("notification.email-failed", {
@@ -189,17 +201,7 @@ async function processStudentNudge(
       error: msg,
     });
     skipped.push({ type: notifType, reason: `email_failed: ${msg}` });
-    return { sent, skipped };
   }
-
-  const entries = await recordNotificationPair(db, {
-    userId: data.learnerUserId,
-    type: notifType,
-    subject,
-    payload: buildNudgePayload(data, notifType),
-    now,
-  });
-  sent.push(...entries);
 
   return { sent, skipped };
 }
@@ -259,9 +261,21 @@ async function processParentAlerts(
     }
 
     const { subject, body } = buildParentAlertContent(data, guardian.name, now);
+    const payload = buildParentPayload(data);
 
+    // Record in-app notification unconditionally
+    const inAppEntry = await recordInAppNotification(db, {
+      userId: guardian.guardianUserId, type: "parent_alert", subject, payload, now,
+    });
+    sent.push(inAppEntry);
+
+    // Attempt email (best-effort)
     try {
       await sendEmailFn({ to: guardian.email, subject, html: body });
+      const emailEntry = await recordEmailNotification(db, {
+        userId: guardian.guardianUserId, type: "parent_alert", subject, payload, now,
+      });
+      sent.push(emailEntry);
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
       structuredLog("notification.parent-email-failed", {
@@ -270,17 +284,7 @@ async function processParentAlerts(
         error: msg,
       });
       skipped.push({ type: "parent_alert", reason: `email_failed: ${msg}` });
-      continue;
     }
-
-    const entries = await recordNotificationPair(db, {
-      userId: guardian.guardianUserId,
-      type: "parent_alert",
-      subject,
-      payload: buildParentPayload(data),
-      now,
-    });
-    sent.push(...entries);
   }
 
   return { sent, skipped };
@@ -290,16 +294,18 @@ async function processParentAlerts(
 // Shared notification recording
 // ---------------------------------------------------------------------------
 
-async function recordNotificationPair(
+interface NotificationRecordOpts {
+  userId: string;
+  type: NotificationType;
+  subject: string;
+  payload: Record<string, unknown>;
+  now: Date;
+}
+
+async function recordInAppNotification(
   db: Database,
-  opts: {
-    userId: string;
-    type: NotificationType;
-    subject: string;
-    payload: Record<string, unknown>;
-    now: Date;
-  },
-): Promise<NotificationResult["sent"]> {
+  opts: NotificationRecordOpts,
+): Promise<NotificationResult["sent"][number]> {
   const [inAppNotif] = await db
     .insert(notificationEvents)
     .values({
@@ -312,6 +318,13 @@ async function recordNotificationPair(
     })
     .returning({ id: notificationEvents.id });
 
+  return { notificationId: inAppNotif.id, type: opts.type, channel: "in_app" as const, recipientUserId: opts.userId };
+}
+
+async function recordEmailNotification(
+  db: Database,
+  opts: NotificationRecordOpts,
+): Promise<NotificationResult["sent"][number]> {
   const [emailNotif] = await db
     .insert(notificationEvents)
     .values({
@@ -325,10 +338,7 @@ async function recordNotificationPair(
     })
     .returning({ id: notificationEvents.id });
 
-  return [
-    { notificationId: inAppNotif.id, type: opts.type, channel: "in_app" as const, recipientUserId: opts.userId },
-    { notificationId: emailNotif.id, type: opts.type, channel: "email" as const, recipientUserId: opts.userId },
-  ];
+  return { notificationId: emailNotif.id, type: opts.type, channel: "email" as const, recipientUserId: opts.userId };
 }
 
 // ---------------------------------------------------------------------------
@@ -628,6 +638,15 @@ export async function markNotificationRead(
 // Content builders
 // ---------------------------------------------------------------------------
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function determineStudentNotificationType(data: NudgeTriggerData): NotificationType {
   if (data.examProximity && data.examProximity.daysToExam <= 28) {
     return "exam_proximity";
@@ -642,7 +661,7 @@ export function buildStudentNudgeContent(
   data: NudgeTriggerData,
   type: NotificationType,
 ): { subject: string; body: string } {
-  const firstName = data.learnerName.split(" ")[0];
+  const firstName = escapeHtml(data.learnerName.split(" ")[0]);
 
   switch (type) {
     case "exam_proximity": {
@@ -691,8 +710,8 @@ export function buildParentAlertContent(
   guardianName: string,
   now?: Date,
 ): { subject: string; body: string } {
-  const firstName = data.learnerName.split(" ")[0];
-  const guardianFirstName = guardianName.split(" ")[0];
+  const firstName = escapeHtml(data.learnerName.split(" ")[0]);
+  const guardianFirstName = escapeHtml(guardianName.split(" ")[0]);
   const referenceDate = now ?? new Date();
 
   let concern = "";
