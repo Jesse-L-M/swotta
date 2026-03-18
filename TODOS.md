@@ -77,3 +77,21 @@ The engine functions are ready. The wrappers need the Inngest client from Task 3
 **Depends on:** GCP infrastructure setup (Task 3.1) for Vertex AI API access and credentials. The project already uses GCP (Cloud Run, Cloud SQL, Cloud Storage), so Vertex AI fits naturally.
 
 **Added:** 2026-03-18 via /plan-eng-review on branch Jesse-L-M/ingestion-pipeline.
+
+---
+
+## Persist study block reason string in schema
+
+**Added:** 2026-03-18 | **Source:** Task 2.2 eng review
+
+**What:** Add a `reason` varchar column to `study_blocks` so the human-readable reason ("Overdue review", "Low mastery", "Exam approaching") is persisted at creation time.
+
+**Why:** The scheduler computes the reason in `buildCandidatePool` (`scheduler.ts`) but only returns it in the `StudyBlock` struct — it's never written to the DB. When `loadTodayQueue` (`dashboard/data.ts`) reads existing pending blocks, it has to hardcode `"Scheduled review"` because the real reason is lost.
+
+**Pros:** Dashboard shows accurate context per block. Small schema addition (nullable varchar, no migration risk).
+
+**Cons:** Requires coordinating with schema owner to add column + migration. Low-priority cosmetic issue.
+
+**Context:** The `StudyBlock` interface (`types.ts`) has `reason: string`. The scheduler sets it to "Overdue review", "Low mastery", "Exam approaching", or "Returning after gap" based on topic state. The fix is: (1) add `reason varchar(100)` to `study_blocks`, (2) pass the reason when inserting in `getNextBlocks` and `buildWeeklyPlan`, (3) read it in `loadTodayQueue` instead of hardcoding.
+
+**Depends on:** Schema owner agreement (Phase 0 territory). The scheduler (`scheduler.ts`, Task 1.3) would also need a small update to persist the field.
