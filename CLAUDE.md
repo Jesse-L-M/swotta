@@ -10,6 +10,7 @@ Swotta is a student-centric academic operating system. One student, one academic
 2. Read `docs/SCHEMA.md` — the database schema is the source of truth
 3. Read `docs/INTERFACES.md` — function signatures and contracts between components
 4. Read `docs/PLAN.md` — find your task, note which files you own
+5. Read `DESIGN.md` — the design system is the source of truth for all visual decisions
 
 ## File ownership
 
@@ -43,6 +44,14 @@ The Drizzle schema in `src/db/schema/` is the canonical definition of all databa
 - Prompts live in `src/ai/prompts/` as Markdown files.
 - Never hardcode prompts in TypeScript — load from files.
 - Study sessions must guide, not give answers directly.
+
+## Design system
+
+Always read `DESIGN.md` before making any visual or UI decisions. All font choices, colours, spacing, border radius, and aesthetic direction are defined there. Do not deviate without explicit user approval. Key rules:
+- **Fonts:** Instrument Serif (headlines), Instrument Sans (body), JetBrains Mono (data/code)
+- **Colours:** Warm cream base (#FAF6F0), teal primary (#2D7A6E), coral secondary (#D4654A)
+- **Three-state semantics:** positive (teal), attention (coral), neutral (stone). Not four colours.
+- **No AI slop:** No purple gradients, no icon-in-circle grids, no bubbly uniform border-radius, no generic hero sections.
 
 ## Testing
 
