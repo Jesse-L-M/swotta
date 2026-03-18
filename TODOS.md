@@ -1,5 +1,23 @@
 # TODOs
 
+## Wire Clerk auth into parent pages
+
+**Added:** 2026-03-18 | **Source:** Task 2.3 eng review
+
+**What:** Replace `getGuardianUserId()` stubs with real Clerk auth calls in `src/app/(parent)/dashboard/page.tsx` and `src/app/(parent)/learners/[id]/page.tsx`.
+
+**Why:** Both parent pages currently return `null` from the auth stub, so they always show "Sign in required." Once Task 2.1 (Auth + Layout Shell) merges, these need to call Clerk's `currentUser()` and look up the guardian's user ID via the `users` table.
+
+**Pros:** Makes parent pages functional for real guardian users.
+
+**Cons:** Blocked until Task 2.1 merges and provides `src/lib/auth.ts` helpers.
+
+**Context:** The `getGuardianUserId()` function in each page is a placeholder marked with `// TODO: Replace with real Clerk auth once Task 2.1 (Auth + Layout) is merged`. The pattern should be: call `requireAuth()` → get `userId` → query `users` table by `clerkId` → return `user.id`. The guardian link scoping is already implemented in the page queries.
+
+**Depends on:** Task 2.1 (Auth + Layout Shell) merged to main.
+
+---
+
 ## Wire endSession to call mastery.processAttemptOutcome
 
 **What:** After `endSession` updates the DB, call the mastery engine to update the learner's topic state (mastery level, ease factor, next review date) based on the session outcome.
@@ -35,21 +53,6 @@
 
 ---
 
-## Scheduler: Create Inngest function wrappers
-
-**Added:** 2026-03-18 | **Source:** Task 1.3 eng review
-
-PLAN.md Task 1.3 owns `inngest/functions/update-queue.ts`, `rebuild-plans.ts`, `decay-check.ts`. These are thin wrappers that call engine functions on cron/event triggers:
-- `update-queue`: on `attempt.completed` event, update review queue
-- `rebuild-plans`: Monday 00:00 UTC cron, call `buildWeeklyPlan` for all active learners
-- `decay-check`: daily 00:00 UTC cron, scan `learner_topic_state` for overdue topics, insert `review_queue` entries
-
-The engine functions are ready. The wrappers need the Inngest client from Task 3.2.
-
-**Depends on:** Task 3.2 (Inngest client config and function registry)
-
----
-
 ## Reconcile test seed with curriculum loader
 
 **What:** Replace the manual `seedGCSEBiology()` implementation in `src/test/seed.ts` with a call to `loadQualification(db, seedJson)` from `src/engine/curriculum.ts`.
@@ -77,3 +80,57 @@ The engine functions are ready. The wrappers need the Inngest client from Task 3
 **Depends on:** GCP infrastructure setup (Task 3.1) for Vertex AI API access and credentials. The project already uses GCP (Cloud Run, Cloud SQL, Cloud Storage), so Vertex AI fits naturally.
 
 **Added:** 2026-03-18 via /plan-eng-review on branch Jesse-L-M/ingestion-pipeline.
+
+---
+
+## Extract BLOCK_TYPE_LABELS to shared location
+
+**What:** Move the `BLOCK_TYPE_LABELS` mapping (block_type enum to human-readable label) from both `src/ai/study-modes.ts` and `src/components/session/session-view.tsx` to a shared location like `src/lib/labels.ts`.
+
+**Why:** DRY violation — same 8-entry mapping in two files. If a new block type is added or a label changes, both need updating.
+
+**Pros:** Single source of truth. Both engine and UI import from one place.
+
+**Cons:** Touches a file owned by Task 1.4 (`study-modes.ts`), so needs coordination.
+
+**Context:** Both copies are identical. The labels are stable (block types are schema-level). Low risk of drift but a clean-up worth doing. The natural home is `src/lib/labels.ts` or added to `src/lib/types.ts`.
+
+**Depends on:** Nothing — can be done anytime. Coordinate with Task 1.4 owner when modifying `study-modes.ts`.
+
+**Added:** 2026-03-18 via /plan-eng-review on branch Jesse-L-M/study-session-ui.
+
+---
+
+## Persist study block reason string in schema
+
+**Added:** 2026-03-18 | **Source:** Task 2.2 eng review
+
+**What:** Add a `reason` varchar column to `study_blocks` so the human-readable reason ("Overdue review", "Low mastery", "Exam approaching") is persisted at creation time.
+
+**Why:** The scheduler computes the reason in `buildCandidatePool` (`scheduler.ts`) but only returns it in the `StudyBlock` struct — it's never written to the DB. When `loadTodayQueue` (`dashboard/data.ts`) reads existing pending blocks, it has to hardcode `"Scheduled review"` because the real reason is lost.
+
+**Pros:** Dashboard shows accurate context per block. Small schema addition (nullable varchar, no migration risk).
+
+**Cons:** Requires coordinating with schema owner to add column + migration. Low-priority cosmetic issue.
+
+**Context:** The `StudyBlock` interface (`types.ts`) has `reason: string`. The scheduler sets it to "Overdue review", "Low mastery", "Exam approaching", or "Returning after gap" based on topic state. The fix is: (1) add `reason varchar(100)` to `study_blocks`, (2) pass the reason when inserting in `getNextBlocks` and `buildWeeklyPlan`, (3) read it in `loadTodayQueue` instead of hardcoding.
+
+**Depends on:** Schema owner agreement (Phase 0 territory). The scheduler (`scheduler.ts`, Task 1.3) would also need a small update to persist the field.
+
+---
+
+## Add staging environment CD trigger
+
+**Added:** 2026-03-18 | **Source:** Task 3.1 eng review
+
+**What:** Add a staging CD trigger to `.github/workflows/deploy.yml` that deploys to a separate Cloud Run service on push to a `staging` branch or via manual workflow dispatch.
+
+**Why:** Lets you test infrastructure and app changes in a staging environment before they hit production.
+
+**Pros:** Safer deploy workflow. Catches config issues early. Terraform modules already support staging via separate `.tfvars` files.
+
+**Cons:** Requires a second set of GCP resources (second Cloud SQL instance ~$8/mo for db-f1-micro). Adds a second CD job to the workflow.
+
+**Context:** The Terraform modules already parameterize everything via `var.environment`. A staging deploy is mostly duplicating the CD job with `_CLOUD_RUN_SERVICE=swotta-app-staging` and different substitutions. The `terraform/terraform.tfvars.example` shows the staging vs production differences.
+
+**Depends on:** Task 3.1 (GCP deployment) merged. Terraform applied for staging environment.
