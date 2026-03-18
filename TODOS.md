@@ -134,3 +134,21 @@
 **Context:** The Terraform modules already parameterize everything via `var.environment`. A staging deploy is mostly duplicating the CD job with `_CLOUD_RUN_SERVICE=swotta-app-staging` and different substitutions. The `terraform/terraform.tfvars.example` shows the staging vs production differences.
 
 **Depends on:** Task 3.1 (GCP deployment) merged. Terraform applied for staging environment.
+
+---
+
+## Wire scheduler to read exam proximity phase
+
+**Added:** 2026-03-18 | **Source:** Task 5.5 eng review
+
+**What:** Update `getNextBlocks` and `buildWeeklyPlan` in `src/engine/scheduler.ts` to call `getExamPhase` from `src/engine/proximity.ts` and apply the returned `schedulerWeights` when selecting block types and prioritizing topics.
+
+**Why:** The proximity engine (Task 5.5) returns per-phase weights for block types (`blockTypeWeights`), topic priorities (`newTopicWeight`, `weakTopicWeight`, `reviewTopicWeight`), and session length (`sessionMinutesMultiplier`). Without this wiring, the scheduler ignores exam proximity entirely — a student 3 days before their exam gets the same block mix as one 3 months out.
+
+**Pros:** Makes the scheduler time-aware. Students get retrieval drills and timed practice as exams approach instead of exploratory essay planning.
+
+**Cons:** Adds a DB query per `getNextBlocks` call (reads `learner_qualifications` for exam date). Minimal overhead.
+
+**Context:** The integration point is in `buildCandidatePool` (scheduler.ts) where block types and priorities are assigned. Multiply each candidate's priority by the relevant weight from `schedulerWeights`. For block type selection in `selectBlockType`/`selectBlockTypeSync`, use `blockTypeWeights` to bias the selection. The `toneModifiers` are consumed by the session runner (separate TODO), not the scheduler.
+
+**Depends on:** Task 5.5 (proximity engine) merged. Touches `src/engine/scheduler.ts` (Task 1.3 territory).
