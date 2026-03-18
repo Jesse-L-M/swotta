@@ -80,6 +80,24 @@ The engine functions are ready. The wrappers need the Inngest client from Task 3
 
 ---
 
+## Extract BLOCK_TYPE_LABELS to shared location
+
+**What:** Move the `BLOCK_TYPE_LABELS` mapping (block_type enum to human-readable label) from both `src/ai/study-modes.ts` and `src/components/session/session-view.tsx` to a shared location like `src/lib/labels.ts`.
+
+**Why:** DRY violation — same 8-entry mapping in two files. If a new block type is added or a label changes, both need updating.
+
+**Pros:** Single source of truth. Both engine and UI import from one place.
+
+**Cons:** Touches a file owned by Task 1.4 (`study-modes.ts`), so needs coordination.
+
+**Context:** Both copies are identical. The labels are stable (block types are schema-level). Low risk of drift but a clean-up worth doing. The natural home is `src/lib/labels.ts` or added to `src/lib/types.ts`.
+
+**Depends on:** Nothing — can be done anytime. Coordinate with Task 1.4 owner when modifying `study-modes.ts`.
+
+**Added:** 2026-03-18 via /plan-eng-review on branch Jesse-L-M/study-session-ui.
+
+---
+
 ## Persist study block reason string in schema
 
 **Added:** 2026-03-18 | **Source:** Task 2.2 eng review
