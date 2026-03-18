@@ -10,7 +10,7 @@ This document records locked technical decisions. Agents should not revisit or s
 | **Language** | TypeScript (strict mode) | Single language across frontend + backend + schema. Every agent reasons about one codebase. |
 | **ORM** | Drizzle ORM | Schema-as-TypeScript, fine-grained SQL control for complex relational queries, lighter than Prisma |
 | **Database** | PostgreSQL 16 + pgvector | Relational data + vector embeddings in one DB. No separate vector store. Atomic transactions across all five data layers. |
-| **Auth** | Clerk | Multi-org, multi-role, org-level tenancy out of the box. Maps directly to the identity layer. |
+| **Auth** | Firebase Auth | Authentication only (who are you?). Authorization handled by application layer via Drizzle schema (organizations, memberships, roles). Students sign in with Google accounts (universal in UK schools). Uses GCP credits. Schema column: `firebase_uid` on users table. |
 | **Background Jobs** | Inngest | Durable, retryable, typed functions. Calls the Next.js app via HTTP. No Redis/Celery infrastructure. |
 | **AI** | Claude API (Anthropic TypeScript SDK) | Study sessions, material analysis, misconception detection, report generation. |
 | **Embeddings** | Voyage AI (voyage-3, 1024 dimensions) | Anthropic-recommended embedding model. Stored in pgvector. Model is configurable — the schema stores the model name with each embedding. |
@@ -44,5 +44,6 @@ This document records locked technical decisions. Agents should not revisit or s
 - **Not MongoDB/DynamoDB.** The data model is deeply relational (topic graphs, scoped permissions, learner state across subjects). Document stores would fight this.
 - **Not Python.** The AI calls are API calls — Python's ML library advantage doesn't apply. TypeScript everywhere reduces agent context-switching.
 - **Not microservices.** One Next.js app to start. The engine modules are well-separated in code — extract to services later only if scale demands it.
-- **Not Supabase.** The multi-tenant RLS model for this schema would be overly complex. Clerk + application-level scoping is cleaner.
+- **Not Supabase.** The multi-tenant RLS model for this schema would be overly complex. Firebase Auth + application-level scoping is cleaner.
+- **Not Clerk.** Clerk's org/membership features would duplicate the authorization model already built in the Drizzle schema (organizations, memberships, guardian_links). Firebase Auth is simpler: it handles authentication, the schema handles authorization. Also stays within GCP ecosystem.
 - **Not Vercel.** Serverless function timeouts (60s Pro / 300s Enterprise) are too short for AI study sessions with multi-turn Claude conversations. Cloud Run gives persistent connections and configurable timeouts.

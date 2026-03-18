@@ -9,8 +9,10 @@ Swotta is a student-centric academic operating system. One student, one academic
 1. Read `docs/DECISIONS.md` — tech stack is locked, do not suggest alternatives
 2. Read `docs/SCHEMA.md` — the database schema is the source of truth
 3. Read `docs/INTERFACES.md` — function signatures and contracts between components
-4. Read `docs/PLAN.md` — find your task, note which files you own
-5. Read `DESIGN.md` — the design system is the source of truth for all visual decisions
+4. Read `docs/PLAN.md` — Phases 0-3 (foundation, engines, UI, infra)
+5. Read `docs/PLAN-PHASE4.md` — Phases 4-7 (auth, intelligence, communication, experience)
+6. Find your task in whichever plan doc it belongs to, note which files you own
+7. Read `DESIGN.md` — the design system is the source of truth for all visual decisions
 
 ## File ownership
 
@@ -56,5 +58,5 @@ Always read `DESIGN.md` before making any visual or UI decisions. All font choic
 ## Testing
 
 - Unit tests for all engine functions.
-- Mock external services (Claude API, Voyage AI, Cloud Storage) in tests.
+- Mock external services (Claude API, Firebase Auth, Voyage AI, Cloud Storage, Resend) in tests.
 - Test database operations against the real Postgres (via docker-compose).
