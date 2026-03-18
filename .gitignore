@@ -35,3 +35,8 @@ npm-debug.log*
 next-env.d.ts
 coverage/
 .gstack/
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
