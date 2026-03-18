@@ -1,2 +1,6 @@
-// Schema re-exports — populated in Task 0.2
-export {};
+export * from "./enums";
+export * from "./identity";
+export * from "./curriculum";
+export * from "./sources";
+export * from "./learner-state";
+export * from "./planning";
