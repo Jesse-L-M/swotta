@@ -1,8 +1,6 @@
-import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { getAuthContext } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { users } from "@/db/schema";
 import {
   loadLearnerByUserId,
   loadQualifications,
@@ -24,18 +22,10 @@ import {
 } from "@/components/dashboard/utils";
 
 export default async function DashboardPage() {
-  const { userId: clerkId } = await auth();
-  if (!clerkId) redirect("/sign-in");
+  const ctx = await getAuthContext();
+  if (!ctx) redirect("/login");
 
-  const [user] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.clerkId, clerkId))
-    .limit(1);
-
-  if (!user) redirect("/sign-in");
-
-  const learner = await loadLearnerByUserId(user.id, db);
+  const learner = await loadLearnerByUserId(ctx.user.id, db);
   if (!learner) redirect("/onboarding");
 
   const qualifications = await loadQualifications(learner.id, db);

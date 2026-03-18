@@ -56,7 +56,7 @@ export async function createTestUser(
   const [user] = await db
     .insert(users)
     .values({
-      clerkId: overrides?.clerkId ?? `clerk_test_${n}`,
+      firebaseUid: overrides?.firebaseUid ?? `firebase_test_${n}`,
       email: overrides?.email ?? `test${n}@example.com`,
       name: overrides?.name ?? `Test User ${n}`,
       ...overrides,

@@ -4,10 +4,13 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   DATABASE_TEST_URL: z.string().url().optional(),
 
-  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),
-  CLERK_SECRET_KEY: z.string().min(1),
-  NEXT_PUBLIC_CLERK_SIGN_IN_URL: z.string().default("/sign-in"),
-  NEXT_PUBLIC_CLERK_SIGN_UP_URL: z.string().default("/sign-up"),
+  FIREBASE_PROJECT_ID: z.string().min(1),
+  FIREBASE_CLIENT_EMAIL: z.string().email(),
+  FIREBASE_PRIVATE_KEY: z.string().min(1),
+
+  NEXT_PUBLIC_FIREBASE_API_KEY: z.string().min(1),
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: z.string().min(1),
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID: z.string().min(1),
 
   ANTHROPIC_API_KEY: z.string().min(1),
   VOYAGE_API_KEY: z.string().min(1),
@@ -43,4 +46,8 @@ export function getEnv(): Env {
 
   cached = parsed.data;
   return cached;
+}
+
+export function resetEnvCache(): void {
+  cached = null;
 }

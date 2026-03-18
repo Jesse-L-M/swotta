@@ -47,7 +47,7 @@ export const users = pgTable(
     id: uuid("id")
       .primaryKey()
       .default(sql`gen_random_uuid()`),
-    clerkId: varchar("clerk_id", { length: 255 }).unique().notNull(),
+    firebaseUid: varchar("firebase_uid", { length: 255 }).unique().notNull(),
     email: varchar("email", { length: 255 }).notNull(),
     name: varchar("name", { length: 255 }).notNull(),
     avatarUrl: text("avatar_url"),
@@ -58,7 +58,7 @@ export const users = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => [index("users_clerk_id_idx").on(table.clerkId)]
+  (table) => [index("users_firebase_uid_idx").on(table.firebaseUid)]
 );
 
 // --- memberships ---
