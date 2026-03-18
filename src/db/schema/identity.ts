@@ -10,13 +10,16 @@ import {
   date,
   unique,
   index,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import {
   orgTypeEnum,
   roleTypeEnum,
   policyScopeEnum,
+  learnerQualStatusEnum,
 } from "./enums";
+import { subjects, qualificationVersions } from "./curriculum";
 
 // --- organizations ---
 
@@ -167,8 +170,7 @@ export const staffProfiles = pgTable(
 );
 
 // --- classes ---
-// Forward-references subjects and qualification_versions from curriculum.ts
-// We use string references to avoid circular imports
+// subjects and qualification_versions FKs use AnyPgColumn to avoid circular imports
 
 export const classes = pgTable("classes", {
   id: uuid("id")
@@ -178,8 +180,12 @@ export const classes = pgTable("classes", {
     .notNull()
     .references(() => organizations.id),
   name: varchar("name", { length: 255 }).notNull(),
-  subjectId: uuid("subject_id"),
-  qualificationVersionId: uuid("qualification_version_id"),
+  subjectId: uuid("subject_id").references(
+    (): AnyPgColumn => subjects.id
+  ),
+  qualificationVersionId: uuid("qualification_version_id").references(
+    (): AnyPgColumn => qualificationVersions.id
+  ),
   yearGroup: integer("year_group"),
   academicYear: varchar("academic_year", { length: 9 }).notNull(),
   teacherUserId: uuid("teacher_user_id").references(() => users.id),
@@ -245,10 +251,12 @@ export const learnerQualifications = pgTable(
     learnerId: uuid("learner_id")
       .notNull()
       .references(() => learners.id),
-    qualificationVersionId: uuid("qualification_version_id").notNull(),
+    qualificationVersionId: uuid("qualification_version_id")
+      .notNull()
+      .references((): AnyPgColumn => qualificationVersions.id),
     targetGrade: varchar("target_grade", { length: 10 }),
     examDate: date("exam_date"),
-    status: varchar("status", { length: 20 }).notNull().default("active"),
+    status: learnerQualStatusEnum("status").notNull().default("active"),
     enrolledAt: timestamp("enrolled_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -272,7 +280,7 @@ export const policies = pgTable(
     id: uuid("id")
       .primaryKey()
       .default(sql`gen_random_uuid()`),
-    scopeType: varchar("scope_type", { length: 20 }).notNull(),
+    scopeType: policyScopeEnum("scope_type").notNull(),
     scopeId: uuid("scope_id"),
     key: varchar("key", { length: 100 }).notNull(),
     value: jsonb("value").notNull(),

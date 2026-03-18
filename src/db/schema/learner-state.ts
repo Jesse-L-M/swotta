@@ -10,12 +10,14 @@ import {
   timestamp,
   unique,
   index,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { retentionOutcomeEnum, sessionStatusEnum } from "./enums";
 import { learners } from "./identity";
 import { topics, misconceptionRules } from "./curriculum";
 import { assessmentComponents } from "./curriculum";
+import { studyBlocks, blockAttempts } from "./planning";
 
 // --- learner_topic_state ---
 
@@ -191,7 +193,6 @@ export const memoryConfirmed = pgTable(
 );
 
 // --- misconception_events ---
-// Note: block_attempt_id FK is deferred (references planning.ts blockAttempts)
 
 export const misconceptionEvents = pgTable(
   "misconception_events",
@@ -208,7 +209,9 @@ export const misconceptionEvents = pgTable(
     misconceptionRuleId: uuid("misconception_rule_id").references(
       () => misconceptionRules.id
     ),
-    blockAttemptId: uuid("block_attempt_id"),
+    blockAttemptId: uuid("block_attempt_id").references(
+      (): AnyPgColumn => blockAttempts.id
+    ),
     description: text("description").notNull(),
     severity: integer("severity").notNull(),
     resolved: boolean("resolved").notNull().default(false),
@@ -237,7 +240,9 @@ export const confidenceEvents = pgTable("confidence_events", {
   topicId: uuid("topic_id")
     .notNull()
     .references(() => topics.id),
-  blockAttemptId: uuid("block_attempt_id"),
+  blockAttemptId: uuid("block_attempt_id").references(
+    (): AnyPgColumn => blockAttempts.id
+  ),
   selfRated: decimal("self_rated", { precision: 4, scale: 3 }).notNull(),
   actual: decimal("actual", { precision: 4, scale: 3 }).notNull(),
   delta: decimal("delta", { precision: 4, scale: 3 }).notNull(),
@@ -258,7 +263,9 @@ export const retentionEvents = pgTable("retention_events", {
   topicId: uuid("topic_id")
     .notNull()
     .references(() => topics.id),
-  blockAttemptId: uuid("block_attempt_id"),
+  blockAttemptId: uuid("block_attempt_id").references(
+    (): AnyPgColumn => blockAttempts.id
+  ),
   intervalDays: integer("interval_days").notNull(),
   outcome: retentionOutcomeEnum("outcome").notNull(),
   easeFactorBefore: decimal("ease_factor_before", {
@@ -285,8 +292,10 @@ export const studySessions = pgTable(
     learnerId: uuid("learner_id")
       .notNull()
       .references(() => learners.id),
-    blockId: uuid("block_id"),
-    status: varchar("status", { length: 20 }).notNull().default("active"),
+    blockId: uuid("block_id").references(
+      (): AnyPgColumn => studyBlocks.id
+    ),
+    status: sessionStatusEnum("status").notNull().default("active"),
     startedAt: timestamp("started_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

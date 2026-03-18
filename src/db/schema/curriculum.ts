@@ -10,6 +10,7 @@ import {
   unique,
   index,
   check,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import {
@@ -133,7 +134,9 @@ export const topics = pgTable(
     qualificationVersionId: uuid("qualification_version_id")
       .notNull()
       .references(() => qualificationVersions.id),
-    parentTopicId: uuid("parent_topic_id"),
+    parentTopicId: uuid("parent_topic_id").references(
+      (): AnyPgColumn => topics.id
+    ),
     name: varchar("name", { length: 255 }).notNull(),
     code: varchar("code", { length: 50 }),
     depth: integer("depth").notNull().default(0),

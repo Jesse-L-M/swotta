@@ -23,7 +23,11 @@ const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 
-function validateEnv(): Env {
+let cached: Env | null = null;
+
+export function getEnv(): Env {
+  if (cached) return cached;
+
   const parsed = envSchema.safeParse(process.env);
   if (!parsed.success) {
     const formatted = parsed.error.format();
@@ -36,7 +40,7 @@ function validateEnv(): Env {
       .join("\n");
     throw new Error(`Missing or invalid environment variables:\n${message}`);
   }
-  return parsed.data;
-}
 
-export const env = validateEnv();
+  cached = parsed.data;
+  return cached;
+}

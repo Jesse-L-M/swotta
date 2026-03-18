@@ -1,5 +1,5 @@
 {
-  "id": "73075289-82ba-44dc-bcf7-a8fa56fb7f2c",
+  "id": "34d06de4-9647-444d-90cc-a2b19bb8e083",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -80,6 +80,32 @@
           "tableTo": "organizations",
           "columnsFrom": [
             "org_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "classes_subject_id_subjects_id_fk": {
+          "name": "classes_subject_id_subjects_id_fk",
+          "tableFrom": "classes",
+          "tableTo": "subjects",
+          "columnsFrom": [
+            "subject_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "classes_qualification_version_id_qualification_versions_id_fk": {
+          "name": "classes_qualification_version_id_qualification_versions_id_fk",
+          "tableFrom": "classes",
+          "tableTo": "qualification_versions",
+          "columnsFrom": [
+            "qualification_version_id"
           ],
           "columnsTo": [
             "id"
@@ -420,6 +446,19 @@
           "tableTo": "learners",
           "columnsFrom": [
             "learner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "learner_qualifications_qualification_version_id_qualification_versions_id_fk": {
+          "name": "learner_qualifications_qualification_version_id_qualification_versions_id_fk",
+          "tableFrom": "learner_qualifications",
+          "tableTo": "qualification_versions",
+          "columnsFrom": [
+            "qualification_version_id"
           ],
           "columnsTo": [
             "id"
@@ -1834,6 +1873,19 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "topics_parent_topic_id_topics_id_fk": {
+          "name": "topics_parent_topic_id_topics_id_fk",
+          "tableFrom": "topics",
+          "tableTo": "topics",
+          "columnsFrom": [
+            "parent_topic_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -2546,6 +2598,19 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "confidence_events_block_attempt_id_block_attempts_id_fk": {
+          "name": "confidence_events_block_attempt_id_block_attempts_id_fk",
+          "tableFrom": "confidence_events",
+          "tableTo": "block_attempts",
+          "columnsFrom": [
+            "block_attempt_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -3240,6 +3305,19 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "misconception_events_block_attempt_id_block_attempts_id_fk": {
+          "name": "misconception_events_block_attempt_id_block_attempts_id_fk",
+          "tableFrom": "misconception_events",
+          "tableTo": "block_attempts",
+          "columnsFrom": [
+            "block_attempt_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -3331,6 +3409,19 @@
           "tableTo": "topics",
           "columnsFrom": [
             "topic_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "retention_events_block_attempt_id_block_attempts_id_fk": {
+          "name": "retention_events_block_attempt_id_block_attempts_id_fk",
+          "tableFrom": "retention_events",
+          "tableTo": "block_attempts",
+          "columnsFrom": [
+            "block_attempt_id"
           ],
           "columnsTo": [
             "id"
@@ -3479,6 +3570,19 @@
           "tableTo": "learners",
           "columnsFrom": [
             "learner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "study_sessions_block_id_study_blocks_id_fk": {
+          "name": "study_sessions_block_id_study_blocks_id_fk",
+          "tableFrom": "study_sessions",
+          "tableTo": "study_blocks",
+          "columnsFrom": [
+            "block_id"
           ],
           "columnsTo": [
             "id"
