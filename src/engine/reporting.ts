@@ -9,8 +9,6 @@ import type {
 import {
   studySessions,
   learnerTopicState,
-  blockAttempts,
-  studyBlocks,
   misconceptionEvents,
   weeklyReports,
   safetyFlags,
@@ -193,37 +191,40 @@ export async function generateWeeklyReport(
   });
   const summary = await aiSummarize(summaryPrompt);
 
-  // 9. Persist the report
-  const [report] = await database
-    .insert(weeklyReports)
-    .values({
-      learnerId,
-      periodStart: periodStart.toISOString().slice(0, 10),
-      periodEnd: periodEnd.toISOString().slice(0, 10),
-      summary,
-      masteryChanges: masteryChanges as unknown as Record<string, unknown>,
-      sessionsCompleted,
-      totalStudyMinutes,
-      topicsReviewed,
-      flags: flags.map((f) => ({
-        type: f.type,
-        description: f.description,
-        severity: f.severity,
-      })) as unknown as Record<string, unknown>,
-      sentTo: [] as unknown as Record<string, unknown>,
-    })
-    .returning();
+  // 9. Persist report + safety flags in a single transaction (per INTERFACES.md)
+  const report = await database.transaction(async (tx) => {
+    const [reportRow] = await tx
+      .insert(weeklyReports)
+      .values({
+        learnerId,
+        periodStart: periodStart.toISOString().slice(0, 10),
+        periodEnd: periodEnd.toISOString().slice(0, 10),
+        summary,
+        masteryChanges: masteryChanges as unknown as Record<string, unknown>,
+        sessionsCompleted,
+        totalStudyMinutes,
+        topicsReviewed,
+        flags: flags.map((f) => ({
+          type: f.type,
+          description: f.description,
+          severity: f.severity,
+        })) as unknown as Record<string, unknown>,
+        sentTo: [] as unknown as Record<string, unknown>,
+      })
+      .returning();
 
-  // 10. Persist safety flags
-  for (const flag of flags) {
-    await database.insert(safetyFlags).values({
-      learnerId,
-      flagType: mapFlagTypeToEnum(flag.type),
-      severity: flag.severity,
-      description: flag.description,
-      evidence: flag.evidence as Record<string, unknown>,
-    });
-  }
+    for (const flag of flags) {
+      await tx.insert(safetyFlags).values({
+        learnerId,
+        flagType: mapFlagTypeToEnum(flag.type),
+        severity: flag.severity,
+        description: flag.description,
+        evidence: flag.evidence as Record<string, unknown>,
+      });
+    }
+
+    return reportRow;
+  });
 
   const reportData: WeeklyReportData & { reportId: string } = {
     reportId: report.id,
@@ -554,10 +555,13 @@ export async function generateTeacherInsight(
     isOverdue: m.nextReviewAt !== null && m.nextReviewAt < now,
   }));
 
-  // 3. Get recent session stats (last 30 days)
+  // 3. Get recent session stats (last 30 days) via aggregate
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  const recentSessions = await database
-    .select()
+  const [sessionStats] = await database
+    .select({
+      count: sql<number>`count(*)::int`,
+      totalMinutes: sql<number>`coalesce(sum(${studySessions.totalDurationMinutes}), 0)::int`,
+    })
     .from(studySessions)
     .where(
       and(
@@ -588,11 +592,8 @@ export async function generateTeacherInsight(
   const insightPrompt = buildTeacherInsightPrompt({
     learnerName,
     topicBreakdown,
-    sessionsLast30Days: recentSessions.length,
-    totalMinutesLast30Days: recentSessions.reduce(
-      (sum, s) => sum + (s.totalDurationMinutes ?? 0),
-      0,
-    ),
+    sessionsLast30Days: sessionStats?.count ?? 0,
+    totalMinutesLast30Days: sessionStats?.totalMinutes ?? 0,
     misconceptions: recentMisconceptions.map((m) => ({
       topicName: m.topicName,
       description: m.description,
@@ -742,7 +743,7 @@ function parseTeacherInsightResponse(response: string): {
 
 type FlagTypeEnum = "disengagement" | "avoidance" | "distress" | "overreliance";
 
-function mapFlagTypeToEnum(type: string): FlagTypeEnum {
+export function mapFlagTypeToEnum(type: string): FlagTypeEnum {
   const validTypes: FlagTypeEnum[] = ["disengagement", "avoidance", "distress", "overreliance"];
   if (validTypes.includes(type as FlagTypeEnum)) {
     return type as FlagTypeEnum;

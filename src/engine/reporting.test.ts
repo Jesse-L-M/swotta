@@ -16,8 +16,6 @@ import {
   weeklyReports,
   safetyFlags,
   notificationEvents,
-  studyBlocks,
-  blockAttempts,
 } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import type { LearnerId, UserId, TopicId } from "@/lib/types";

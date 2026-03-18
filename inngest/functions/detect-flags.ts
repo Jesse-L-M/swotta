@@ -2,17 +2,10 @@ import { Inngest } from "inngest";
 import { db } from "@/lib/db";
 import { learnerQualifications, safetyFlags } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { detectFlags } from "@/engine/reporting";
+import { detectFlags, mapFlagTypeToEnum } from "@/engine/reporting";
 import type { LearnerId } from "@/lib/types";
 
 const inngest = new Inngest({ id: "swotta" });
-
-type FlagTypeEnum = "disengagement" | "avoidance" | "distress" | "overreliance";
-
-function toFlagType(type: string): FlagTypeEnum {
-  const valid: FlagTypeEnum[] = ["disengagement", "avoidance", "distress", "overreliance"];
-  return valid.includes(type as FlagTypeEnum) ? (type as FlagTypeEnum) : "distress";
-}
 
 /**
  * Cron: daily 06:00 UTC
@@ -42,7 +35,7 @@ export const detectFlagsCron = inngest.createFunction(
           for (const flag of flags) {
             await db.insert(safetyFlags).values({
               learnerId,
-              flagType: toFlagType(flag.type),
+              flagType: mapFlagTypeToEnum(flag.type),
               severity: flag.severity,
               description: flag.description,
               evidence: flag.evidence as Record<string, unknown>,
