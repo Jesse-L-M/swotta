@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { db as prodDb, type Database } from "@/lib/db";
+import { structuredLog } from "@/lib/logger";
 import type {
   LearnerId,
   UserId,
@@ -1143,13 +1144,22 @@ async function gatherEnrichment(
   const [behaviourResult, calibrationResult, techniqueResult, misconceptionNarratives] =
     await Promise.all([
       detectPatternsFn
-        ? detectPatternsFn(database, learnerId).catch((): null => null)
+        ? detectPatternsFn(database, learnerId).catch((err: unknown) => {
+            structuredLog("enrichment_engine_failed", { engine: "detectPatterns", learnerId, err: String(err) });
+            return null;
+          })
         : Promise.resolve(null),
       calculateCalibrationFn
-        ? calculateCalibrationFn(database, learnerId).catch((): null => null)
+        ? calculateCalibrationFn(database, learnerId).catch((err: unknown) => {
+            structuredLog("enrichment_engine_failed", { engine: "calculateCalibration", learnerId, err: String(err) });
+            return null;
+          })
         : Promise.resolve(null),
       getTechniqueMasteryFn
-        ? getTechniqueMasteryFn(database, learnerId).catch((): TechniqueMastery[] => [])
+        ? getTechniqueMasteryFn(database, learnerId).catch((err: unknown) => {
+            structuredLog("enrichment_engine_failed", { engine: "getTechniqueMastery", learnerId, err: String(err) });
+            return [] as TechniqueMastery[];
+          })
         : Promise.resolve([]),
       buildMisconceptionNarratives(database, learnerId),
     ]);
@@ -1237,7 +1247,8 @@ async function getClosestExamPhase(
       qualificationName: closest.qualName,
       description: phase.toneModifiers.description,
     };
-  } catch {
+  } catch (err: unknown) {
+    structuredLog("enrichment_engine_failed", { engine: "getClosestExamPhase", learnerId, err: String(err) });
     return null;
   }
 }
