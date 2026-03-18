@@ -75,61 +75,32 @@ export function estimateBlockDuration(blockType: BlockType): number {
   return durations[blockType];
 }
 
-export async function getNextBlocks(
+interface TopicCandidate {
+  topicId: TopicId;
+  topicName: string;
+  masteryLevel: number;
+  streak: number;
+  daysOverdue: number;
+  daysUntilExam: number | null;
+  priority: number;
+  blockType: BlockType;
+  duration: number;
+  reason: string;
+}
+
+async function buildCandidatePool(
   learnerId: LearnerId,
+  qualVersionIds: QualificationVersionId[],
+  examDateMap: Map<string, Date | null>,
   db: Database,
-  options?: {
-    qualificationVersionIds?: QualificationVersionId[];
-    maxBlocks?: number;
-    sessionMinutes?: number;
-    focusTopicIds?: TopicId[];
-    excludeBlockTypes?: BlockType[];
-  },
   config: SchedulerConfig = DEFAULT_CONFIG
-): Promise<StudyBlock[]> {
-  const maxBlocks = options?.maxBlocks ?? config.maxBlocksPerSession;
-  const sessionMinutes = options?.sessionMinutes ?? config.defaultSessionMinutes;
-
-  const quals = await db
-    .select()
-    .from(learnerQualifications)
-    .where(
-      and(
-        eq(learnerQualifications.learnerId, learnerId),
-        eq(learnerQualifications.status, "active")
-      )
-    );
-
-  if (quals.length === 0) return [];
-
-  let qualVersionIds = quals.map(
-    (q) => q.qualificationVersionId as QualificationVersionId
-  );
-  if (options?.qualificationVersionIds?.length) {
-    qualVersionIds = qualVersionIds.filter((id) =>
-      options.qualificationVersionIds!.includes(id)
-    );
-    if (qualVersionIds.length === 0) return [];
-  }
-
-  const examDateMap = new Map<string, Date | null>();
-  for (const q of quals) {
-    examDateMap.set(
-      q.qualificationVersionId,
-      q.examDate ? new Date(q.examDate) : null
-    );
-  }
-
+): Promise<TopicCandidate[]> {
   const allTopicStates = await db
     .select({
-      learnerId: learnerTopicState.learnerId,
       topicId: learnerTopicState.topicId,
       masteryLevel: learnerTopicState.masteryLevel,
-      easeFactor: learnerTopicState.easeFactor,
-      intervalDays: learnerTopicState.intervalDays,
-      nextReviewAt: learnerTopicState.nextReviewAt,
       streak: learnerTopicState.streak,
-      reviewCount: learnerTopicState.reviewCount,
+      nextReviewAt: learnerTopicState.nextReviewAt,
       topicName: topics.name,
       qualificationVersionId: topics.qualificationVersionId,
     })
@@ -138,31 +109,13 @@ export async function getNextBlocks(
     .where(eq(learnerTopicState.learnerId, learnerId));
 
   const now = new Date();
-  const candidates: Array<{
-    topicId: TopicId;
-    topicName: string;
-    masteryLevel: number;
-    streak: number;
-    daysOverdue: number;
-    daysUntilExam: number | null;
-    priority: number;
-    blockType: BlockType;
-    duration: number;
-    reason: string;
-  }> = [];
+  const candidates: TopicCandidate[] = [];
 
   for (const state of allTopicStates) {
     if (
       !qualVersionIds.includes(
         state.qualificationVersionId as QualificationVersionId
       )
-    ) {
-      continue;
-    }
-
-    if (
-      options?.focusTopicIds?.length &&
-      !options.focusTopicIds.includes(state.topicId as TopicId)
     ) {
       continue;
     }
@@ -193,11 +146,7 @@ export async function getNextBlocks(
       daysUntilExam,
       config
     );
-
     const blockType = selectBlockType(mastery, streak, daysOverdue);
-
-    if (options?.excludeBlockTypes?.includes(blockType)) continue;
-
     const duration = estimateBlockDuration(blockType);
 
     let reason = "Scheduled review";
@@ -222,6 +171,89 @@ export async function getNextBlocks(
   }
 
   candidates.sort((a, b) => a.priority - b.priority);
+  return candidates;
+}
+
+async function loadQualContext(
+  learnerId: LearnerId,
+  db: Database
+): Promise<{
+  quals: Array<{ qualificationVersionId: string; examDate: string | null; status: string }>;
+  qualVersionIds: QualificationVersionId[];
+  examDateMap: Map<string, Date | null>;
+} | null> {
+  const quals = await db
+    .select()
+    .from(learnerQualifications)
+    .where(
+      and(
+        eq(learnerQualifications.learnerId, learnerId),
+        eq(learnerQualifications.status, "active")
+      )
+    );
+
+  if (quals.length === 0) return null;
+
+  const qualVersionIds = quals.map(
+    (q) => q.qualificationVersionId as QualificationVersionId
+  );
+
+  const examDateMap = new Map<string, Date | null>();
+  for (const q of quals) {
+    examDateMap.set(
+      q.qualificationVersionId,
+      q.examDate ? new Date(q.examDate) : null
+    );
+  }
+
+  return { quals, qualVersionIds, examDateMap };
+}
+
+export async function getNextBlocks(
+  learnerId: LearnerId,
+  db: Database,
+  options?: {
+    qualificationVersionIds?: QualificationVersionId[];
+    maxBlocks?: number;
+    sessionMinutes?: number;
+    focusTopicIds?: TopicId[];
+    excludeBlockTypes?: BlockType[];
+  },
+  config: SchedulerConfig = DEFAULT_CONFIG
+): Promise<StudyBlock[]> {
+  const maxBlocks = options?.maxBlocks ?? config.maxBlocksPerSession;
+  const sessionMinutes = options?.sessionMinutes ?? config.defaultSessionMinutes;
+
+  const ctx = await loadQualContext(learnerId, db);
+  if (!ctx) return [];
+
+  let { qualVersionIds } = ctx;
+  if (options?.qualificationVersionIds?.length) {
+    qualVersionIds = qualVersionIds.filter((id) =>
+      options.qualificationVersionIds!.includes(id)
+    );
+    if (qualVersionIds.length === 0) return [];
+  }
+
+  let candidates = await buildCandidatePool(
+    learnerId,
+    qualVersionIds,
+    ctx.examDateMap,
+    db,
+    config
+  );
+
+  if (options?.focusTopicIds?.length) {
+    candidates = candidates.filter((c) =>
+      options.focusTopicIds!.includes(c.topicId)
+    );
+  }
+
+  if (options?.excludeBlockTypes?.length) {
+    candidates = candidates.filter(
+      (c) => !options.excludeBlockTypes!.includes(c.blockType)
+    );
+  }
 
   const selected: typeof candidates = [];
   let totalMinutes = 0;
@@ -330,117 +362,23 @@ export async function buildWeeklyPlan(
     })
     .returning();
 
-  const quals = await db
-    .select()
-    .from(learnerQualifications)
-    .where(
-      and(
-        eq(learnerQualifications.learnerId, learnerId),
-        eq(learnerQualifications.status, "active")
-      )
-    );
-
-  if (quals.length === 0) {
+  const ctx = await loadQualContext(learnerId, db);
+  if (!ctx) {
     return { planId: plan.id, blocks: [] };
-  }
-
-  const qualVersionIds = quals.map(
-    (q) => q.qualificationVersionId as QualificationVersionId
-  );
-
-  const examDateMap = new Map<string, Date | null>();
-  for (const q of quals) {
-    examDateMap.set(
-      q.qualificationVersionId,
-      q.examDate ? new Date(q.examDate) : null
-    );
   }
 
   if (options?.examDates) {
     for (const ed of options.examDates) {
-      examDateMap.set(ed.qualificationVersionId, ed.date);
+      ctx.examDateMap.set(ed.qualificationVersionId, ed.date);
     }
   }
 
-  const allTopicStates = await db
-    .select({
-      topicId: learnerTopicState.topicId,
-      masteryLevel: learnerTopicState.masteryLevel,
-      streak: learnerTopicState.streak,
-      nextReviewAt: learnerTopicState.nextReviewAt,
-      topicName: topics.name,
-      qualificationVersionId: topics.qualificationVersionId,
-    })
-    .from(learnerTopicState)
-    .innerJoin(topics, eq(learnerTopicState.topicId, topics.id))
-    .where(eq(learnerTopicState.learnerId, learnerId));
-
-  const now = new Date();
-  const topicPool: Array<{
-    topicId: TopicId;
-    topicName: string;
-    masteryLevel: number;
-    streak: number;
-    daysOverdue: number;
-    daysUntilExam: number | null;
-    priority: number;
-    blockType: BlockType;
-    duration: number;
-    reason: string;
-  }> = [];
-
-  for (const state of allTopicStates) {
-    if (
-      !qualVersionIds.includes(
-        state.qualificationVersionId as QualificationVersionId
-      )
-    ) {
-      continue;
-    }
-
-    const mastery = Number(state.masteryLevel);
-    let daysOverdue = 0;
-    if (state.nextReviewAt) {
-      const overdueMs = now.getTime() - state.nextReviewAt.getTime();
-      daysOverdue = Math.max(0, Math.floor(overdueMs / (1000 * 60 * 60 * 24)));
-    }
-
-    const examDate = examDateMap.get(state.qualificationVersionId) ?? null;
-    let daysUntilExam: number | null = null;
-    if (examDate) {
-      daysUntilExam = Math.max(
-        0,
-        Math.floor(
-          (examDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-        )
-      );
-    }
-
-    const priority = calculateTopicPriority(mastery, daysOverdue, daysUntilExam);
-    const blockType = selectBlockType(mastery, state.streak, daysOverdue);
-    const duration = estimateBlockDuration(blockType);
-
-    let reason = "Scheduled review";
-    if (daysOverdue > 0) reason = "Overdue review";
-    if (mastery < 0.3) reason = "Low mastery";
-    if (daysUntilExam !== null && daysUntilExam < 14)
-      reason = "Exam approaching";
-
-    topicPool.push({
-      topicId: state.topicId as TopicId,
-      topicName: state.topicName,
-      masteryLevel: mastery,
-      streak: state.streak,
-      daysOverdue,
-      daysUntilExam,
-      priority,
-      blockType,
-      duration,
-      reason,
-    });
-  }
-
-  topicPool.sort((a, b) => a.priority - b.priority);
+  const topicPool = await buildCandidatePool(
+    learnerId,
+    ctx.qualVersionIds,
+    ctx.examDateMap,
+    db
+  );
 
   const allBlocks: StudyBlock[] = [];
 
