@@ -121,10 +121,10 @@ export default function Home() {
       <section className="border-t border-cream-200">
         <div className="mx-auto max-w-[1120px] px-6 py-28 md:px-8 md:py-36">
           <div className="grid items-center gap-12 lg:grid-cols-[1fr_1fr] lg:gap-16">
-            <FadeIn y={32}>
+            <FadeIn y={32} className="order-2 lg:order-1">
               <SessionMockup />
             </FadeIn>
-            <div>
+            <div className="order-1 lg:order-2">
               <FadeIn>
                 <p className="text-xs font-semibold uppercase tracking-[0.15em] text-teal">
                   Personalised
