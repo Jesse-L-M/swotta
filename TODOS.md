@@ -1,5 +1,41 @@
 # TODOs
 
+## Guardian linking: replace raw learner UUID fallback with real invite tokens
+
+**Added:** 2026-03-19 | **Source:** Auth review follow-up
+
+**What:** Add a real guardian-invite mechanism for `POST /api/auth/link-guardian`, such as a dedicated `guardian_invites` table or a signed, short-lived invite token issued from the learner side.
+
+**Why:** The route now accepts `inviteCode` as the public contract again, but for compatibility it still resolves that code directly to the learner UUID. That preserves the current flow without breaking callers, but it is not a true invite code and still exposes raw learner identifiers.
+
+**Pros:** Better security, better UX, revocable/expiring invites, and a cleaner boundary between public API inputs and internal primary keys.
+
+**Cons:** Requires schema/API work and a small issuing flow in the learner/onboarding experience.
+
+**Context:** `src/app/api/auth/link-guardian/route.ts` currently accepts `inviteCode` plus a temporary `learnerId` fallback while still looking learners up by ID. This should be replaced once a proper invite flow exists.
+
+**Depends on:** Nothing blocking, but it should be done before exposing guardian linking widely.
+
+---
+
+## Guardian linking: remove `learnerId` compatibility alias after clients migrate
+
+**Added:** 2026-03-19 | **Source:** Auth review follow-up
+
+**What:** Remove the temporary `learnerId` request-body alias from `POST /api/auth/link-guardian` and require only `inviteCode`.
+
+**Why:** The alias is useful for a safe transition, but keeping both inputs indefinitely makes the route contract fuzzier and encourages new callers to keep passing internal learner IDs.
+
+**Pros:** Clearer API contract, easier validation, and no accidental drift back to the raw-ID flow.
+
+**Cons:** Needs coordination with any clients/tests still using `learnerId`.
+
+**Context:** `src/app/api/auth/link-guardian/route.ts` currently accepts either `inviteCode` or `learnerId`, and `src/app/api/auth/auth.test.ts` keeps one compatibility test to protect the transition.
+
+**Depends on:** All callers migrated to `inviteCode`.
+
+---
+
 ## Wire Clerk auth into parent pages
 
 **Added:** 2026-03-18 | **Source:** Task 2.3 eng review

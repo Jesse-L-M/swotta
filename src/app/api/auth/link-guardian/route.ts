@@ -1,16 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { learners, guardianLinks } from "@/db/schema";
-import { requireAuth } from "@/lib/auth";
+import { learners, guardianLinks, memberships } from "@/db/schema";
+import { AuthError, requireRole } from "@/lib/auth";
 import { eq, and } from "drizzle-orm";
 import { structuredLog } from "@/lib/logger";
 
 const linkSchema = z
   .object({
-    learnerId: z
-      .string({ required_error: "learnerId is required" })
-      .uuid("Invalid learner ID format"),
+    inviteCode: z.string().uuid("Invalid invite code format").optional(),
+    learnerId: z.string().uuid("Invalid learner ID format").optional(),
     relationship: z
       .string()
       .trim()
@@ -18,17 +17,38 @@ const linkSchema = z
       .max(50, "Relationship must be 50 characters or fewer")
       .default("parent"),
   })
-  .strict();
+  .strict()
+  .superRefine((data, ctx) => {
+    if (!data.inviteCode && !data.learnerId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["inviteCode"],
+        message: "inviteCode is required",
+      });
+    }
+
+    if (data.inviteCode && data.learnerId && data.inviteCode !== data.learnerId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["inviteCode"],
+        message: "inviteCode and learnerId must match when both are provided",
+      });
+    }
+  });
 
 export async function POST(request: NextRequest) {
   let ctx;
   try {
-    ctx = await requireAuth();
-  } catch {
-    return NextResponse.json(
-      { error: { code: "UNAUTHENTICATED", message: "Authentication required" } },
-      { status: 401 }
-    );
+    ctx = await requireRole("guardian");
+  } catch (error: unknown) {
+    if (error instanceof AuthError) {
+      return NextResponse.json(
+        { error: { code: error.code, message: error.message } },
+        { status: error.code === "UNAUTHENTICATED" ? 401 : 403 }
+      );
+    }
+
+    throw error;
   }
 
   const body = await request.json();
@@ -41,31 +61,28 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { learnerId, relationship } = parsed.data;
+  const { inviteCode, learnerId, relationship } = parsed.data;
+  const learnerLookupId = inviteCode ?? learnerId;
 
   const [learner] = await db
     .select({ id: learners.id, orgId: learners.orgId, userId: learners.userId })
     .from(learners)
-    .where(eq(learners.id, learnerId))
+    .where(eq(learners.id, learnerLookupId!))
     .limit(1);
 
   if (!learner) {
     return NextResponse.json(
-      { error: { code: "LEARNER_NOT_FOUND", message: "Learner not found" } },
+      { error: { code: "INVALID_CODE", message: "Invalid invite code" } },
       { status: 404 }
     );
   }
 
-  const hasGuardianMembership = ctx.roles.some(
-    (role) => role.orgId === learner.orgId && role.role === "guardian"
-  );
-
-  if (!hasGuardianMembership || learner.userId === ctx.user.id) {
+  if (learner.userId === ctx.user.id) {
     return NextResponse.json(
       {
         error: {
           code: "FORBIDDEN",
-          message: "Guardian membership in the learner org is required",
+          message: "Cannot link yourself as guardian",
         },
       },
       { status: 403 }
@@ -91,10 +108,21 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  await db.insert(guardianLinks).values({
-    guardianUserId: ctx.user.id,
-    learnerId: learner.id,
-    relationship,
+  await db.transaction(async (tx) => {
+    await tx.insert(guardianLinks).values({
+      guardianUserId: ctx.user.id,
+      learnerId: learner.id,
+      relationship,
+    });
+
+    await tx
+      .insert(memberships)
+      .values({
+        userId: ctx.user.id,
+        orgId: learner.orgId,
+        role: "guardian",
+      })
+      .onConflictDoNothing();
   });
 
   structuredLog("auth.link-guardian", {
