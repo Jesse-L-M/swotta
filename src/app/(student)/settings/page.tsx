@@ -1,49 +1,96 @@
+import { redirect } from "next/navigation";
+import { AuthError, getAuthContext } from "@/lib/auth";
 import { PreferencesForm } from "@/components/settings/preferences-form";
 import { NotificationConfig } from "@/components/settings/notification-config";
-import { DEFAULT_PREFERENCES, DEFAULT_NOTIFICATION_CONFIG } from "@/components/settings/settings-schemas";
+import {
+  loadSettingsPageData,
+  saveNotificationConfig,
+  savePreferences,
+  type SettingsPageData,
+} from "./actions";
 
-// TODO: Get learnerId/guardianUserId from auth context (Task 2.1)
-// For now, this renders with defaults. When auth is wired up,
-// call getPreferences(learnerId) and getNotificationConfig(guardianUserId, learnerId).
+export default async function SettingsPage() {
+  const ctx = await getAuthContext();
+  if (!ctx) redirect("/login");
 
-export default function SettingsPage() {
+  let settingsData: SettingsPageData;
+  try {
+    settingsData = await loadSettingsPageData();
+  } catch (error) {
+    if (error instanceof AuthError) {
+      redirect("/onboarding");
+    }
+
+    throw error;
+  }
+
   return (
-    <div className="mx-auto max-w-2xl space-y-8 p-6">
+    <div className="mx-auto max-w-3xl space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold">Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Manage your study preferences and notification settings.
-        </p>
+        <div className="overflow-hidden rounded-[20px] border border-[#E5E0D6] bg-[linear-gradient(135deg,_rgba(255,255,255,0.94)_0%,_rgba(250,246,240,0.96)_60%,_rgba(228,240,237,0.92)_100%)] px-6 py-8 shadow-[0_1px_3px_rgba(26,25,23,0.05)] sm:px-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#2D7A6E]">
+            Settings
+          </p>
+          <h1 className="mt-4 font-[family-name:var(--font-serif)] text-3xl leading-tight text-[#1A1917] sm:text-4xl">
+            Shape how Swotta supports your study.
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#5C5950] sm:text-base">
+            Update your session rhythm, revision targets, and the family
+            notifications tied to your progress.
+          </p>
+        </div>
       </div>
 
-      <section className="space-y-4 rounded-lg border p-6">
-        <div>
-          <h2 className="text-lg font-medium">Study Preferences</h2>
-          <p className="text-sm text-muted-foreground">
-            Customise how your study sessions are structured.
+      <section className="space-y-6 rounded-[16px] border border-[#E5E0D6] bg-white p-6 shadow-[0_1px_3px_rgba(26,25,23,0.05)] sm:p-8">
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#2D7A6E]">
+            Study Preferences
+          </p>
+          <h2 className="font-[family-name:var(--font-serif)] text-2xl text-[#1A1917]">
+            Set the pace for each study week.
+          </h2>
+          <p className="max-w-2xl text-sm leading-6 text-[#5C5950]">
+            These choices shape the default session length, difficulty target,
+            study window, and reminder cadence across the learner experience.
           </p>
         </div>
         <PreferencesForm
-          initialValues={DEFAULT_PREFERENCES}
-          onSave={async () => {
-            // TODO: Wire to savePreferences server action
-          }}
+          initialValues={settingsData.preferences}
+          onSave={savePreferences}
         />
       </section>
 
-      <section className="space-y-4 rounded-lg border p-6">
-        <div>
-          <h2 className="text-lg font-medium">Notifications</h2>
-          <p className="text-sm text-muted-foreground">
-            Control what notifications you receive.
+      <section className="space-y-6 rounded-[16px] border border-[#E5E0D6] bg-white p-6 shadow-[0_1px_3px_rgba(26,25,23,0.05)] sm:p-8">
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#D4654A]">
+            Household Notifications
+          </p>
+          <h2 className="font-[family-name:var(--font-serif)] text-2xl text-[#1A1917]">
+            Manage the linked guardian alerts.
+          </h2>
+          <p className="max-w-2xl text-sm leading-6 text-[#5C5950]">
+            These settings govern the weekly report and safety alerts that go to
+            the guardian connections already attached to this learner.
           </p>
         </div>
-        <NotificationConfig
-          initialValues={DEFAULT_NOTIFICATION_CONFIG}
-          onSave={async () => {
-            // TODO: Wire to saveNotificationConfig server action
-          }}
-        />
+
+        {settingsData.notificationConfig.mode === "single_guardian" ? (
+          <NotificationConfig
+            initialValues={settingsData.notificationConfig.initialValues}
+            onSave={saveNotificationConfig}
+          />
+        ) : settingsData.notificationConfig.mode === "no_guardians" ? (
+          <div className="rounded-[8px] border-l-[3px] border-[#949085] bg-[#F0ECE4] px-4 py-3 text-sm text-[#5C5950]">
+            No guardian is linked to this learner yet, so there are no family
+            notifications to manage here.
+          </div>
+        ) : (
+          <div className="rounded-[8px] border-l-[3px] border-[#D4654A] bg-[#FAEAE5] px-4 py-3 text-sm text-[#D4654A]">
+            {settingsData.notificationConfig.guardianCount} guardians are linked
+            to this learner. This screen still needs a per-guardian editing flow
+            before those notification settings can be changed safely.
+          </div>
+        )}
       </section>
     </div>
   );
