@@ -1,13 +1,18 @@
-import { describe, it, expect } from "vitest";
-import { buildStoragePath, createGCSClient } from "./storage";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  buildStoragePath,
+  createConfiguredStorageClient,
+  createGCSClient,
+  StorageConfigurationError,
+} from "./storage";
 
 describe("buildStoragePath", () => {
-  it("builds correct path with simple filename", () => {
+  it("builds the correct path with a simple filename", () => {
     const path = buildStoragePath("org-1", "col-1", "file-1", "notes.pdf");
     expect(path).toBe("sources/org-1/col-1/file-1/notes.pdf");
   });
 
-  it("sanitizes special characters in filename", () => {
+  it("sanitizes special characters in the filename", () => {
     const path = buildStoragePath(
       "org-1",
       "col-1",
@@ -33,29 +38,87 @@ describe("buildStoragePath", () => {
   });
 });
 
-describe("createGCSClient", () => {
-  const client = createGCSClient("test-bucket", "test-project");
+describe("createConfiguredStorageClient", () => {
+  const originalEnv = { ...process.env };
 
-  it("generates signed upload URL with bucket name", async () => {
-    const url = await client.generateSignedUploadUrl(
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  it("returns an unconfigured client when bucket env is missing", async () => {
+    delete process.env.GCS_BUCKET_NAME;
+    delete process.env.GCS_PROJECT_ID;
+
+    const client = createConfiguredStorageClient();
+
+    expect(client.mode).toBe("unconfigured");
+    await expect(
+      client.uploadFile("sources/org/col/file/doc.pdf", new Uint8Array(), "application/pdf")
+    ).rejects.toThrow(StorageConfigurationError);
+  });
+});
+
+describe("createGCSClient", () => {
+  it("uploads, signs, and deletes through the configured storage factory", async () => {
+    const save = vi.fn().mockResolvedValue(undefined);
+    const getSignedUrl = vi
+      .fn()
+      .mockResolvedValueOnce(["https://example.com/upload"])
+      .mockResolvedValueOnce(["https://example.com/download"]);
+    const deleteFile = vi.fn().mockResolvedValue(undefined);
+    const bucket = {
+      file: vi.fn(() => ({
+        getSignedUrl,
+        save,
+        delete: deleteFile,
+      })),
+    };
+    const storageFactory = vi.fn().mockResolvedValue({
+      bucket: vi.fn(() => bucket),
+    });
+    const client = createGCSClient("test-bucket", "test-project", {
+      clientEmail: "storage@test.example",
+      privateKey: "private-key",
+      storageFactory,
+    });
+
+    await client.uploadFile(
+      "sources/org/col/file/doc.pdf",
+      new Uint8Array([1, 2, 3]),
+      "application/pdf"
+    );
+    const uploadUrl = await client.generateSignedUploadUrl(
       "sources/org/col/file/doc.pdf",
       "application/pdf",
       50 * 1024 * 1024
     );
-    expect(url).toContain("test-bucket");
-    expect(url).toContain("uploadType=resumable");
-  });
-
-  it("generates signed download URL with bucket name", async () => {
-    const url = await client.generateSignedDownloadUrl(
+    const downloadUrl = await client.generateSignedDownloadUrl(
       "sources/org/col/file/doc.pdf"
     );
-    expect(url).toContain("test-bucket");
+    await client.deleteFile("sources/org/col/file/doc.pdf");
+
+    expect(client.mode).toBe("gcs");
+    expect(storageFactory).toHaveBeenCalled();
+    expect(save).toHaveBeenCalledWith(new Uint8Array([1, 2, 3]), {
+      contentType: "application/pdf",
+      resumable: false,
+      metadata: { contentType: "application/pdf" },
+    });
+    expect(uploadUrl).toBe("https://example.com/upload");
+    expect(downloadUrl).toBe("https://example.com/download");
+    expect(deleteFile).toHaveBeenCalled();
   });
 
-  it("deleteFile completes without error", async () => {
+  it("returns an unconfigured client without credentials", async () => {
+    const client = createGCSClient("test-bucket", "test-project");
+
+    expect(client.mode).toBe("unconfigured");
     await expect(
-      client.deleteFile("sources/org/col/file/doc.pdf")
-    ).resolves.toBeUndefined();
+      client.generateSignedUploadUrl(
+        "sources/org/col/file/doc.pdf",
+        "application/pdf",
+        50 * 1024 * 1024
+      )
+    ).rejects.toThrow(StorageConfigurationError);
   });
 });

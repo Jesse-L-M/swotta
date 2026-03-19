@@ -1,15 +1,10 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
 import {
-  validateFile,
   validateFilesBatch,
-  formatFileSize,
   getAcceptString,
-  getMimeTypeLabel,
   MAX_FILE_SIZE_LABEL,
-  type FileValidationResult,
 } from "./upload-utils";
 
 interface UploadDropzoneProps {
@@ -21,7 +16,6 @@ interface UploadDropzoneProps {
 export function UploadDropzone({
   onFilesSelected,
   disabled = false,
-  maxFiles = 10,
 }: UploadDropzoneProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
@@ -102,9 +96,13 @@ export function UploadDropzone({
           }
         }}
         className={`
-          flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-8 transition-colors
+          flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 transition-colors
           ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}
-          ${isDragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/50 hover:bg-muted/50"}
+          ${
+            isDragOver
+              ? "border-[#2D7A6E] bg-[#E4F0ED]"
+              : "border-[#D9D2C5] bg-white hover:border-[#2D7A6E]/60 hover:bg-[#F5F2EC]"
+          }
         `}
       >
         <svg
@@ -123,10 +121,10 @@ export function UploadDropzone({
           <line x1="12" y1="3" x2="12" y2="15" />
         </svg>
         <div className="text-center">
-          <p className="text-sm font-medium">
+          <p className="text-sm font-medium text-[#1A1917]">
             {isDragOver ? "Drop files here" : "Drag and drop files here"}
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1 text-xs text-[#5C5950]">
             or click to browse. PDF and DOCX up to {MAX_FILE_SIZE_LABEL}
           </p>
         </div>
@@ -145,11 +143,11 @@ export function UploadDropzone({
       {errors.length > 0 && (
         <div
           role="alert"
-          className="rounded-md border border-destructive/30 bg-destructive/5 p-3"
+          className="rounded-lg border-l-[3px] border-[#D4654A] bg-[#FAEAE5] p-3"
         >
           <ul className="space-y-1">
             {errors.map((error, i) => (
-              <li key={i} className="text-sm text-destructive">
+              <li key={i} className="text-sm text-[#D4654A]">
                 {error}
               </li>
             ))}

@@ -13,23 +13,23 @@ const STATUS_CONFIG: Record<
   { label: string; color: string; icon: string }
 > = {
   pending: {
-    label: "Pending",
-    color: "text-muted-foreground bg-muted",
+    label: "Queued",
+    color: "bg-[#F0ECE4] text-[#5C5950]",
     icon: "clock",
   },
   processing: {
     label: "Processing",
-    color: "text-chart-1 bg-chart-1/10",
+    color: "bg-[#E4F0ED] text-[#2D7A6E]",
     icon: "loader",
   },
   ready: {
     label: "Ready",
-    color: "text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-950",
+    color: "bg-[#E4F0ED] text-[#2D7A6E]",
     icon: "check",
   },
   failed: {
     label: "Failed",
-    color: "text-destructive bg-destructive/10",
+    color: "bg-[#FAEAE5] text-[#D4654A]",
     icon: "x",
   },
 };
@@ -68,7 +68,7 @@ export function ProcessingStatus({
 
 interface UploadProgressBarProps {
   filename: string;
-  progress: number;
+  progress: number | null;
   status: "uploading" | "processing" | "complete" | "error";
   errorMessage?: string;
 }
@@ -79,7 +79,8 @@ export function UploadProgressBar({
   status,
   errorMessage,
 }: UploadProgressBarProps) {
-  const clampedProgress = Math.max(0, Math.min(100, progress));
+  const clampedProgress =
+    progress === null ? null : Math.max(0, Math.min(100, progress));
 
   return (
     <div className="space-y-1.5">
@@ -87,32 +88,44 @@ export function UploadProgressBar({
         <span className="truncate font-medium" title={filename}>
           {filename}
         </span>
-        <span className="ml-2 shrink-0 text-xs text-muted-foreground">
-          {status === "uploading" && `${Math.round(clampedProgress)}%`}
-          {status === "processing" && "Processing..."}
-          {status === "complete" && "Done"}
+        <span className="ml-2 shrink-0 text-xs text-[#5C5950]">
+          {status === "uploading"
+            ? clampedProgress === null
+              ? "Uploading..."
+              : `${Math.round(clampedProgress)}%`
+            : null}
+          {status === "processing" && "Queued for processing"}
+          {status === "complete" && "Uploaded"}
           {status === "error" && "Failed"}
         </span>
       </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-        <div
-          className={`h-full rounded-full transition-all duration-300 ${
-            status === "error"
-              ? "bg-destructive"
-              : status === "complete"
-                ? "bg-green-600"
-                : "bg-primary"
-          }`}
-          style={{ width: `${clampedProgress}%` }}
-          role="progressbar"
-          aria-valuenow={clampedProgress}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label={`Upload progress for ${filename}`}
-        />
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#F0ECE4]">
+        {clampedProgress === null && status === "uploading" ? (
+          <div
+            className="h-full w-1/2 animate-pulse rounded-full bg-[#2D7A6E]"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`Upload progress for ${filename}`}
+          />
+        ) : (
+          <div
+            className={`h-full rounded-full transition-all duration-300 ${
+              status === "error"
+                ? "bg-[#D4654A]"
+                : "bg-[#2D7A6E]"
+            }`}
+            style={{ width: `${clampedProgress ?? 100}%` }}
+            role="progressbar"
+            aria-valuenow={clampedProgress ?? 100}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`Upload progress for ${filename}`}
+          />
+        )}
       </div>
       {status === "error" && errorMessage && (
-        <p className="text-xs text-destructive">{errorMessage}</p>
+        <p className="text-xs text-[#D4654A]">{errorMessage}</p>
       )}
     </div>
   );
