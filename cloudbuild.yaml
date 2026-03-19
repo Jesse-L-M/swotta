@@ -1,5 +1,5 @@
 steps:
-  # Step 1: Generate .env.production for NEXT_PUBLIC_ build args
+  # Step 1: Generate .env.production for Firebase client build-time vars
   # Next.js reads this file during `next build` to inline client-side env vars
   - name: "ubuntu"
     id: "env-setup"
@@ -8,9 +8,9 @@ steps:
       - "-c"
       - |
         cat > .env.production << EOF
-        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${_NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-        NEXT_PUBLIC_CLERK_SIGN_IN_URL=${_NEXT_PUBLIC_CLERK_SIGN_IN_URL}
-        NEXT_PUBLIC_CLERK_SIGN_UP_URL=${_NEXT_PUBLIC_CLERK_SIGN_UP_URL}
+        NEXT_PUBLIC_FIREBASE_API_KEY=${_NEXT_PUBLIC_FIREBASE_API_KEY}
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID=${_NEXT_PUBLIC_FIREBASE_PROJECT_ID}
         EOF
 
   # Step 2: Build Docker image
@@ -83,6 +83,8 @@ steps:
       - "--image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/swotta:${SHORT_SHA}"
       - "--region=${_REGION}"
       - "--platform=managed"
+      # Keep the runtime Firebase admin credentials in sync with the image deploy path.
+      - "--update-secrets=FIREBASE_PROJECT_ID=${_FIREBASE_PROJECT_ID_SECRET}:latest,FIREBASE_CLIENT_EMAIL=${_FIREBASE_CLIENT_EMAIL_SECRET}:latest,FIREBASE_PRIVATE_KEY=${_FIREBASE_PRIVATE_KEY_SECRET}:latest"
       - "--quiet"
     waitFor: ["migrate"]
 
@@ -96,9 +98,12 @@ substitutions:
   _CLOUD_RUN_SERVICE: "swotta-app-production"
   _ARTIFACT_REPO: "swotta"
   _DB_INSTANCE: ""
-  _NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ""
-  _NEXT_PUBLIC_CLERK_SIGN_IN_URL: "/sign-in"
-  _NEXT_PUBLIC_CLERK_SIGN_UP_URL: "/sign-up"
+  _NEXT_PUBLIC_FIREBASE_API_KEY: ""
+  _NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ""
+  _NEXT_PUBLIC_FIREBASE_PROJECT_ID: ""
+  _FIREBASE_PROJECT_ID_SECRET: "swotta-firebase-project-id-production"
+  _FIREBASE_CLIENT_EMAIL_SECRET: "swotta-firebase-client-email-production"
+  _FIREBASE_PRIVATE_KEY_SECRET: "swotta-firebase-private-key-production"
 
 options:
   logging: CLOUD_LOGGING_ONLY
