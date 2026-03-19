@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, type FormEvent } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   IntroScreen,
@@ -27,7 +27,7 @@ export default function DiagnosticPage() {
   const [qualificationName, setQualificationName] = useState("");
   const [topics, setTopics] = useState<DiagnosticTopic[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [systemPrompt, setSystemPrompt] = useState("");
+  const [pendingMessage, setPendingMessage] = useState<ChatMessage | null>(null);
   const [progress, setProgress] = useState<DiagnosticProgress>({
     explored: [],
     current: null,
@@ -44,7 +44,7 @@ export default function DiagnosticPage() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, pendingMessage, loading]);
 
   const apiCall = useCallback(
     async (body: Record<string, unknown>) => {
@@ -77,10 +77,11 @@ export default function DiagnosticPage() {
         qualificationVersionId,
       });
       if (!data) throw new Error("No data returned");
-      setSystemPrompt(data.systemPrompt as string);
       setQualificationName(data.qualificationName as string);
       setTopics(data.topics as DiagnosticTopic[]);
       setProgress(data.progress as DiagnosticProgress);
+      setPendingMessage(null);
+      setIsComplete(false);
       setMessages([
         { role: "user", content: "I'm ready to start the diagnostic." },
         { role: "assistant", content: data.reply as string },
@@ -101,7 +102,7 @@ export default function DiagnosticPage() {
 
     const userMessage: ChatMessage = { role: "user", content: text };
     const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
+    setPendingMessage(userMessage);
     setInput("");
     setLoading(true);
     setError(null);
@@ -110,7 +111,6 @@ export default function DiagnosticPage() {
       const data = await apiCall({
         action: "message",
         qualificationVersionId,
-        systemPrompt,
         messages: updatedMessages,
       });
       if (!data) throw new Error("No data returned");
@@ -118,10 +118,13 @@ export default function DiagnosticPage() {
       const newProgress = data.progress as DiagnosticProgress;
       const complete = data.isComplete as boolean;
 
+      setPendingMessage(null);
       setMessages([...updatedMessages, { role: "assistant", content: reply }]);
       setProgress(newProgress);
       setIsComplete(complete);
     } catch (err: unknown) {
+      setPendingMessage(null);
+      setInput(text);
       setError(
         err instanceof Error ? err.message : "Failed to send message"
       );
@@ -217,6 +220,7 @@ export default function DiagnosticPage() {
           {messages.map((msg, i) => (
             <MessageBubble key={i} message={msg} />
           ))}
+          {pendingMessage && <MessageBubble message={pendingMessage} />}
           {loading && (
             <div className="flex items-center gap-2 text-[#949085]">
               <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[#2D7A6E]" />
