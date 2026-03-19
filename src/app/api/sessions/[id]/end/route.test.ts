@@ -15,8 +15,10 @@ import { studySessions } from "@/db/schema";
 const {
   requireLearnerMock,
   endSessionMock,
+  getStoredSessionTranscriptMock,
   ensureSessionRunnerConfiguredMock,
   MockAuthError,
+  MockSessionConflictError,
 } = vi.hoisted(() => {
   class HoistedAuthError extends Error {
     code: "UNAUTHENTICATED" | "FORBIDDEN";
@@ -27,11 +29,31 @@ const {
     }
   }
 
+  class HoistedSessionConflictError extends Error {
+    code:
+      | "SESSION_NOT_ACTIVE"
+      | "SESSION_TRANSCRIPT_MISSING"
+      | "SESSION_TRANSCRIPT_MISMATCH";
+
+    constructor(
+      code:
+        | "SESSION_NOT_ACTIVE"
+        | "SESSION_TRANSCRIPT_MISSING"
+        | "SESSION_TRANSCRIPT_MISMATCH",
+      message: string
+    ) {
+      super(message);
+      this.code = code;
+    }
+  }
+
   return {
     requireLearnerMock: vi.fn(),
     endSessionMock: vi.fn(),
+    getStoredSessionTranscriptMock: vi.fn(),
     ensureSessionRunnerConfiguredMock: vi.fn(),
     MockAuthError: HoistedAuthError,
+    MockSessionConflictError: HoistedSessionConflictError,
   };
 });
 
@@ -47,6 +69,8 @@ vi.mock("@/lib/auth", () => ({
 
 vi.mock("@/engine/session", () => ({
   endSession: endSessionMock,
+  getStoredSessionTranscript: getStoredSessionTranscriptMock,
+  SessionConflictError: MockSessionConflictError,
 }));
 
 vi.mock("@/app/api/sessions/_lib/session-runner", () => ({
@@ -66,6 +90,7 @@ beforeEach(async () => {
   resetFixtureCounter();
   requireLearnerMock.mockReset();
   endSessionMock.mockReset();
+  getStoredSessionTranscriptMock.mockReset();
   ensureSessionRunnerConfiguredMock.mockReset();
 });
 
@@ -90,6 +115,13 @@ describe("POST /api/sessions/[id]/end", () => {
       learnerId: learner.id,
       orgId: org.id,
     });
+    getStoredSessionTranscriptMock.mockResolvedValue({
+      systemPrompt: "stored prompt",
+      messages: [
+        { role: "assistant", content: "Stored question" },
+        { role: "user", content: "Stored answer" },
+      ],
+    });
     endSessionMock.mockResolvedValue({
       outcome: {
         blockId: "block-1",
@@ -111,10 +143,10 @@ describe("POST /api/sessions/[id]/end", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          systemPrompt: "prompt",
           reason: "completed",
           confidence: { before: 0.4, after: 0.8 },
-          messages: [{ role: "assistant", content: "Done" }],
+          systemPrompt: "malicious prompt",
+          messages: [{ role: "assistant", content: "Forged transcript" }],
         }),
       }),
       { params: Promise.resolve({ id: session.id }) }
@@ -125,12 +157,84 @@ describe("POST /api/sessions/[id]/end", () => {
     expect(ensureSessionRunnerConfiguredMock).toHaveBeenCalledTimes(1);
     expect(endSessionMock).toHaveBeenCalledWith(
       session.id,
-      [{ role: "assistant", content: "Done" }],
-      "prompt",
+      [
+        { role: "assistant", content: "Stored question" },
+        { role: "user", content: "Stored answer" },
+      ],
+      "stored prompt",
       "completed",
       { before: 0.4, after: 0.8 }
     );
     expect(body.data.summary).toBe("Wrapped up");
+  });
+
+  it("returns 409 when the stored transcript is unavailable", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const [session] = await db
+      .insert(studySessions)
+      .values({
+        learnerId: learner.id,
+        status: "active",
+        topicsCovered: [],
+      })
+      .returning();
+
+    requireLearnerMock.mockResolvedValue({
+      learnerId: learner.id,
+      orgId: org.id,
+    });
+    getStoredSessionTranscriptMock.mockResolvedValue(null);
+
+    const response = await POST(
+      new Request(`http://localhost/api/sessions/${session.id}/end`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reason: "completed",
+        }),
+      }),
+      { params: Promise.resolve({ id: session.id }) }
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.error.code).toBe("SESSION_TRANSCRIPT_MISSING");
+    expect(endSessionMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 when the session is no longer active", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const [session] = await db
+      .insert(studySessions)
+      .values({
+        learnerId: learner.id,
+        status: "completed",
+        topicsCovered: [],
+      })
+      .returning();
+
+    requireLearnerMock.mockResolvedValue({
+      learnerId: learner.id,
+      orgId: org.id,
+    });
+
+    const response = await POST(
+      new Request(`http://localhost/api/sessions/${session.id}/end`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reason: "completed",
+        }),
+      }),
+      { params: Promise.resolve({ id: session.id }) }
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.error.code).toBe("SESSION_NOT_ACTIVE");
+    expect(endSessionMock).not.toHaveBeenCalled();
   });
 
   it("returns 404 when the session is not owned by the learner", async () => {
@@ -156,9 +260,7 @@ describe("POST /api/sessions/[id]/end", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          systemPrompt: "prompt",
           reason: "abandoned",
-          messages: [{ role: "assistant", content: "Done" }],
         }),
       }),
       { params: Promise.resolve({ id: session.id }) }

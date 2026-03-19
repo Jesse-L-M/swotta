@@ -75,7 +75,25 @@ export interface EndSessionResult {
   summary: string;
 }
 
-type SessionMessage = { role: "user" | "assistant"; content: string };
+export type SessionMessage = { role: "user" | "assistant"; content: string };
+
+export class SessionConflictError extends Error {
+  code:
+    | "SESSION_NOT_ACTIVE"
+    | "SESSION_TRANSCRIPT_MISSING"
+    | "SESSION_TRANSCRIPT_MISMATCH";
+
+  constructor(
+    code:
+      | "SESSION_NOT_ACTIVE"
+      | "SESSION_TRANSCRIPT_MISSING"
+      | "SESSION_TRANSCRIPT_MISMATCH",
+    message: string
+  ) {
+    super(message);
+    this.code = code;
+  }
+}
 
 interface StoredAttemptOutcome {
   score: number | null;
@@ -91,14 +109,34 @@ interface StoredAttemptOutcome {
   summary: string;
 }
 
+interface StoredSessionTranscript {
+  attemptId: string;
+  systemPrompt: string;
+  messages: SessionMessage[];
+}
+
 function buildAttemptRawInteraction(
   sessionId: SessionId,
-  messages: SessionMessage[] = [],
-  extractedOutcome?: StoredAttemptOutcome
+  options: {
+    messages?: SessionMessage[];
+    systemPrompt?: string;
+    extractedOutcome?: StoredAttemptOutcome;
+  } = {}
 ): Record<string, unknown> {
-  return extractedOutcome
-    ? { sessionId, messages, extractedOutcome }
-    : { sessionId, messages };
+  const rawInteraction: Record<string, unknown> = {
+    sessionId,
+    messages: options.messages ?? [],
+  };
+
+  if (options.systemPrompt) {
+    rawInteraction.systemPrompt = options.systemPrompt;
+  }
+
+  if (options.extractedOutcome) {
+    rawInteraction.extractedOutcome = options.extractedOutcome;
+  }
+
+  return rawInteraction;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -140,6 +178,86 @@ export function getPersistedAttemptMisconceptions(
       },
     ];
   });
+}
+
+export function getStoredAttemptMessages(
+  rawInteraction: unknown
+): SessionMessage[] {
+  if (!isRecord(rawInteraction) || !Array.isArray(rawInteraction.messages)) {
+    return [];
+  }
+
+  return rawInteraction.messages.flatMap((message) => {
+    if (
+      !isRecord(message) ||
+      (message.role !== "user" && message.role !== "assistant") ||
+      typeof message.content !== "string"
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        role: message.role,
+        content: message.content,
+      },
+    ];
+  });
+}
+
+export function getStoredAttemptSystemPrompt(
+  rawInteraction: unknown
+): string | null {
+  if (!isRecord(rawInteraction) || typeof rawInteraction.systemPrompt !== "string") {
+    return null;
+  }
+
+  return rawInteraction.systemPrompt;
+}
+
+function areSessionMessagesEqual(
+  left: SessionMessage[],
+  right: SessionMessage[]
+): boolean {
+  return (
+    left.length === right.length &&
+    left.every(
+      (message, index) =>
+        message.role === right[index]?.role &&
+        message.content === right[index]?.content
+    )
+  );
+}
+
+export async function getStoredSessionTranscript(
+  dbLike: { select: Database["select"] },
+  sessionId: SessionId
+): Promise<StoredSessionTranscript | null> {
+  const [attempt] = await dbLike
+    .select({
+      id: blockAttempts.id,
+      rawInteraction: blockAttempts.rawInteraction,
+    })
+    .from(blockAttempts)
+    .where(sql`${blockAttempts.rawInteraction} ->> 'sessionId' = ${sessionId}`)
+    .orderBy(desc(blockAttempts.createdAt))
+    .limit(1);
+
+  if (!attempt) {
+    return null;
+  }
+
+  const systemPrompt = getStoredAttemptSystemPrompt(attempt.rawInteraction);
+  const messages = getStoredAttemptMessages(attempt.rawInteraction);
+  if (!systemPrompt || messages.length === 0) {
+    return null;
+  }
+
+  return {
+    attemptId: attempt.id,
+    systemPrompt,
+    messages,
+  };
 }
 
 async function findAttemptIdForSession(
@@ -236,7 +354,15 @@ export async function startSession(
       .insert(blockAttempts)
       .values({
         blockId: block.id,
-        rawInteraction: buildAttemptRawInteraction(sess.id as SessionId),
+        rawInteraction: buildAttemptRawInteraction(sess.id as SessionId, {
+          systemPrompt,
+          messages: [
+            {
+              role: "assistant",
+              content: initialMessage,
+            },
+          ],
+        }),
       });
 
     await tx
@@ -258,15 +384,44 @@ export async function startSession(
 export async function continueSession(
   sessionId: SessionId,
   messages: Array<{ role: "user" | "assistant"; content: string }>,
-  systemPrompt: string
+  _systemPrompt: string
 ): Promise<ContinueSessionResult> {
-  const { anthropic } = getDeps();
+  const { db, anthropic } = getDeps();
+  const transcript = await getStoredSessionTranscript(db, sessionId);
+  if (!transcript) {
+    throw new SessionConflictError(
+      "SESSION_TRANSCRIPT_MISSING",
+      "Stored session transcript is unavailable"
+    );
+  }
+
+  if (messages.length !== transcript.messages.length + 1) {
+    throw new SessionConflictError(
+      "SESSION_TRANSCRIPT_MISMATCH",
+      "Submitted messages do not match the stored session transcript"
+    );
+  }
+
+  const nextUserMessage = messages[messages.length - 1];
+  const submittedHistory = messages.slice(0, -1);
+  if (
+    !nextUserMessage ||
+    nextUserMessage.role !== "user" ||
+    !areSessionMessagesEqual(submittedHistory, transcript.messages)
+  ) {
+    throw new SessionConflictError(
+      "SESSION_TRANSCRIPT_MISMATCH",
+      "Submitted messages do not match the stored session transcript"
+    );
+  }
+
+  const fullMessages = [...transcript.messages, nextUserMessage];
 
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 1024,
-    system: systemPrompt,
-    messages: messages.map((m) => ({
+    system: transcript.systemPrompt,
+    messages: fullMessages.map((m) => ({
       role: m.role,
       content: m.content,
     })),
@@ -276,6 +431,22 @@ export async function continueSession(
     response.content[0].type === "text" ? response.content[0].text : "";
 
   const { isComplete, cleanReply } = parseSessionStatus(rawReply);
+
+  await db
+    .update(blockAttempts)
+    .set({
+      rawInteraction: buildAttemptRawInteraction(sessionId, {
+        systemPrompt: transcript.systemPrompt,
+        messages: [
+          ...fullMessages,
+          {
+            role: "assistant",
+            content: cleanReply,
+          },
+        ],
+      }),
+    })
+    .where(eq(blockAttempts.id, transcript.attemptId));
 
   return {
     reply: cleanReply,
@@ -347,6 +518,7 @@ export async function endSession(
     .select({
       id: studySessions.id,
       blockId: studySessions.blockId,
+      status: studySessions.status,
       startedAt: studySessions.startedAt,
       topicsCovered: studySessions.topicsCovered,
     })
@@ -358,6 +530,12 @@ export async function endSession(
   }
 
   const session = sessionRows[0];
+  if (session.status !== "active") {
+    throw new SessionConflictError(
+      "SESSION_NOT_ACTIVE",
+      "Study session is not active"
+    );
+  }
 
   let topicName = "Unknown Topic";
   let blockType: BlockType = "retrieval_drill";
@@ -439,7 +617,7 @@ export async function endSession(
   const confidenceAfter = confidence?.after ?? null;
 
   await db.transaction(async (tx) => {
-    await tx
+    const [updatedSession] = await tx
       .update(studySessions)
       .set({
         status: reason === "completed" ? "completed" : reason,
@@ -447,7 +625,20 @@ export async function endSession(
         summary: extracted.summary,
         totalDurationMinutes: durationMinutes,
       })
-      .where(eq(studySessions.id, sessionId));
+      .where(
+        and(
+          eq(studySessions.id, sessionId),
+          eq(studySessions.status, "active")
+        )
+      )
+      .returning({ id: studySessions.id });
+
+    if (!updatedSession) {
+      throw new SessionConflictError(
+        "SESSION_NOT_ACTIVE",
+        "Study session is not active"
+      );
+    }
 
     if (blockId) {
       const attemptId = await findAttemptIdForSession(tx, blockId, sessionId);
@@ -466,15 +657,19 @@ export async function endSession(
             helpTiming: extracted.helpTiming,
             misconceptionsDetected: extracted.misconceptions.length,
             notes: extracted.summary,
-            rawInteraction: buildAttemptRawInteraction(sessionId, messages, {
-              score: extracted.score,
-              confidenceBefore,
-              confidenceAfter,
-              helpRequested: extracted.helpRequested,
-              helpTiming: extracted.helpTiming,
-              retentionOutcome: extracted.retentionOutcome,
-              misconceptions: extracted.misconceptions,
-              summary: extracted.summary,
+            rawInteraction: buildAttemptRawInteraction(sessionId, {
+              messages,
+              systemPrompt,
+              extractedOutcome: {
+                score: extracted.score,
+                confidenceBefore,
+                confidenceAfter,
+                helpRequested: extracted.helpRequested,
+                helpTiming: extracted.helpTiming,
+                retentionOutcome: extracted.retentionOutcome,
+                misconceptions: extracted.misconceptions,
+                summary: extracted.summary,
+              },
             }),
           })
           .where(eq(blockAttempts.id, attemptId));

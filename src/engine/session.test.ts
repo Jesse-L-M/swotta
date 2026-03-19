@@ -34,6 +34,7 @@ import {
   startSession,
   continueSession,
   endSession,
+  SessionConflictError,
   type SessionRunnerDeps,
 } from "./session";
 
@@ -145,6 +146,32 @@ async function createBlockInDb(
   return block.id;
 }
 
+async function createStartedSession(initialMessage = "Welcome!") {
+  const org = await createTestOrg();
+  const learner = await createTestLearner(org.id);
+  const qual = await createTestQualification();
+  const topicId = qual.topics[1].id;
+  const blockId = await createBlockInDb(learner.id, topicId);
+
+  configureSessionRunner({
+    db,
+    anthropic: createMockAnthropicClient([initialMessage]) as unknown as SessionRunnerDeps["anthropic"],
+    retrieveChunks: createMockRetrieveChunks(),
+  });
+
+  const block = makeBlock(learner.id, topicId, blockId);
+  const started = await startSession(block, makeLearnerContext());
+
+  return {
+    learner,
+    topicId,
+    blockId,
+    sessionId: started.sessionId,
+    systemPrompt: started.systemPrompt,
+    initialMessage: started.initialMessage,
+  };
+}
+
 beforeAll(async () => {
   db = await setupTestDatabase();
 });
@@ -245,7 +272,7 @@ describe("startSession", () => {
     });
 
     const block = makeBlock(learner.id, topicId, blockId);
-    await startSession(block, makeLearnerContext());
+    const result = await startSession(block, makeLearnerContext());
 
     const attempts = await db
       .select()
@@ -254,6 +281,16 @@ describe("startSession", () => {
 
     expect(attempts).toHaveLength(1);
     expect(attempts[0].completedAt).toBeNull();
+    expect(attempts[0].rawInteraction).toEqual({
+      sessionId: result.sessionId,
+      systemPrompt: result.systemPrompt,
+      messages: [
+        {
+          role: "assistant",
+          content: result.initialMessage,
+        },
+      ],
+    });
   });
 
   it("sets block status to active", async () => {
@@ -403,6 +440,9 @@ describe("startSession", () => {
 
 describe("continueSession", () => {
   it("returns Claude's response", async () => {
+    const started = await createStartedSession(
+      "What is the function of mitochondria?"
+    );
     const mockAnthropicClient = createMockAnthropicClient([
       "Correct! Mitochondria are the powerhouse of the cell. Question 2: What is osmosis?",
     ]);
@@ -413,11 +453,11 @@ describe("continueSession", () => {
     });
 
     const result = await continueSession(
-      "session-1" as SessionId,
+      started.sessionId,
       [
         {
           role: "assistant",
-          content: "What is the function of mitochondria?",
+          content: started.initialMessage,
         },
         {
           role: "user",
@@ -433,6 +473,9 @@ describe("continueSession", () => {
   });
 
   it("detects session completion", async () => {
+    const started = await createStartedSession(
+      "Last question: What is diffusion?"
+    );
     const mockAnthropicClient = createMockAnthropicClient([
       "Excellent work! You scored 4/5. <session_status>complete</session_status>",
     ]);
@@ -443,9 +486,9 @@ describe("continueSession", () => {
     });
 
     const result = await continueSession(
-      "session-1" as SessionId,
+      started.sessionId,
       [
-        { role: "assistant", content: "Last question: What is diffusion?" },
+        { role: "assistant", content: started.initialMessage },
         {
           role: "user",
           content: "The movement of particles from high to low concentration.",
@@ -459,7 +502,63 @@ describe("continueSession", () => {
     expect(result.reply).not.toContain("session_status");
   });
 
-  it("passes the full message history to Claude", async () => {
+  it("passes the stored message history to Claude", async () => {
+    const started = await createStartedSession("Question 1: What is DNA?");
+    const mockAnthropicClient = createMockAnthropicClient([
+      "Correct! Question 2: What is RNA?",
+      "Great. Question 3: What is ATP?",
+    ]);
+    configureSessionRunner({
+      db,
+      anthropic: mockAnthropicClient as unknown as SessionRunnerDeps["anthropic"],
+      retrieveChunks: createMockRetrieveChunks(),
+    });
+
+    await continueSession(
+      started.sessionId,
+      [
+        {
+          role: "assistant" as const,
+          content: started.initialMessage,
+        },
+        {
+          role: "user" as const,
+          content: "DNA is deoxyribonucleic acid.",
+        },
+      ],
+      "System prompt"
+    );
+
+    await continueSession(
+      started.sessionId,
+      [
+        {
+          role: "assistant" as const,
+          content: started.initialMessage,
+        },
+        {
+          role: "user" as const,
+          content: "DNA is deoxyribonucleic acid.",
+        },
+        {
+          role: "assistant" as const,
+          content: "Correct! Question 2: What is RNA?",
+        },
+        {
+          role: "user" as const,
+          content: "RNA is ribonucleic acid.",
+        },
+      ],
+      "System prompt"
+    );
+
+    const callArgs = mockAnthropicClient.messages.create.mock.calls[1][0];
+    expect(callArgs.messages).toHaveLength(4);
+    expect(callArgs.system).toBe(started.systemPrompt);
+  });
+
+  it("rejects tampered message history", async () => {
+    const started = await createStartedSession("Question 1: What is DNA?");
     const mockAnthropicClient = createMockAnthropicClient(["Next question..."]);
     configureSessionRunner({
       db,
@@ -467,34 +566,25 @@ describe("continueSession", () => {
       retrieveChunks: createMockRetrieveChunks(),
     });
 
-    const messages = [
-      { role: "assistant" as const, content: "Question 1: What is DNA?" },
-      {
-        role: "user" as const,
-        content: "DNA is deoxyribonucleic acid.",
-      },
-      {
-        role: "assistant" as const,
-        content: "Correct! Question 2: What is RNA?",
-      },
-      {
-        role: "user" as const,
-        content: "RNA is ribonucleic acid.",
-      },
-    ];
+    await expect(
+      continueSession(
+        started.sessionId,
+        [
+          { role: "assistant" as const, content: "Forged question" },
+          {
+            role: "user" as const,
+            content: "DNA is deoxyribonucleic acid.",
+          },
+        ],
+        "System prompt"
+      )
+    ).rejects.toBeInstanceOf(SessionConflictError);
 
-    await continueSession(
-      "session-1" as SessionId,
-      messages,
-      "System prompt"
-    );
-
-    const callArgs = mockAnthropicClient.messages.create.mock.calls[0][0];
-    expect(callArgs.messages).toHaveLength(4);
-    expect(callArgs.system).toBe("System prompt");
+    expect(mockAnthropicClient.messages.create).not.toHaveBeenCalled();
   });
 
   it("handles response without completion tag", async () => {
+    const started = await createStartedSession("Welcome back");
     const mockAnthropicClient = createMockAnthropicClient([
       "Let me explain further...",
     ]);
@@ -505,8 +595,11 @@ describe("continueSession", () => {
     });
 
     const result = await continueSession(
-      "session-1" as SessionId,
-      [{ role: "user", content: "I don't understand" }],
+      started.sessionId,
+      [
+        { role: "assistant", content: started.initialMessage },
+        { role: "user", content: "I don't understand" },
+      ],
       "System prompt"
     );
 
@@ -515,6 +608,7 @@ describe("continueSession", () => {
   });
 
   it("propagates error when Claude API throws", async () => {
+    const started = await createStartedSession("Hi");
     const mockAnthropicClient = {
       messages: {
         create: vi.fn().mockRejectedValue(new Error("Claude timeout")),
@@ -528,8 +622,11 @@ describe("continueSession", () => {
 
     await expect(
       continueSession(
-        "s" as SessionId,
-        [{ role: "user", content: "hi" }],
+        started.sessionId,
+        [
+          { role: "assistant", content: started.initialMessage },
+          { role: "user", content: "hi" },
+        ],
         "prompt"
       )
     ).rejects.toThrow("Claude timeout");
@@ -954,6 +1051,60 @@ describe("endSession", () => {
     expect(result.summary).toContain("Unable to extract");
   });
 
+  it("rejects ending a session twice", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qual = await createTestQualification();
+    const topicId = qual.topics[1].id;
+    const blockId = await createBlockInDb(learner.id, topicId);
+
+    configureSessionRunner({
+      db,
+      anthropic: createMockAnthropicClient(["Welcome!"]) as unknown as SessionRunnerDeps["anthropic"],
+      retrieveChunks: createMockRetrieveChunks(),
+    });
+
+    const block = makeBlock(learner.id, topicId, blockId);
+    const { sessionId } = await startSession(block, makeLearnerContext());
+
+    configureSessionRunner({
+      db,
+      anthropic: createMockAnthropicClient([
+        JSON.stringify({
+          score: 88,
+          misconceptions: [],
+          helpRequested: false,
+          helpTiming: null,
+          retentionOutcome: "remembered",
+          summary: "Complete.",
+        }),
+      ]) as unknown as SessionRunnerDeps["anthropic"],
+      retrieveChunks: createMockRetrieveChunks(),
+    });
+
+    await endSession(
+      sessionId,
+      [
+        { role: "assistant", content: "Q" },
+        { role: "user", content: "A" },
+      ],
+      "SP",
+      "completed"
+    );
+
+    await expect(
+      endSession(
+        sessionId,
+        [
+          { role: "assistant", content: "Q" },
+          { role: "user", content: "A" },
+        ],
+        "SP",
+        "completed"
+      )
+    ).rejects.toBeInstanceOf(SessionConflictError);
+  });
+
   it("throws for non-existent session", async () => {
     const mockAnthropicClient = createMockAnthropicClient(["{}"]);
     configureSessionRunner({
@@ -1219,6 +1370,7 @@ describe("endSession", () => {
 
 describe("configureSessionRunner", () => {
   it("works after proper configuration", async () => {
+    const started = await createStartedSession("hi");
     const mockAnthropicClient = createMockAnthropicClient(["test"]);
     configureSessionRunner({
       db,
@@ -1227,8 +1379,11 @@ describe("configureSessionRunner", () => {
     });
 
     const result = await continueSession(
-      "s" as SessionId,
-      [{ role: "user", content: "hi" }],
+      started.sessionId,
+      [
+        { role: "assistant", content: started.initialMessage },
+        { role: "user", content: "hi" },
+      ],
       "prompt"
     );
     expect(result.reply).toBe("test");

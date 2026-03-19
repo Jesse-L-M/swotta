@@ -4,7 +4,11 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireLearner, AuthError } from "@/lib/auth";
 import { studySessions } from "@/db/schema";
-import { endSession } from "@/engine/session";
+import {
+  endSession,
+  getStoredSessionTranscript,
+  SessionConflictError,
+} from "@/engine/session";
 import { ensureSessionRunnerConfigured } from "@/app/api/sessions/_lib/session-runner";
 import type { SessionId } from "@/lib/types";
 
@@ -13,7 +17,6 @@ const paramsSchema = z.object({
 });
 
 const requestSchema = z.object({
-  systemPrompt: z.string().min(1),
   reason: z.enum(["completed", "abandoned", "timeout"]),
   confidence: z
     .object({
@@ -21,14 +24,6 @@ const requestSchema = z.object({
       after: z.number().min(0).max(1).nullable(),
     })
     .optional(),
-  messages: z
-    .array(
-      z.object({
-        role: z.enum(["user", "assistant"]),
-        content: z.string().min(1),
-      })
-    )
-    .min(1),
 });
 
 export async function POST(
@@ -77,7 +72,7 @@ export async function POST(
   }
 
   const [session] = await db
-    .select({ id: studySessions.id })
+    .select({ id: studySessions.id, status: studySessions.status })
     .from(studySessions)
     .where(
       and(
@@ -99,14 +94,53 @@ export async function POST(
     );
   }
 
-  ensureSessionRunnerConfigured();
-  const result = await endSession(
-    session.id as SessionId,
-    parsed.data.messages,
-    parsed.data.systemPrompt,
-    parsed.data.reason,
-    parsed.data.confidence
+  if (session.status !== "active") {
+    return NextResponse.json(
+      {
+        error: {
+          code: "SESSION_NOT_ACTIVE",
+          message: "Study session is not active",
+        },
+      },
+      { status: 409 }
+    );
+  }
+
+  const transcript = await getStoredSessionTranscript(
+    db,
+    session.id as SessionId
   );
+  if (!transcript) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "SESSION_TRANSCRIPT_MISSING",
+          message: "Stored session transcript is unavailable",
+        },
+      },
+      { status: 409 }
+    );
+  }
+
+  ensureSessionRunnerConfigured();
+  let result;
+  try {
+    result = await endSession(
+      session.id as SessionId,
+      transcript.messages,
+      transcript.systemPrompt,
+      parsed.data.reason,
+      parsed.data.confidence
+    );
+  } catch (error: unknown) {
+    if (error instanceof SessionConflictError) {
+      return NextResponse.json(
+        { error: { code: error.code, message: error.message } },
+        { status: 409 }
+      );
+    }
+    throw error;
+  }
 
   return NextResponse.json({ data: result });
 }

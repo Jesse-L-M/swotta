@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireLearner, AuthError } from "@/lib/auth";
 import { studySessions } from "@/db/schema";
-import { continueSession } from "@/engine/session";
+import { continueSession, SessionConflictError } from "@/engine/session";
 import { ensureSessionRunnerConfigured } from "@/app/api/sessions/_lib/session-runner";
 import type { SessionId } from "@/lib/types";
 
@@ -93,13 +93,28 @@ export async function POST(
   }
 
   ensureSessionRunnerConfigured();
-  const result = await continueSession(
-    session.id as SessionId,
-    parsed.data.messages,
-    parsed.data.systemPrompt
-  );
+  let result;
+  try {
+    result = await continueSession(
+      session.id as SessionId,
+      parsed.data.messages,
+      parsed.data.systemPrompt
+    );
+  } catch (error: unknown) {
+    if (error instanceof SessionConflictError) {
+      return NextResponse.json(
+        { error: { code: error.code, message: error.message } },
+        { status: 409 }
+      );
+    }
+    throw error;
+  }
 
-  return new Response(result.reply, {
+  const responseText = result.isComplete
+    ? `${result.reply}<session_status>complete</session_status>`
+    : result.reply;
+
+  return new Response(responseText, {
     status: 200,
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
