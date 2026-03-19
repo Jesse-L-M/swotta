@@ -52,7 +52,7 @@ export default function Home() {
           <div className="grid items-center gap-12 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
             <div>
               <FadeIn>
-                <h1 className="font-serif text-[3.25rem] leading-[1.08] tracking-[-0.02em] md:text-[4.25rem] lg:text-[5rem] lg:leading-[1.05] lg:tracking-[-0.03em]">
+                <h1 className="text-balance font-serif text-[3.25rem] leading-[1.08] tracking-[-0.02em] md:text-[4.25rem] lg:text-[5rem] lg:leading-[1.05] lg:tracking-[-0.03em]">
                   Know exactly what to study next.
                 </h1>
               </FadeIn>
@@ -82,7 +82,7 @@ export default function Home() {
       <section className="border-t border-cream-200">
         <div className="mx-auto max-w-[1120px] px-6 py-32 md:px-8 md:py-40">
           <FadeIn>
-            <p className="mx-auto max-w-[36ch] text-center font-serif text-[1.75rem] leading-[1.4] text-stone-650 md:text-[2.5rem] md:leading-[1.35]">
+            <p className="mx-auto max-w-[36ch] text-center text-balance font-serif text-[1.75rem] leading-[1.4] text-stone-650 md:text-[2.5rem] md:leading-[1.35]">
               Six revision apps. None of them know your spec. None of them talk
               to each other.
             </p>
@@ -99,7 +99,7 @@ export default function Home() {
                 <p className="text-xs font-semibold uppercase tracking-[0.15em] text-teal">
                   Curriculum-first
                 </p>
-                <h2 className="mt-4 font-serif text-[2rem] leading-[1.2] md:text-[2.75rem]">
+                <h2 className="mt-4 text-balance font-serif text-[2rem] leading-[1.2] md:text-[2.75rem]">
                   Built on your actual exam spec
                 </h2>
                 <p className="mt-6 max-w-md text-[0.9375rem] leading-[1.7] text-stone-650">
@@ -129,7 +129,7 @@ export default function Home() {
                 <p className="text-xs font-semibold uppercase tracking-[0.15em] text-teal">
                   Personalised
                 </p>
-                <h2 className="mt-4 font-serif text-[2rem] leading-[1.2] md:text-[2.75rem]">
+                <h2 className="mt-4 text-balance font-serif text-[2rem] leading-[1.2] md:text-[2.75rem]">
                   Remembers how you think
                 </h2>
                 <p className="mt-6 max-w-md text-[0.9375rem] leading-[1.7] text-stone-650">
@@ -152,7 +152,7 @@ export default function Home() {
                 <p className="text-xs font-semibold uppercase tracking-[0.15em] text-teal">
                   Adaptive
                 </p>
-                <h2 className="mt-4 font-serif text-[2rem] leading-[1.2] md:text-[2.75rem]">
+                <h2 className="mt-4 text-balance font-serif text-[2rem] leading-[1.2] md:text-[2.75rem]">
                   Gets smarter as exams approach
                 </h2>
                 <p className="mt-6 max-w-md text-[0.9375rem] leading-[1.7] text-stone-650">
@@ -173,7 +173,7 @@ export default function Home() {
       <section className="border-t border-cream-200">
         <div className="mx-auto max-w-[1120px] px-6 py-32 md:px-8 md:py-40">
           <FadeIn>
-            <p className="mx-auto max-w-[32ch] text-center font-serif text-[1.75rem] leading-[1.4] text-stone-650 md:text-[2.5rem] md:leading-[1.35]">
+            <p className="mx-auto max-w-[32ch] text-center text-balance font-serif text-[1.75rem] leading-[1.4] text-stone-650 md:text-[2.5rem] md:leading-[1.35]">
               Not a chatbot. Not a flashcard app.{" "}
               <span className="text-stone-750">
                 An academic operating system.
@@ -192,7 +192,7 @@ export default function Home() {
                 <p className="text-xs font-semibold uppercase tracking-[0.15em] text-stone-450">
                   For parents
                 </p>
-                <h2 className="mt-4 font-serif text-[2rem] leading-[1.2] text-cream-100 md:text-[2.75rem]">
+                <h2 className="mt-4 text-balance font-serif text-[2rem] leading-[1.2] text-cream-100 md:text-[2.75rem]">
                   Finally see what&apos;s really happening
                 </h2>
                 <p className="mt-6 max-w-md text-[0.9375rem] leading-[1.7] text-stone-450">
@@ -235,7 +235,7 @@ export default function Home() {
       <section className="bg-[#D6EBE7]">
         <div className="mx-auto max-w-[1120px] px-6 py-28 text-center md:px-8 md:py-36">
           <FadeIn>
-            <h2 className="mx-auto max-w-[20ch] font-serif text-[2rem] leading-[1.2] text-stone-750 md:text-[3rem] md:leading-[1.15]">
+            <h2 className="mx-auto max-w-[20ch] text-balance font-serif text-[2rem] leading-[1.2] text-stone-750 md:text-[3rem] md:leading-[1.15]">
               Revision that knows you.
             </h2>
             <p className="mx-auto mt-6 max-w-md text-base leading-relaxed text-stone-650">
