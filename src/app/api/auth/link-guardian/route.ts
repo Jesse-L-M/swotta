@@ -1,15 +1,24 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { learners, guardianLinks, memberships, users } from "@/db/schema";
+import { learners, guardianLinks } from "@/db/schema";
 import { requireAuth } from "@/lib/auth";
 import { eq, and } from "drizzle-orm";
 import { structuredLog } from "@/lib/logger";
 
-const linkSchema = z.object({
-  inviteCode: z.string().uuid("Invalid invite code format"),
-  relationship: z.string().min(1).max(50).default("parent"),
-});
+const linkSchema = z
+  .object({
+    learnerId: z
+      .string({ required_error: "learnerId is required" })
+      .uuid("Invalid learner ID format"),
+    relationship: z
+      .string()
+      .trim()
+      .min(1, "Relationship is required")
+      .max(50, "Relationship must be 50 characters or fewer")
+      .default("parent"),
+  })
+  .strict();
 
 export async function POST(request: NextRequest) {
   let ctx;
@@ -32,19 +41,34 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { inviteCode, relationship } = parsed.data;
+  const { learnerId, relationship } = parsed.data;
 
-  // Invite code is the learner's ID (in a real product, use a short code + lookup table)
   const [learner] = await db
-    .select({ id: learners.id, orgId: learners.orgId })
+    .select({ id: learners.id, orgId: learners.orgId, userId: learners.userId })
     .from(learners)
-    .where(eq(learners.id, inviteCode))
+    .where(eq(learners.id, learnerId))
     .limit(1);
 
   if (!learner) {
     return NextResponse.json(
-      { error: { code: "INVALID_CODE", message: "Invalid invite code" } },
+      { error: { code: "LEARNER_NOT_FOUND", message: "Learner not found" } },
       { status: 404 }
+    );
+  }
+
+  const hasGuardianMembership = ctx.roles.some(
+    (role) => role.orgId === learner.orgId && role.role === "guardian"
+  );
+
+  if (!hasGuardianMembership || learner.userId === ctx.user.id) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "FORBIDDEN",
+          message: "Guardian membership in the learner org is required",
+        },
+      },
+      { status: 403 }
     );
   }
 
@@ -67,34 +91,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  await db.transaction(async (tx) => {
-    // Create guardian link
-    await tx.insert(guardianLinks).values({
-      guardianUserId: ctx.user.id,
-      learnerId: learner.id,
-      relationship,
-    });
-
-    // Ensure guardian has membership in the learner's org
-    const [existingMembership] = await tx
-      .select({ id: memberships.id })
-      .from(memberships)
-      .where(
-        and(
-          eq(memberships.userId, ctx.user.id),
-          eq(memberships.orgId, learner.orgId),
-          eq(memberships.role, "guardian")
-        )
-      )
-      .limit(1);
-
-    if (!existingMembership) {
-      await tx.insert(memberships).values({
-        userId: ctx.user.id,
-        orgId: learner.orgId,
-        role: "guardian",
-      });
-    }
+  await db.insert(guardianLinks).values({
+    guardianUserId: ctx.user.id,
+    learnerId: learner.id,
+    relationship,
   });
 
   structuredLog("auth.link-guardian", {

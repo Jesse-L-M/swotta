@@ -229,7 +229,7 @@ describe("auth API routes", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          inviteCode: learner.id,
+          learnerId: learner.id,
           relationship: "parent",
         }),
       });
@@ -274,7 +274,7 @@ describe("auth API routes", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          inviteCode: learner.id,
+          learnerId: learner.id,
           relationship: "parent",
         }),
       });
@@ -283,15 +283,17 @@ describe("auth API routes", () => {
       expect(response.status).toBe(409);
     });
 
-    it("rejects invalid invite code", async () => {
-      const org = await createTestOrg();
-      const guardian = await createTestUser({ firebaseUid: "bad-code-uid" });
-      await createTestMembership(guardian.id, org.id, "guardian");
+    it("rejects linking learner outside guardian org", async () => {
+      const targetOrg = await createTestOrg();
+      const learner = await createTestLearner(targetOrg.id);
+      const guardianOrg = await createTestOrg();
+      const guardian = await createTestUser({ firebaseUid: "cross-org-guardian-uid" });
+      await createTestMembership(guardian.id, guardianOrg.id, "guardian");
 
       const { getAuth } = await import("firebase-admin/auth");
       const mockAuth = vi.mocked(getAuth)();
       vi.mocked(mockAuth.verifySessionCookie).mockResolvedValue({
-        uid: "bad-code-uid",
+        uid: "cross-org-guardian-uid",
       } as unknown as Awaited<ReturnType<typeof mockAuth.verifySessionCookie>>);
 
       const { cookies } = await import("next/headers");
@@ -306,13 +308,95 @@ describe("auth API routes", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          inviteCode: "00000000-0000-0000-0000-000000000000",
+          learnerId: learner.id,
+          relationship: "parent",
+        }),
+      });
+
+      const response = await POST(request as never);
+      expect(response.status).toBe(403);
+
+      const links = await db
+        .select()
+        .from(guardianLinks)
+        .where(eq(guardianLinks.guardianUserId, guardian.id));
+      expect(links).toHaveLength(0);
+
+      const userMemberships = await db
+        .select()
+        .from(memberships)
+        .where(eq(memberships.userId, guardian.id));
+      expect(
+        userMemberships.some(
+          (membership) =>
+            membership.orgId === targetOrg.id && membership.role === "guardian"
+        )
+      ).toBe(false);
+    });
+
+    it("rejects unknown learner ID", async () => {
+      const org = await createTestOrg();
+      const guardian = await createTestUser({ firebaseUid: "bad-learner-id-uid" });
+      await createTestMembership(guardian.id, org.id, "guardian");
+
+      const { getAuth } = await import("firebase-admin/auth");
+      const mockAuth = vi.mocked(getAuth)();
+      vi.mocked(mockAuth.verifySessionCookie).mockResolvedValue({
+        uid: "bad-learner-id-uid",
+      } as unknown as Awaited<ReturnType<typeof mockAuth.verifySessionCookie>>);
+
+      const { cookies } = await import("next/headers");
+      vi.mocked(cookies).mockResolvedValue({
+        get: vi.fn().mockReturnValue({ value: "valid-session" }),
+        set: vi.fn(),
+        delete: vi.fn(),
+      } as unknown as Awaited<ReturnType<typeof cookies>>);
+
+      const { POST } = await import("@/app/api/auth/link-guardian/route");
+      const request = new Request("http://localhost/api/auth/link-guardian", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          learnerId: "00000000-0000-0000-0000-000000000000",
           relationship: "parent",
         }),
       });
 
       const response = await POST(request as never);
       expect(response.status).toBe(404);
+    });
+
+    it("rejects legacy inviteCode payload", async () => {
+      const org = await createTestOrg();
+      const guardian = await createTestUser({ firebaseUid: "legacy-invite-code-uid" });
+      await createTestMembership(guardian.id, org.id, "guardian");
+      const learner = await createTestLearner(org.id);
+
+      const { getAuth } = await import("firebase-admin/auth");
+      const mockAuth = vi.mocked(getAuth)();
+      vi.mocked(mockAuth.verifySessionCookie).mockResolvedValue({
+        uid: "legacy-invite-code-uid",
+      } as unknown as Awaited<ReturnType<typeof mockAuth.verifySessionCookie>>);
+
+      const { cookies } = await import("next/headers");
+      vi.mocked(cookies).mockResolvedValue({
+        get: vi.fn().mockReturnValue({ value: "valid-session" }),
+        set: vi.fn(),
+        delete: vi.fn(),
+      } as unknown as Awaited<ReturnType<typeof cookies>>);
+
+      const { POST } = await import("@/app/api/auth/link-guardian/route");
+      const request = new Request("http://localhost/api/auth/link-guardian", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          inviteCode: learner.id,
+          relationship: "parent",
+        }),
+      });
+
+      const response = await POST(request as never);
+      expect(response.status).toBe(400);
     });
   });
 });
