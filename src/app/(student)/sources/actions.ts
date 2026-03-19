@@ -34,6 +34,22 @@ import type { TopicId } from "@/lib/types";
 
 const collectionIdSchema = z.string().uuid("Invalid collection ID");
 const fileIdSchema = z.string().uuid("Invalid file ID");
+const preparedUploadFileSchema = uploadFileSchema.omit({
+  collectionId: true,
+});
+const prepareSourceUploadsSchema = z.object({
+  collectionId: collectionIdSchema.optional(),
+  collectionName: createCollectionSchema.shape.name.optional(),
+  files: z.array(preparedUploadFileSchema).min(1, "No files selected"),
+});
+const uploadFailureReportSchema = z.object({
+  fileId: fileIdSchema,
+  errorMessage: z
+    .string()
+    .trim()
+    .min(1, "Error message is required")
+    .max(1000, "Error message too long"),
+});
 
 interface LearnerScope {
   userId: string;
@@ -41,19 +57,24 @@ interface LearnerScope {
   learnerId: string;
 }
 
-export interface UploadedSourceFileResult {
+export interface PreparedSourceFileResult {
   fileId: string | null;
   filename: string;
   status: FileStatus;
   errorMessage: string | null;
+  uploadUrl: string | null;
 }
 
-export type UploadSourcesResult =
+export type PrepareSourceUploadsInput = z.infer<
+  typeof prepareSourceUploadsSchema
+>;
+
+export type PrepareSourceUploadsResult =
   | { success: false; error: string }
   | {
       success: true;
       collection: { id: string; name: string; created: boolean };
-      files: UploadedSourceFileResult[];
+      files: PreparedSourceFileResult[];
       topicMappings: TopicMapping[];
       warnings: string[];
     };
@@ -363,22 +384,11 @@ function mapSourceFileInfo(row: {
   };
 }
 
-function normalizeStringEntry(value: FormDataEntryValue | null): string | undefined {
-  if (typeof value !== "string") return undefined;
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-}
-
-function extractFilesFromFormData(formData: FormData): File[] {
-  return formData
-    .getAll("files")
-    .filter((entry): entry is File => entry instanceof File && entry.size > 0);
-}
-
-function buildDefaultCollectionName(files: File[]): string {
+function buildDefaultCollectionName(
+  files: Array<{ filename: string }>
+): string {
   const fallback = `Study materials ${new Date().toISOString().slice(0, 10)}`;
-  const singleFileStem = files[0]?.name.replace(/\.[^.]+$/, "").trim();
+  const singleFileStem = files[0]?.filename.replace(/\.[^.]+$/, "").trim();
 
   if (files.length === 1 && singleFileStem) {
     return singleFileStem.slice(0, 255);
@@ -399,9 +409,7 @@ function buildUploadWarnings(storageMode: "gcs" | "unconfigured"): string[] {
     ];
   }
 
-  return [
-    "Files are stored immediately. Automatic processing and topic mapping still depend on the ingestion worker.",
-  ];
+  return [];
 }
 
 export async function getSourcesPageData(
@@ -486,17 +494,25 @@ export async function registerUpload(
   return registerUploadRecord(scope, input, database);
 }
 
-export async function uploadSourceFiles(
-  formData: FormData,
+export async function prepareSourceUploads(
+  input: PrepareSourceUploadsInput,
   database: Database = db
-): Promise<UploadSourcesResult> {
+): Promise<PrepareSourceUploadsResult> {
   const scope = await getLearnerScope(database);
-  const files = extractFilesFromFormData(formData);
+  const parsedInput = prepareSourceUploadsSchema.safeParse(input);
+  if (!parsedInput.success) {
+    return {
+      success: false,
+      error: parsedInput.error.issues[0]?.message ?? "Invalid upload request",
+    };
+  }
+
+  const files = parsedInput.data.files;
   const validation = validateFilesBatch(
     files.map((file) => ({
-      name: file.name,
-      size: file.size,
-      type: file.type,
+      name: file.filename,
+      size: file.sizeBytes,
+      type: file.mimeType,
     }))
   );
 
@@ -507,8 +523,8 @@ export async function uploadSourceFiles(
     };
   }
 
-  const requestedCollectionId = normalizeStringEntry(formData.get("collectionId"));
-  const requestedCollectionName = normalizeStringEntry(formData.get("collectionName"));
+  const requestedCollectionId = parsedInput.data.collectionId;
+  const requestedCollectionName = parsedInput.data.collectionName;
 
   let collection: { id: string; name: string; created: boolean };
 
@@ -534,7 +550,8 @@ export async function uploadSourceFiles(
       created: false,
     };
   } else {
-    const collectionName = requestedCollectionName ?? buildDefaultCollectionName(files);
+    const collectionName =
+      requestedCollectionName ?? buildDefaultCollectionName(files);
     const createdCollection = await createCollectionRecord(
       scope,
       { name: collectionName },
@@ -555,17 +572,31 @@ export async function uploadSourceFiles(
     };
   }
 
-  const storageClient = createConfiguredStorageClient();
-  const initialResults: UploadedSourceFileResult[] = [];
+  let storageClient: ReturnType<typeof createConfiguredStorageClient>;
+  try {
+    storageClient = createConfiguredStorageClient();
+  } catch (error) {
+    structuredLog("upload.storage_config_error", {
+      userId: scope.userId,
+      collectionId: collection.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return {
+      success: false,
+      error: "Cloud Storage is misconfigured for uploads",
+    };
+  }
+
+  const initialResults: PreparedSourceFileResult[] = [];
 
   for (const file of files) {
     const uploadRecord = await registerUploadRecord(
       scope,
       {
         collectionId: collection.id,
-        filename: file.name,
-        mimeType: file.type,
-        sizeBytes: file.size,
+        filename: file.filename,
+        mimeType: file.mimeType,
+        sizeBytes: file.sizeBytes,
       },
       database
     );
@@ -573,9 +604,10 @@ export async function uploadSourceFiles(
     if (!uploadRecord.success || !uploadRecord.fileId || !uploadRecord.storagePath) {
       initialResults.push({
         fileId: null,
-        filename: file.name,
+        filename: file.filename,
         status: "failed",
         errorMessage: uploadRecord.error ?? "Failed to register upload",
+        uploadUrl: null,
       });
       continue;
     }
@@ -586,43 +618,45 @@ export async function uploadSourceFiles(
       await markFileFailed(uploadRecord.fileId, errorMessage, database);
       initialResults.push({
         fileId: uploadRecord.fileId,
-        filename: file.name,
+        filename: file.filename,
         status: "failed",
         errorMessage,
+        uploadUrl: null,
       });
       continue;
     }
 
     try {
-      const contents = new Uint8Array(await file.arrayBuffer());
-      await storageClient.uploadFile(
+      const uploadUrl = await storageClient.generateSignedUploadUrl(
         uploadRecord.storagePath,
-        contents,
-        file.type
+        file.mimeType,
+        file.sizeBytes
       );
       initialResults.push({
         fileId: uploadRecord.fileId,
-        filename: file.name,
+        filename: file.filename,
         status: "pending",
         errorMessage: null,
+        uploadUrl,
       });
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : "Failed to upload file";
+        error instanceof Error ? error.message : "Failed to prepare upload";
 
       await markFileFailed(uploadRecord.fileId, errorMessage, database);
-      structuredLog("upload.store_error", {
+      structuredLog("upload.prepare_error", {
         userId: scope.userId,
         fileId: uploadRecord.fileId,
-        filename: file.name,
+        filename: file.filename,
         error: errorMessage,
       });
 
       initialResults.push({
         fileId: uploadRecord.fileId,
-        filename: file.name,
+        filename: file.filename,
         status: "failed",
         errorMessage,
+        uploadUrl: null,
       });
     }
   }
@@ -652,11 +686,40 @@ export async function uploadSourceFiles(
         filename: storedFile.filename,
         status: storedFile.status,
         errorMessage: storedFile.errorMessage,
+        uploadUrl: result.uploadUrl,
       };
     }),
     topicMappings: [],
     warnings: buildUploadWarnings(storageClient.mode),
   };
+}
+
+export async function reportUploadFailure(
+  input: z.infer<typeof uploadFailureReportSchema>,
+  database: Database = db
+): Promise<{ success: boolean; error?: string }> {
+  const parsed = uploadFailureReportSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message };
+  }
+
+  const scope = await getLearnerScope(database);
+  const [file] = await listFilesByIds(scope.learnerId, [parsed.data.fileId], database);
+
+  if (!file) {
+    return { success: false, error: "File not found" };
+  }
+
+  await markFileFailed(file.id, parsed.data.errorMessage, database);
+  structuredLog("upload.client_failure", {
+    userId: scope.userId,
+    fileId: file.id,
+    filename: file.filename,
+    error: parsed.data.errorMessage,
+  });
+  revalidateSourcesViews();
+
+  return { success: true };
 }
 
 export async function getTopicMappings(

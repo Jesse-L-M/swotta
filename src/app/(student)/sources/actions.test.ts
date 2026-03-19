@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
-import { getTestDb } from "@/test/setup";
+import { cleanupTestDatabase, getTestDb } from "@/test/setup";
 import type { Database } from "@/lib/db";
 import {
   createTestLearner,
@@ -50,9 +50,10 @@ import {
   createCollection,
   getCollections,
   getFiles,
+  prepareSourceUploads,
   getTopicMappings,
+  reportUploadFailure,
   registerUpload,
-  uploadSourceFiles,
 } from "./actions";
 
 describe("source actions", () => {
@@ -63,6 +64,7 @@ describe("source actions", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    await cleanupTestDatabase();
 
     db = getTestDb();
 
@@ -288,22 +290,27 @@ describe("source actions", () => {
     });
   });
 
-  describe("uploadSourceFiles", () => {
-    it("creates a collection when needed and stores uploaded files", async () => {
-      const uploadFileMock = vi.fn().mockResolvedValue(undefined);
+  describe("prepareSourceUploads", () => {
+    it("creates a collection when needed and prepares direct uploads", async () => {
+      const generateSignedUploadUrlMock = vi
+        .fn()
+        .mockResolvedValue("https://example.com/upload");
       createConfiguredStorageClientMock.mockReturnValue(
-        makeStorageClient("gcs", uploadFileMock)
+        makeStorageClient("gcs", { generateSignedUploadUrl: generateSignedUploadUrlMock })
       );
 
-      const formData = new FormData();
-      formData.append(
-        "files",
-        new File(["%PDF-1.4"], "cell-biology-notes.pdf", {
-          type: "application/pdf",
-        })
+      const result = await prepareSourceUploads(
+        {
+          files: [
+            {
+              filename: "cell-biology-notes.pdf",
+              mimeType: "application/pdf",
+              sizeBytes: 2048,
+            },
+          ],
+        },
+        db
       );
-
-      const result = await uploadSourceFiles(formData, db);
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -311,10 +318,11 @@ describe("source actions", () => {
         expect(result.collection.name).toBe("cell-biology-notes");
         expect(result.files).toHaveLength(1);
         expect(result.files[0].status).toBe("pending");
-        expect(result.warnings[0]).toContain("stored immediately");
+        expect(result.files[0].uploadUrl).toBe("https://example.com/upload");
+        expect(result.warnings).toEqual([]);
       }
 
-      expect(uploadFileMock).toHaveBeenCalledTimes(1);
+      expect(generateSignedUploadUrlMock).toHaveBeenCalledTimes(1);
 
       const collections = await getCollections(db);
       expect(collections).toHaveLength(1);
@@ -330,21 +338,25 @@ describe("source actions", () => {
         makeStorageClient("unconfigured")
       );
 
-      const formData = new FormData();
-      formData.set("collectionName", "Chemistry Notes");
-      formData.append(
-        "files",
-        new File(["%PDF-1.4"], "chemistry.pdf", {
-          type: "application/pdf",
-        })
+      const result = await prepareSourceUploads(
+        {
+          collectionName: "Chemistry Notes",
+          files: [
+            {
+              filename: "chemistry.pdf",
+              mimeType: "application/pdf",
+              sizeBytes: 1024,
+            },
+          ],
+        },
+        db
       );
-
-      const result = await uploadSourceFiles(formData, db);
 
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.files).toHaveLength(1);
         expect(result.files[0].status).toBe("failed");
+        expect(result.files[0].uploadUrl).toBeNull();
         expect(result.warnings[0]).toContain("not configured");
 
         const files = await getFiles(result.collection.id, db);
@@ -354,6 +366,34 @@ describe("source actions", () => {
           "Cloud Storage is not configured"
         );
       }
+    });
+
+    it("marks owned files as failed when the browser reports an upload error", async () => {
+      const collection = await createCollection({ name: "Uploads" }, db);
+      const upload = await registerUpload(
+        {
+          collectionId: collection.collectionId!,
+          filename: "notes.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 1024,
+        },
+        db
+      );
+
+      const result = await reportUploadFailure(
+        {
+          fileId: upload.fileId!,
+          errorMessage: "Upload failed with status 403",
+        },
+        db
+      );
+
+      expect(result.success).toBe(true);
+
+      const files = await getFiles(collection.collectionId!, db);
+      expect(files).toHaveLength(1);
+      expect(files[0].status).toBe("failed");
+      expect(files[0].errorMessage).toBe("Upload failed with status 403");
     });
   });
 
@@ -424,7 +464,7 @@ describe("source actions", () => {
 
 function makeStorageClient(
   mode: StorageClient["mode"],
-  uploadFile = vi.fn().mockResolvedValue(undefined)
+  overrides: Partial<StorageClient> = {}
 ): StorageClient {
   return {
     mode,
@@ -435,7 +475,8 @@ function makeStorageClient(
     generateSignedDownloadUrl: vi
       .fn()
       .mockResolvedValue("https://example.com/download"),
-    uploadFile,
+    uploadFile: vi.fn().mockResolvedValue(undefined),
     deleteFile: vi.fn().mockResolvedValue(undefined),
+    ...overrides,
   };
 }

@@ -1,4 +1,5 @@
 import { structuredLog } from "@/lib/logger";
+import { getStorageEnv } from "@/lib/env";
 
 export interface StorageClient {
   mode: "gcs" | "unconfigured";
@@ -66,9 +67,8 @@ export function createGCSClient(
   projectId: string,
   options: CreateGCSClientOptions = {}
 ): StorageClient {
-  const clientEmail = options.clientEmail ?? process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey =
-    options.privateKey ?? process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  const clientEmail = options.clientEmail;
+  const privateKey = options.privateKey;
   const storageFactory =
     options.storageFactory
     ?? (clientEmail && privateKey
@@ -184,14 +184,16 @@ export class StorageConfigurationError extends Error {
 }
 
 export function createConfiguredStorageClient(): StorageClient {
-  const bucketName = process.env.GCS_BUCKET_NAME;
-  const projectId = process.env.GCS_PROJECT_ID ?? process.env.FIREBASE_PROJECT_ID;
+  const storageEnv = getStorageEnv();
 
-  if (!bucketName || !projectId) {
+  if (storageEnv.mode === "unconfigured") {
     return createUnconfiguredStorageClient();
   }
 
-  return createGCSClient(bucketName, projectId);
+  return createGCSClient(storageEnv.bucketName, storageEnv.projectId, {
+    clientEmail: storageEnv.clientEmail,
+    privateKey: storageEnv.privateKey,
+  });
 }
 
 function createUnconfiguredStorageClient(): StorageClient {

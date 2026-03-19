@@ -3,7 +3,10 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { uploadSourceFiles } from "@/app/(student)/sources/actions";
+import {
+  prepareSourceUploads,
+  reportUploadFailure,
+} from "@/app/(student)/sources/actions";
 import { UploadDropzone } from "@/components/sources/upload-dropzone";
 import { UploadProgressBar } from "@/components/sources/processing-status";
 import { TopicMappingPreview } from "@/components/sources/topic-mapping-preview";
@@ -30,6 +33,14 @@ interface UploadSummary {
   failedCount: number;
 }
 
+interface FinalizedUpload {
+  fileId: string;
+  filename: string;
+  progress: number;
+  status: UploadProgress["status"];
+  errorMessage?: string;
+}
+
 export function SourceUploadFlow({ collections }: SourceUploadFlowProps) {
   const [availableCollections, setAvailableCollections] =
     useState<UploadCollectionOption[]>(collections);
@@ -42,6 +53,19 @@ export function SourceUploadFlow({ collections }: SourceUploadFlowProps) {
   const [topicMappings, setTopicMappings] = useState<TopicMapping[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  function updateUploadProgress(
+    fileId: string | undefined,
+    progress: number | null
+  ) {
+    if (!fileId) return;
+
+    setUploads((current) =>
+      current.map((upload) =>
+        upload.fileId === fileId ? { ...upload, progress } : upload
+      )
+    );
+  }
 
   function handleFilesSelected(files: File[]) {
     if (files.length === 0) return;
@@ -61,87 +85,113 @@ export function SourceUploadFlow({ collections }: SourceUploadFlowProps) {
     setStep("uploading");
 
     startTransition(async () => {
-      const formData = new FormData();
+      try {
+        const result = await prepareSourceUploads({
+          collectionId:
+            collectionChoice !== "new" ? collectionChoice : undefined,
+          collectionName: collectionName.trim() || undefined,
+          files: files.map((file) => ({
+            filename: file.name,
+            mimeType: file.type,
+            sizeBytes: file.size,
+          })),
+        });
 
-      if (collectionChoice !== "new") {
-        formData.set("collectionId", collectionChoice);
-      }
+        if (!result.success) {
+          setError(result.error);
+          setUploads([]);
+          setStep("select");
+          return;
+        }
 
-      if (collectionName.trim()) {
-        formData.set("collectionName", collectionName.trim());
-      }
-
-      for (const file of files) {
-        formData.append("files", file);
-      }
-
-      const result = await uploadSourceFiles(formData);
-
-      if (!result.success) {
-        setError(result.error);
-        setUploads([]);
-        setStep("select");
-        return;
-      }
-
-      const persistedCount = result.files.filter((file) => file.fileId).length;
-      const uploadedCount = result.files.filter(
-        (file) => file.status !== "failed"
-      ).length;
-      const failedCount = result.files.filter(
-        (file) => file.status === "failed"
-      ).length;
-
-      setWarnings(result.warnings);
-      setTopicMappings(result.topicMappings);
-      setSummary({
-        collectionName: result.collection.name,
-        uploadedCount,
-        failedCount,
-      });
-      setUploads(
-        result.files.map((file, index) => ({
+        const preparedUploads = result.files.map((file, index) => ({
           fileId:
             file.fileId
             ?? pendingUploads[index]?.fileId
             ?? crypto.randomUUID(),
           filename: file.filename,
-          progress: 100,
-          status: mapFileStatus(file.status),
+          progress: file.status === "failed" ? 100 : null,
+          status: file.status === "failed" ? "error" : "uploading",
           errorMessage: file.errorMessage ?? undefined,
-        }))
-      );
-      setAvailableCollections((current) => {
-        const existing = current.find(
-          (collection) => collection.id === result.collection.id
+        })) satisfies UploadProgress[];
+
+        setUploads(preparedUploads);
+
+        const finalizedUploads = await Promise.all(
+          result.files.map((file, index) =>
+            uploadPreparedFile({
+              file,
+              localFile: files[index],
+              progressId: preparedUploads[index]?.fileId,
+              onProgress: updateUploadProgress,
+            })
+          )
         );
 
-        if (existing) {
-          return current.map((collection) =>
-            collection.id === result.collection.id
-              ? {
-                  ...collection,
-                  fileCount: collection.fileCount + persistedCount,
-                }
-              : collection
-          );
-        }
+        const persistedCount = result.files.filter((file) => file.fileId).length;
+        const uploadedCount = finalizedUploads.filter(
+          (file) => file.status !== "error"
+        ).length;
+        const failedCount = finalizedUploads.filter(
+          (file) => file.status === "error"
+        ).length;
 
-        return [
-          {
-            id: result.collection.id,
-            name: result.collection.name,
-            description: null,
-            fileCount: persistedCount,
-          },
-          ...current,
-        ];
-      });
-      setCollectionChoice(result.collection.id);
-      if (!collectionName.trim()) {
-        setCollectionName(result.collection.name);
+        setWarnings(result.warnings);
+        setTopicMappings(result.topicMappings);
+        setSummary({
+          collectionName: result.collection.name,
+          uploadedCount,
+          failedCount,
+        });
+        setUploads(
+          finalizedUploads.map((file) => ({
+            fileId: file.fileId,
+            filename: file.filename,
+            progress: file.progress,
+            status: file.status,
+            errorMessage: file.errorMessage,
+          }))
+        );
+        setAvailableCollections((current) => {
+          const existing = current.find(
+            (collection) => collection.id === result.collection.id
+          );
+
+          if (existing) {
+            return current.map((collection) =>
+              collection.id === result.collection.id
+                ? {
+                    ...collection,
+                    fileCount: collection.fileCount + persistedCount,
+                  }
+                : collection
+            );
+          }
+
+          return [
+            {
+              id: result.collection.id,
+              name: result.collection.name,
+              description: null,
+              fileCount: persistedCount,
+            },
+            ...current,
+          ];
+        });
+        setCollectionChoice(result.collection.id);
+        if (!collectionName.trim()) {
+          setCollectionName(result.collection.name);
+        }
+        setStep("done");
+      } catch (uploadError) {
+        setError(
+          uploadError instanceof Error
+            ? uploadError.message
+            : "Failed to prepare uploads"
+        );
+        setUploads([]);
+        setStep("select");
       }
-      setStep("done");
     });
   }
 
@@ -305,12 +355,6 @@ export function SourceUploadFlow({ collections }: SourceUploadFlowProps) {
   );
 }
 
-function mapFileStatus(status: FileStatus): UploadProgress["status"] {
-  if (status === "ready") return "complete";
-  if (status === "failed") return "error";
-  return "processing";
-}
-
 function formatSummary(summary: UploadSummary): string {
   if (summary.uploadedCount > 0 && summary.failedCount === 0) {
     return `${pluralise(summary.uploadedCount, "file")} uploaded and queued for processing.`;
@@ -325,4 +369,113 @@ function formatSummary(summary: UploadSummary): string {
 
 function pluralise(count: number, noun: string): string {
   return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+async function uploadPreparedFile({
+  file,
+  localFile,
+  progressId,
+  onProgress,
+}: {
+  file: {
+    fileId: string | null;
+    filename: string;
+    status: FileStatus;
+    errorMessage: string | null;
+    uploadUrl: string | null;
+  };
+  localFile: File | undefined;
+  progressId: string | undefined;
+  onProgress: (fileId: string | undefined, progress: number | null) => void;
+}): Promise<FinalizedUpload> {
+  const fileId = file.fileId ?? progressId ?? crypto.randomUUID();
+
+  if (
+    file.status === "failed"
+    || !file.fileId
+    || !file.uploadUrl
+    || !localFile
+  ) {
+    return {
+      fileId,
+      filename: file.filename,
+      progress: 100,
+      status: "error",
+      errorMessage: file.errorMessage ?? "Failed to prepare upload",
+    };
+  }
+
+  try {
+    await uploadFileToSignedUrl(file.uploadUrl, localFile, (progress) =>
+      onProgress(progressId, progress)
+    );
+
+    return {
+      fileId,
+      filename: file.filename,
+      progress: 100,
+      status: "processing",
+    };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to upload file";
+
+    onProgress(progressId, 100);
+    await reportUploadFailure({
+      fileId: file.fileId,
+      errorMessage,
+    }).catch(() => undefined);
+
+    return {
+      fileId,
+      filename: file.filename,
+      progress: 100,
+      status: "error",
+      errorMessage,
+    };
+  }
+}
+
+function uploadFileToSignedUrl(
+  uploadUrl: string,
+  file: File,
+  onProgress: (progress: number | null) => void
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+
+    request.open("PUT", uploadUrl);
+    request.setRequestHeader("Content-Type", file.type);
+
+    request.upload.onprogress = (event) => {
+      if (!event.lengthComputable || event.total === 0) {
+        onProgress(null);
+        return;
+      }
+
+      onProgress(Math.round((event.loaded / event.total) * 100));
+    };
+
+    request.onerror = () => {
+      reject(new Error("Failed to upload file"));
+    };
+
+    request.onload = () => {
+      if (request.status >= 200 && request.status < 300) {
+        onProgress(100);
+        resolve();
+        return;
+      }
+
+      reject(
+        new Error(
+          request.status === 0
+            ? "Failed to upload file"
+            : `Upload failed with status ${request.status}`
+        )
+      );
+    };
+
+    request.send(file);
+  });
 }

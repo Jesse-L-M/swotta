@@ -5,6 +5,7 @@ import {
   createGCSClient,
   StorageConfigurationError,
 } from "./storage";
+import { resetEnvCache } from "@/lib/env";
 
 describe("buildStoragePath", () => {
   it("builds the correct path with a simple filename", () => {
@@ -43,11 +44,15 @@ describe("createConfiguredStorageClient", () => {
 
   afterEach(() => {
     process.env = { ...originalEnv };
+    resetEnvCache();
   });
 
   it("returns an unconfigured client when bucket env is missing", async () => {
     delete process.env.GCS_BUCKET_NAME;
     delete process.env.GCS_PROJECT_ID;
+    delete process.env.FIREBASE_PROJECT_ID;
+    delete process.env.FIREBASE_CLIENT_EMAIL;
+    delete process.env.FIREBASE_PRIVATE_KEY;
 
     const client = createConfiguredStorageClient();
 
@@ -55,6 +60,18 @@ describe("createConfiguredStorageClient", () => {
     await expect(
       client.uploadFile("sources/org/col/file/doc.pdf", new Uint8Array(), "application/pdf")
     ).rejects.toThrow(StorageConfigurationError);
+  });
+
+  it("throws when storage env is only partially configured", () => {
+    process.env.GCS_BUCKET_NAME = "test-bucket";
+    delete process.env.GCS_PROJECT_ID;
+    delete process.env.FIREBASE_PROJECT_ID;
+    delete process.env.FIREBASE_CLIENT_EMAIL;
+    delete process.env.FIREBASE_PRIVATE_KEY;
+
+    expect(() => createConfiguredStorageClient()).toThrow(
+      "Missing or invalid storage environment variables"
+    );
   });
 });
 
