@@ -11,9 +11,10 @@ import type {
   QualificationVersionId,
   TopicId,
 } from "@/lib/types";
-import { learnerTopicState } from "@/db/schema";
+import { learnerQualifications, learnerTopicState } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import {
+  DIAGNOSTIC_START_MESSAGE,
   getDiagnosticTopics,
   getQualificationName,
   isLearnerEnrolled,
@@ -27,6 +28,12 @@ import {
   skipDiagnostic,
   clearDiagnosticPromptCache,
   loadDiagnosticPromptSections,
+  createDiagnosticSessionState,
+  generateDiagnosticSessionToken,
+  verifyDiagnosticSessionToken,
+  matchesDiagnosticTranscript,
+  extendsDiagnosticTranscript,
+  normaliseDiagnosticResults,
   type DiagnosticTopic,
   type DiagnosticResult,
 } from "@/engine/diagnostic";
@@ -173,6 +180,104 @@ describe("diagnostic engine", () => {
       );
 
       expect(enrolled).toBe(false);
+    });
+
+    it("returns false when learner only has an inactive enrollment", async () => {
+      const db = getTestDb();
+      const org = await createTestOrg();
+      const learner = await createTestLearner(org.id);
+      const { qualificationVersionId } = await createTestQualification();
+
+      await db.insert(learnerQualifications).values({
+        learnerId: learner.id,
+        qualificationVersionId,
+        targetGrade: "7",
+        examDate: "2026-06-15",
+        status: "dropped",
+      });
+
+      const enrolled = await isLearnerEnrolled(
+        db,
+        learner.id as LearnerId,
+        qualificationVersionId
+      );
+
+      expect(enrolled).toBe(false);
+    });
+  });
+
+  describe("diagnostic session state", () => {
+    it("round-trips a signed session token", () => {
+      const messages = [
+        { role: "user" as const, content: DIAGNOSTIC_START_MESSAGE },
+        { role: "assistant" as const, content: "Let's begin." },
+      ];
+      const state = createDiagnosticSessionState(
+        "learner-1" as LearnerId,
+        "qualification-1" as QualificationVersionId,
+        messages,
+        false
+      );
+
+      const token = generateDiagnosticSessionToken(state, "test-secret");
+
+      expect(verifyDiagnosticSessionToken(token, "test-secret")).toEqual(state);
+    });
+
+    it("rejects a tampered session token", () => {
+      const messages = [
+        { role: "user" as const, content: DIAGNOSTIC_START_MESSAGE },
+        { role: "assistant" as const, content: "Let's begin." },
+      ];
+      const state = createDiagnosticSessionState(
+        "learner-1" as LearnerId,
+        "qualification-1" as QualificationVersionId,
+        messages,
+        false
+      );
+
+      const token = generateDiagnosticSessionToken(state, "test-secret");
+      const decoded = Buffer.from(token, "base64url").toString("utf-8");
+      const [payload, signature] = decoded.split("::");
+      const tamperedSignature = `${signature?.[0] === "a" ? "b" : "a"}${signature?.slice(1) ?? ""}`;
+      const tamperedToken = Buffer.from(
+        `${payload}::${tamperedSignature}`
+      ).toString("base64url");
+
+      expect(
+        verifyDiagnosticSessionToken(tamperedToken, "test-secret")
+      ).toBeNull();
+    });
+
+    it("validates exact transcripts and single-turn extensions", () => {
+      const transcript = [
+        { role: "user" as const, content: DIAGNOSTIC_START_MESSAGE },
+        { role: "assistant" as const, content: "Let's begin." },
+      ];
+      const state = createDiagnosticSessionState(
+        "learner-1" as LearnerId,
+        "qualification-1" as QualificationVersionId,
+        transcript,
+        false
+      );
+
+      expect(matchesDiagnosticTranscript(transcript, state)).toBe(true);
+      expect(
+        extendsDiagnosticTranscript(
+          [...transcript, { role: "user" as const, content: "I know cells." }],
+          state
+        )
+      ).toBe(true);
+      expect(
+        extendsDiagnosticTranscript(
+          [
+            { role: "user" as const, content: DIAGNOSTIC_START_MESSAGE },
+            { role: "assistant" as const, content: "Tampered." },
+            { role: "user" as const, content: "I know cells." },
+          ],
+          state
+        )
+      ).toBe(false);
     });
   });
 
@@ -559,6 +664,82 @@ describe("diagnostic engine", () => {
       expect(userContent).toContain("topic-1");
       expect(userContent).toContain("Cell Biology");
       expect(userContent).toContain("I know about cells");
+    });
+
+    it("filters duplicate and unknown topic IDs from analysis output", async () => {
+      const client = createMockClient(
+        JSON.stringify([
+          {
+            topicId: "topic-2",
+            topicName: "Organisation",
+            score: 0.4,
+            confidence: 0.5,
+          },
+          {
+            topicId: "topic-2",
+            topicName: "Duplicate",
+            score: 0.8,
+            confidence: 0.9,
+          },
+          {
+            topicId: "unknown-topic",
+            topicName: "Unknown",
+            score: 1,
+            confidence: 1,
+          },
+        ])
+      );
+
+      const results = await analyseDiagnosticConversation(
+        messages,
+        topics,
+        "GCSE Biology",
+        client
+      );
+
+      expect(results).toEqual([
+        {
+          topicId: "topic-2",
+          topicName: "Organisation",
+          score: 0.4,
+          confidence: 0.5,
+        },
+      ]);
+    });
+  });
+
+  describe("normaliseDiagnosticResults", () => {
+    it("keeps only known root topics and canonical names", () => {
+      const topics: DiagnosticTopic[] = [
+        { id: "topic-1" as TopicId, name: "Cell Biology", code: "4.1" },
+      ];
+
+      expect(
+        normaliseDiagnosticResults(
+          [
+            {
+              topicId: "topic-1" as TopicId,
+              topicName: "Wrong Name",
+              score: 1.2,
+              confidence: -0.5,
+            },
+            {
+              topicId: "topic-2" as TopicId,
+              topicName: "Unknown",
+              score: 0.8,
+              confidence: 0.8,
+            },
+          ],
+          topics
+        )
+      ).toEqual([
+        {
+          topicId: "topic-1",
+          topicName: "Cell Biology",
+          score: 1,
+          confidence: 0,
+        },
+      ]);
     });
   });
 
