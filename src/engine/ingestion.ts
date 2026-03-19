@@ -1,4 +1,4 @@
-import { eq, sql, and, inArray } from "drizzle-orm";
+import { eq, sql, and, inArray, isNull } from "drizzle-orm";
 import {
   sourceFiles,
   sourceCollections,
@@ -347,7 +347,13 @@ async function resolveAccessibleCollections(
       classId: enrollments.classId,
     })
     .from(learners)
-    .leftJoin(enrollments, eq(learners.id, enrollments.learnerId))
+    .leftJoin(
+      enrollments,
+      and(
+        eq(learners.id, enrollments.learnerId),
+        isNull(enrollments.unenrolledAt)
+      )
+    )
     .where(eq(learners.id, learnerId));
 
   if (learnerWithEnrollments.length === 0) return [];
@@ -431,7 +437,7 @@ export async function processFile(
 
   await d.db
     .update(sourceFiles)
-    .set({ status: "processing" })
+    .set({ status: "processing", errorMessage: null, processedAt: null })
     .where(eq(sourceFiles.id, fileId));
 
   try {
@@ -450,45 +456,26 @@ export async function processFile(
       throw new IngestionError("NO_CHUNKS", "No chunks produced from text");
     }
 
-    // Step 3: Store chunks (single transaction)
-    const insertedChunks = await d.db
-      .insert(sourceChunks)
-      .values(
-        textChunks.map((c) => ({
-          fileId,
-          content: c.content,
-          chunkIndex: c.index,
-          tokenCount: c.tokenCount,
-          startPage: c.startPage ?? null,
-          endPage: c.endPage ?? null,
-        }))
-      )
-      .returning();
-
-    // Step 4: Generate embeddings
+    // Step 3: Generate embeddings
     const embeddings = await d.generateEmbeddings(
       textChunks.map((c) => c.content)
     );
 
-    // Step 5: Store embeddings (single transaction)
-    // pgvector requires string format '[0.1,0.2,...]' - the custom type doesn't serialize arrays
-    await d.db.insert(chunkEmbeddings).values(
-      insertedChunks.map((chunk, i) => ({
-        chunkId: chunk.id,
-        embedding: vectorToString(embeddings[i]),
-        model: "voyage-3",
-      }))
-    );
-
-    // Step 6: Get topics for classification
+    // Step 4: Get topics for classification
     const fileTopics = await getTopicsForFile(
       d.db,
       fileId,
       options?.qualificationVersionId
     );
 
-    // Step 7: Classify chunks and store mappings
-    let mappingsCreated = 0;
+    // Step 5: Classify chunks before writing so retries can replace prior rows
+    // without appending duplicates.
+    const mappingBlueprints: Array<{
+      chunkIndex: number;
+      topicId: string;
+      confidence: string;
+      mappingMethod: "auto";
+    }> = [];
     const topicsCoveredSet = new Set<string>();
 
     if (fileTopics.length > 0) {
@@ -497,19 +484,10 @@ export async function processFile(
         fileTopics
       );
 
-      const mappingValues: Array<{
-        chunkId: string;
-        topicId: string;
-        confidence: string;
-        mappingMethod: "auto";
-      }> = [];
-
       for (const classification of classifications) {
-        const chunk = insertedChunks[classification.chunkIndex];
-        if (!chunk) continue;
         for (const mapping of classification.mappings) {
-          mappingValues.push({
-            chunkId: chunk.id,
+          mappingBlueprints.push({
+            chunkIndex: classification.chunkIndex,
             topicId: mapping.topicId,
             confidence: mapping.confidence.toFixed(2),
             mappingMethod: "auto" as const,
@@ -517,17 +495,88 @@ export async function processFile(
           topicsCoveredSet.add(mapping.topicId);
         }
       }
-
-      if (mappingValues.length > 0) {
-        await d.db.insert(sourceMappings).values(mappingValues);
-        mappingsCreated = mappingValues.length;
-      }
     }
 
-    // Step 8: Update file status to ready
+    // Step 6-8: Replace prior derived rows and write the new chunks,
+    // embeddings, and mappings in retryable DB transactions.
+    const { insertedChunks, mappingsCreated } = await d.db.transaction(
+      async (tx) => {
+        const existingChunks = await tx
+          .select({ id: sourceChunks.id })
+          .from(sourceChunks)
+          .where(eq(sourceChunks.fileId, fileId));
+
+        const existingChunkIds = existingChunks.map((chunk) => chunk.id);
+
+        if (existingChunkIds.length > 0) {
+          await tx
+            .delete(sourceMappings)
+            .where(inArray(sourceMappings.chunkId, existingChunkIds));
+          await tx
+            .delete(chunkEmbeddings)
+            .where(inArray(chunkEmbeddings.chunkId, existingChunkIds));
+          await tx
+            .delete(sourceChunks)
+            .where(eq(sourceChunks.fileId, fileId));
+        }
+
+        const nextChunks = await tx
+          .insert(sourceChunks)
+          .values(
+            textChunks.map((c) => ({
+              fileId,
+              content: c.content,
+              chunkIndex: c.index,
+              tokenCount: c.tokenCount,
+              startPage: c.startPage ?? null,
+              endPage: c.endPage ?? null,
+            }))
+          )
+          .returning();
+
+        const chunkIdByIndex = new Map(
+          nextChunks.map((chunk) => [chunk.chunkIndex, chunk.id])
+        );
+
+        // pgvector requires string format '[0.1,0.2,...]' - the custom type
+        // doesn't serialize arrays.
+        await tx.insert(chunkEmbeddings).values(
+          textChunks.flatMap((chunk, index) => {
+            const chunkId = chunkIdByIndex.get(chunk.index);
+            if (!chunkId) return [];
+
+            return [
+              {
+                chunkId,
+                embedding: vectorToString(embeddings[index]),
+                model: "voyage-3",
+              },
+            ];
+          })
+        );
+
+        const mappingValues = mappingBlueprints.flatMap((mapping) => {
+          const chunkId = chunkIdByIndex.get(mapping.chunkIndex);
+          if (!chunkId) return [];
+
+          return [{ ...mapping, chunkId }];
+        });
+
+        if (mappingValues.length > 0) {
+          await tx.insert(sourceMappings).values(mappingValues);
+        }
+
+        return {
+          insertedChunks: nextChunks,
+          mappingsCreated: mappingValues.length,
+        };
+      }
+    );
+
+    // Step 9: Update file status to ready
     await d.db
       .update(sourceFiles)
-      .set({ status: "ready", processedAt: new Date() })
+      .set({ status: "ready", processedAt: new Date(), errorMessage: null })
       .where(eq(sourceFiles.id, fileId));
 
     structuredLog("file_processed", {
@@ -599,18 +648,37 @@ export async function retrieveChunks(
 
   const collectionArray = uuidArrayLiteral(collectionIds);
 
-  let topicJoin = sql``;
-  let topicFilter = sql``;
+  const hasTopicFilter = Boolean(options?.topicIds && options.topicIds.length > 0);
+  const topicArray = hasTopicFilter
+    ? uuidArrayLiteral(options?.topicIds as string[])
+    : null;
 
-  if (options?.topicIds && options.topicIds.length > 0) {
-    const topicArray = uuidArrayLiteral(options.topicIds as string[]);
-    topicJoin = sql`JOIN source_mappings sm ON sc.id = sm.chunk_id`;
-    topicFilter = sql`AND sm.topic_id = ANY(${topicArray}) AND CAST(sm.confidence AS numeric) >= ${minConfidence}`;
-  }
+  const qualifyingMappingsFilter = hasTopicFilter
+    ? sql`
+        AND EXISTS (
+          SELECT 1
+          FROM source_mappings sm
+          WHERE sm.chunk_id = sc.id
+            AND sm.topic_id = ANY(${topicArray})
+            AND CAST(sm.confidence AS numeric) >= ${minConfidence}
+        )
+      `
+    : sql`
+        AND EXISTS (
+          SELECT 1
+          FROM source_mappings sm
+          WHERE sm.chunk_id = sc.id
+            AND CAST(sm.confidence AS numeric) >= ${minConfidence}
+        )
+      `;
+
+  const selectedTopicFilter = hasTopicFilter
+    ? sql`AND sm2.topic_id = ANY(${topicArray})`
+    : sql``;
 
   const results = await d.db.execute(sql`
     WITH ranked AS (
-      SELECT DISTINCT ON (sc.id)
+      SELECT
         sc.id as chunk_id,
         sc.content,
         sf.filename as source_file_name,
@@ -619,15 +687,15 @@ export async function retrieveChunks(
       FROM chunk_embeddings ce
       JOIN source_chunks sc ON ce.chunk_id = sc.id
       JOIN source_files sf ON sc.file_id = sf.id
-      ${topicJoin}
       WHERE sf.collection_id = ANY(${collectionArray})
         AND sf.status = 'ready'
-        ${topicFilter}
-      ORDER BY sc.id, ce.embedding <=> ${vecLiteral}
+        ${qualifyingMappingsFilter}
     )
     SELECT r.*,
       (SELECT sm2.topic_id FROM source_mappings sm2
        WHERE sm2.chunk_id = r.chunk_id
+         ${selectedTopicFilter}
+         AND CAST(sm2.confidence AS numeric) >= ${minConfidence}
        ORDER BY CAST(sm2.confidence AS numeric) DESC LIMIT 1) as topic_id
     FROM ranked r
     ORDER BY r.similarity DESC

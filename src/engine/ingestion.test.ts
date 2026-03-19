@@ -367,6 +367,73 @@ describe("processFile", () => {
     expect(updatedFile.status).toBe("failed");
   });
 
+  it("replaces prior derived rows instead of appending on retry", async () => {
+    const org = await createTestOrg();
+    const user = await createTestUser();
+    const learner = await createTestLearner(org.id, { userId: user.id });
+    const qual = await createTestQualification();
+    await enrollLearnerInQualification(learner.id, qual.qualificationVersionId);
+
+    const { file } = await createTestFileWithCollection(
+      db,
+      learner.id,
+      user.id,
+      { status: "failed" }
+    );
+
+    const [staleChunk] = await db
+      .insert(sourceChunks)
+      .values({
+        fileId: file.id,
+        content: "Stale chunk from a previous failed attempt.",
+        chunkIndex: 99,
+        tokenCount: 8,
+      })
+      .returning();
+
+    await db.insert(chunkEmbeddings).values({
+      chunkId: staleChunk.id,
+      embedding: vectorToString(new Array(1024).fill(0.25)),
+      model: "voyage-3",
+    });
+
+    await db.insert(sourceMappings).values({
+      chunkId: staleChunk.id,
+      topicId: qual.topics[0].id,
+      confidence: "0.75",
+      mappingMethod: "auto",
+    });
+
+    const deps = makeMockDeps(db, {
+      classifyChunks: vi.fn().mockResolvedValue([
+        {
+          chunkIndex: 0,
+          mappings: [{ topicId: qual.topics[1].id as TopicId, confidence: 0.9 }],
+        },
+        { chunkIndex: 1, mappings: [] },
+        { chunkIndex: 2, mappings: [] },
+      ]),
+    });
+
+    await processFile(file.id, deps);
+    await processFile(file.id, deps);
+
+    const chunks = await db
+      .select()
+      .from(sourceChunks)
+      .where(eq(sourceChunks.fileId, file.id));
+    expect(chunks).toHaveLength(3);
+    expect(chunks.some((chunk) => chunk.id === staleChunk.id)).toBe(false);
+    expect(chunks.map((chunk) => chunk.chunkIndex).sort((a, b) => a - b)).toEqual([0, 1, 2]);
+
+    const embeddings = await db.select().from(chunkEmbeddings);
+    expect(embeddings).toHaveLength(3);
+
+    const mappings = await db.select().from(sourceMappings);
+    expect(mappings).toHaveLength(1);
+    expect(mappings[0].topicId).toBe(qual.topics[1].id);
+  });
+
   it("transitions status: pending -> processing -> ready", async () => {
     const org = await createTestOrg();
     const user = await createTestUser();
@@ -458,6 +525,7 @@ describe("retrieveChunks", () => {
     const org = await createTestOrg();
     const user = await createTestUser();
     const learner = await createTestLearner(org.id, { userId: user.id });
+    const qual = await createTestQualification();
 
     // Create a collection with a processed file, chunk, and embedding
     const [collection] = await db
@@ -494,6 +562,13 @@ describe("retrieveChunks", () => {
       chunkId: chunk.id,
       embedding: vectorToString(embedding),
       model: "voyage-3",
+    });
+
+    await db.insert(sourceMappings).values({
+      chunkId: chunk.id,
+      topicId: qual.topics[0].id,
+      confidence: "0.90",
+      mappingMethod: "auto",
     });
 
     const queryEmbedding = new Array(1024).fill(0);
@@ -576,6 +651,7 @@ describe("retrieveChunks", () => {
     const org = await createTestOrg();
     const user = await createTestUser();
     const learner = await createTestLearner(org.id, { userId: user.id });
+    const qual = await createTestQualification();
 
     const [collection] = await db
       .insert(sourceCollections)
@@ -611,6 +687,13 @@ describe("retrieveChunks", () => {
       model: "voyage-3",
     });
 
+    await db.insert(sourceMappings).values({
+      chunkId: chunk.id,
+      topicId: qual.topics[0].id,
+      confidence: "0.85",
+      mappingMethod: "auto",
+    });
+
     const deps = makeMockDeps(db, {
       generateEmbedding: vi.fn().mockResolvedValue(new Array(1024).fill(0.3)),
     });
@@ -630,6 +713,7 @@ describe("retrieveChunks", () => {
     const org = await createTestOrg();
     const user = await createTestUser();
     const learner = await createTestLearner(org.id, { userId: user.id });
+    const qual = await createTestQualification();
 
     const [collection] = await db
       .insert(sourceCollections)
@@ -667,6 +751,13 @@ describe("retrieveChunks", () => {
         chunkId: chunk.id,
         embedding: vectorToString(emb),
         model: "voyage-3",
+      });
+
+      await db.insert(sourceMappings).values({
+        chunkId: chunk.id,
+        topicId: qual.topics[0].id,
+        confidence: "0.90",
+        mappingMethod: "auto",
       });
     }
 
@@ -853,6 +944,7 @@ describe("retrieveChunks scope tests", () => {
     const org = await createTestOrg();
     const user = await createTestUser();
     const learner = await createTestLearner(org.id, { userId: user.id });
+    const qual = await createTestQualification();
 
     const [collection] = await db
       .insert(sourceCollections)
@@ -888,6 +980,13 @@ describe("retrieveChunks scope tests", () => {
       model: "voyage-3",
     });
 
+    await db.insert(sourceMappings).values({
+      chunkId: chunk.id,
+      topicId: qual.topics[0].id,
+      confidence: "0.88",
+      mappingMethod: "auto",
+    });
+
     const deps = makeMockDeps(db, {
       generateEmbedding: vi.fn().mockResolvedValue(new Array(1024).fill(0.2)),
     });
@@ -907,6 +1006,7 @@ describe("retrieveChunks scope tests", () => {
     const org = await createTestOrg();
     const user = await createTestUser();
     const learner = await createTestLearner(org.id, { userId: user.id });
+    const qual = await createTestQualification();
 
     // Create a class and enroll the learner
     const [cls] = await db
@@ -957,6 +1057,13 @@ describe("retrieveChunks scope tests", () => {
       model: "voyage-3",
     });
 
+    await db.insert(sourceMappings).values({
+      chunkId: chunk.id,
+      topicId: qual.topics[0].id,
+      confidence: "0.82",
+      mappingMethod: "auto",
+    });
+
     const deps = makeMockDeps(db, {
       generateEmbedding: vi.fn().mockResolvedValue(new Array(1024).fill(0.4)),
     });
@@ -970,6 +1077,82 @@ describe("retrieveChunks scope tests", () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].content).toContain("Class-specific");
+  });
+
+  it("does not return class-scoped chunks from classes the learner has left", async () => {
+    const org = await createTestOrg();
+    const user = await createTestUser();
+    const learner = await createTestLearner(org.id, { userId: user.id });
+    const qual = await createTestQualification();
+
+    const [cls] = await db
+      .insert(classes)
+      .values({
+        orgId: org.id,
+        name: "10C Biology",
+        academicYear: "2025-2026",
+      })
+      .returning();
+
+    await db.insert(enrollments).values({
+      learnerId: learner.id,
+      classId: cls.id,
+      unenrolledAt: new Date(),
+    });
+
+    const [collection] = await db
+      .insert(sourceCollections)
+      .values({ scope: "class", classId: cls.id, name: "Archived Handouts" })
+      .returning();
+
+    const [file] = await db
+      .insert(sourceFiles)
+      .values({
+        collectionId: collection.id,
+        uploadedByUserId: user.id,
+        filename: "archived-handout.pdf",
+        mimeType: "application/pdf",
+        storagePath: "uploads/archived-handout.pdf",
+        sizeBytes: 512,
+        status: "ready",
+      })
+      .returning();
+
+    const [chunk] = await db
+      .insert(sourceChunks)
+      .values({
+        fileId: file.id,
+        content: "Old class content that should no longer be visible.",
+        chunkIndex: 0,
+        tokenCount: 9,
+      })
+      .returning();
+
+    await db.insert(chunkEmbeddings).values({
+      chunkId: chunk.id,
+      embedding: vectorToString(new Array(1024).fill(0.45)),
+      model: "voyage-3",
+    });
+
+    await db.insert(sourceMappings).values({
+      chunkId: chunk.id,
+      topicId: qual.topics[0].id,
+      confidence: "0.92",
+      mappingMethod: "auto",
+    });
+
+    const deps = makeMockDeps(db, {
+      generateEmbedding: vi.fn().mockResolvedValue(new Array(1024).fill(0.45)),
+    });
+
+    const result = await retrieveChunks(
+      learner.id as LearnerId,
+      "archived handout",
+      undefined,
+      deps
+    );
+
+    expect(result).toHaveLength(0);
   });
 
   it("filters by topicIds when provided", async () => {
@@ -1038,5 +1221,188 @@ describe("retrieveChunks scope tests", () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].content).toBe("About topic 1");
+  });
+});
+
+describe("retrieveChunks confidence filters", () => {
+  let db: ReturnType<typeof getTestDb>;
+
+  beforeEach(() => {
+    db = getTestDb();
+  });
+
+  it("applies the default minConfidence even without topic filters", async () => {
+    const org = await createTestOrg();
+    const user = await createTestUser();
+    const learner = await createTestLearner(org.id, { userId: user.id });
+    const qual = await createTestQualification();
+
+    const [collection] = await db
+      .insert(sourceCollections)
+      .values({ scope: "private", learnerId: learner.id, name: "Confidence Notes" })
+      .returning();
+
+    const [file] = await db
+      .insert(sourceFiles)
+      .values({
+        collectionId: collection.id,
+        uploadedByUserId: user.id,
+        filename: "confidence.pdf",
+        mimeType: "application/pdf",
+        storagePath: "uploads/confidence.pdf",
+        sizeBytes: 512,
+        status: "ready",
+      })
+      .returning();
+
+    const [lowChunk] = await db
+      .insert(sourceChunks)
+      .values({
+        fileId: file.id,
+        content: "Low confidence mapping content",
+        chunkIndex: 0,
+        tokenCount: 5,
+      })
+      .returning();
+
+    const [highChunk] = await db
+      .insert(sourceChunks)
+      .values({
+        fileId: file.id,
+        content: "High confidence mapping content",
+        chunkIndex: 1,
+        tokenCount: 5,
+      })
+      .returning();
+
+    await db.insert(chunkEmbeddings).values([
+      {
+        chunkId: lowChunk.id,
+        embedding: vectorToString(new Array(1024).fill(0.55)),
+        model: "voyage-3",
+      },
+      {
+        chunkId: highChunk.id,
+        embedding: vectorToString(new Array(1024).fill(0.55)),
+        model: "voyage-3",
+      },
+    ]);
+
+    await db.insert(sourceMappings).values([
+      {
+        chunkId: lowChunk.id,
+        topicId: qual.topics[0].id,
+        confidence: "0.49",
+        mappingMethod: "auto" as const,
+      },
+      {
+        chunkId: highChunk.id,
+        topicId: qual.topics[1].id,
+        confidence: "0.75",
+        mappingMethod: "auto" as const,
+      },
+    ]);
+
+    const deps = makeMockDeps(db, {
+      generateEmbedding: vi.fn().mockResolvedValue(new Array(1024).fill(0.55)),
+    });
+
+    const result = await retrieveChunks(
+      learner.id as LearnerId,
+      "confidence content",
+      undefined,
+      deps
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].content).toBe("High confidence mapping content");
+  });
+
+  it("applies the same confidence threshold when topic filters are present", async () => {
+    const org = await createTestOrg();
+    const user = await createTestUser();
+    const learner = await createTestLearner(org.id, { userId: user.id });
+    const qual = await createTestQualification();
+    const topicId = qual.topics[0].id;
+
+    const [collection] = await db
+      .insert(sourceCollections)
+      .values({ scope: "private", learnerId: learner.id, name: "Topic Confidence Notes" })
+      .returning();
+
+    const [file] = await db
+      .insert(sourceFiles)
+      .values({
+        collectionId: collection.id,
+        uploadedByUserId: user.id,
+        filename: "topic-confidence.pdf",
+        mimeType: "application/pdf",
+        storagePath: "uploads/topic-confidence.pdf",
+        sizeBytes: 512,
+        status: "ready",
+      })
+      .returning();
+
+    const [lowChunk] = await db
+      .insert(sourceChunks)
+      .values({
+        fileId: file.id,
+        content: "Topic-specific low confidence content",
+        chunkIndex: 0,
+        tokenCount: 6,
+      })
+      .returning();
+
+    const [highChunk] = await db
+      .insert(sourceChunks)
+      .values({
+        fileId: file.id,
+        content: "Topic-specific high confidence content",
+        chunkIndex: 1,
+        tokenCount: 6,
+      })
+      .returning();
+
+    await db.insert(chunkEmbeddings).values([
+      {
+        chunkId: lowChunk.id,
+        embedding: vectorToString(new Array(1024).fill(0.6)),
+        model: "voyage-3",
+      },
+      {
+        chunkId: highChunk.id,
+        embedding: vectorToString(new Array(1024).fill(0.6)),
+        model: "voyage-3",
+      },
+    ]);
+
+    await db.insert(sourceMappings).values([
+      {
+        chunkId: lowChunk.id,
+        topicId,
+        confidence: "0.49",
+        mappingMethod: "auto" as const,
+      },
+      {
+        chunkId: highChunk.id,
+        topicId,
+        confidence: "0.76",
+        mappingMethod: "auto" as const,
+      },
+    ]);
+
+    const deps = makeMockDeps(db, {
+      generateEmbedding: vi.fn().mockResolvedValue(new Array(1024).fill(0.6)),
+    });
+
+    const result = await retrieveChunks(
+      learner.id as LearnerId,
+      "topic confidence",
+      { topicIds: [topicId as TopicId] },
+      deps
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].content).toBe("Topic-specific high confidence content");
   });
 });
