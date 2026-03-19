@@ -1,9 +1,10 @@
 "use server";
 
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db, type Database } from "@/lib/db";
 import { learnerPreferences, guardianLinks } from "@/db/schema";
 import { structuredLog } from "@/lib/logger";
+import { requireLearner } from "@/lib/auth";
 import {
   preferencesSchema,
   notificationConfigSchema,
@@ -14,9 +15,29 @@ import {
   type NotificationConfigInput,
 } from "@/components/settings/settings-schemas";
 
-export async function getPreferences(
+type ActionResult = { success: true } | { success: false; error: string };
+
+export interface NotificationConfigState {
+  mode: "single_guardian" | "no_guardians" | "multiple_guardians";
+  guardianCount: number;
+  initialValues: NotificationConfigInput;
+}
+
+export interface SettingsPageData {
+  preferences: PreferencesInput;
+  notificationConfig: NotificationConfigState;
+}
+
+async function resolveCurrentLearnerId(
+  database: Database
+): Promise<string> {
+  const { learnerId } = await requireLearner(database);
+  return learnerId;
+}
+
+async function loadPreferencesForLearner(
   learnerId: string,
-  database: Database = db
+  database: Database
 ): Promise<PreferencesInput> {
   const rows = await database
     .select({ key: learnerPreferences.key, value: learnerPreferences.value })
@@ -24,20 +45,76 @@ export async function getPreferences(
     .where(eq(learnerPreferences.learnerId, learnerId));
 
   return dbRowsToPreferences(
-    rows.map((r) => ({ key: r.key, value: r.value }))
+    rows.map((row) => ({ key: row.key, value: row.value }))
   );
 }
 
-export async function savePreferences(
+async function loadGuardianNotificationLinks(
   learnerId: string,
-  input: PreferencesInput,
-  database: Database = db
-): Promise<{ success: boolean; error?: string }> {
-  const parsed = preferencesSchema.safeParse(input);
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message };
+  database: Database
+) {
+  return await database
+    .select({
+      guardianUserId: guardianLinks.guardianUserId,
+      receivesWeeklyReport: guardianLinks.receivesWeeklyReport,
+      receivesFlags: guardianLinks.receivesFlags,
+    })
+    .from(guardianLinks)
+    .where(eq(guardianLinks.learnerId, learnerId));
+}
+
+async function loadNotificationConfigForLearner(
+  learnerId: string,
+  database: Database
+): Promise<NotificationConfigState> {
+  const links = await loadGuardianNotificationLinks(learnerId, database);
+
+  if (links.length === 0) {
+    return {
+      mode: "no_guardians",
+      guardianCount: 0,
+      initialValues: DEFAULT_NOTIFICATION_CONFIG,
+    };
   }
 
+  if (links.length > 1) {
+    return {
+      mode: "multiple_guardians",
+      guardianCount: links.length,
+      initialValues: DEFAULT_NOTIFICATION_CONFIG,
+    };
+  }
+
+  return {
+    mode: "single_guardian",
+    guardianCount: 1,
+    initialValues: {
+      receivesWeeklyReport: links[0].receivesWeeklyReport,
+      receivesFlags: links[0].receivesFlags,
+    },
+  };
+}
+
+export async function getPreferences(
+  database: Database = db
+): Promise<PreferencesInput> {
+  const learnerId = await resolveCurrentLearnerId(database);
+  return await loadPreferencesForLearner(learnerId, database);
+}
+
+export async function savePreferences(
+  input: unknown,
+  database: Database = db
+): Promise<ActionResult> {
+  const parsed = preferencesSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid preferences",
+    };
+  }
+
+  const learnerId = await resolveCurrentLearnerId(database);
   const dbRows = preferencesToDbRows(learnerId, parsed.data);
 
   try {
@@ -74,70 +151,43 @@ export async function savePreferences(
 }
 
 export async function getNotificationConfig(
-  guardianUserId: string,
-  learnerId: string,
   database: Database = db
-): Promise<NotificationConfigInput> {
-  const links = await database
-    .select({
-      receivesWeeklyReport: guardianLinks.receivesWeeklyReport,
-      receivesFlags: guardianLinks.receivesFlags,
-    })
-    .from(guardianLinks)
-    .where(
-      and(
-        eq(guardianLinks.learnerId, learnerId),
-        eq(guardianLinks.guardianUserId, guardianUserId)
-      )
-    )
-    .limit(1);
-
-  if (links.length === 0) {
-    return DEFAULT_NOTIFICATION_CONFIG;
-  }
-
-  return {
-    receivesWeeklyReport: links[0].receivesWeeklyReport,
-    receivesFlags: links[0].receivesFlags,
-  };
+): Promise<NotificationConfigState> {
+  const learnerId = await resolveCurrentLearnerId(database);
+  return await loadNotificationConfigForLearner(learnerId, database);
 }
 
 export async function saveNotificationConfig(
-  guardianUserId: string,
-  learnerId: string,
-  input: NotificationConfigInput,
-  database: Database = db
-): Promise<{ success: boolean; error?: string }> {
+  input: unknown
+): Promise<ActionResult> {
   const parsed = notificationConfigSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message };
+    return {
+      success: false,
+      error:
+        parsed.error.issues[0]?.message ?? "Invalid notification settings",
+    };
   }
 
-  try {
-    await database
-      .update(guardianLinks)
-      .set({
-        receivesWeeklyReport: parsed.data.receivesWeeklyReport,
-        receivesFlags: parsed.data.receivesFlags,
-      })
-      .where(
-        and(
-          eq(guardianLinks.learnerId, learnerId),
-          eq(guardianLinks.guardianUserId, guardianUserId)
-        )
-      );
+  // Guardian delivery preferences are owned by the linked guardian account.
+  return {
+    success: false,
+    error:
+      "Guardian notification settings must be updated from the linked guardian account.",
+  };
+}
 
-    structuredLog("notification_config.saved", {
-      guardianUserId,
-      learnerId,
-    });
-    return { success: true };
-  } catch (err) {
-    structuredLog("notification_config.save_error", {
-      guardianUserId,
-      learnerId,
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return { success: false, error: "Failed to save notification settings" };
-  }
+export async function loadSettingsPageData(
+  database: Database = db
+): Promise<SettingsPageData> {
+  const learnerId = await resolveCurrentLearnerId(database);
+  const [preferences, notificationConfig] = await Promise.all([
+    loadPreferencesForLearner(learnerId, database),
+    loadNotificationConfigForLearner(learnerId, database),
+  ]);
+
+  return {
+    preferences,
+    notificationConfig,
+  };
 }

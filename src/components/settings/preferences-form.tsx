@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   preferencesSchema,
@@ -14,7 +14,9 @@ import {
 
 interface PreferencesFormProps {
   initialValues: PreferencesInput;
-  onSave: (values: PreferencesInput) => Promise<void>;
+  onSave: (
+    values: PreferencesInput
+  ) => Promise<{ success: boolean; error?: string }>;
   disabled?: boolean;
 }
 
@@ -27,6 +29,10 @@ export function PreferencesForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    setValues(initialValues);
+  }, [initialValues]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -42,7 +48,12 @@ export function PreferencesForm({
 
       setSaving(true);
       try {
-        await onSave(result.data);
+        const saveResult = await onSave(result.data);
+        if (!saveResult.success) {
+          setError(saveResult.error ?? "Failed to save preferences");
+          return;
+        }
+
         setSuccess(true);
         setTimeout(() => setSuccess(false), 3000);
       } catch (err) {
@@ -60,11 +71,11 @@ export function PreferencesForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-4">
+      <div className="space-y-5">
         <div className="space-y-2">
           <label
             htmlFor="sessionMinutes"
-            className="text-sm font-medium"
+            className="text-sm font-medium text-[#1A1917]"
           >
             Preferred session length
           </label>
@@ -78,7 +89,7 @@ export function PreferencesForm({
               }))
             }
             disabled={isDisabled}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+            className="w-full rounded-[8px] border border-[#E5E0D6] bg-[#FFFCF8] px-3 py-2.5 text-sm text-[#1A1917] focus:border-[#2D7A6E] focus:outline-none focus:ring-1 focus:ring-[#2D7A6E] disabled:cursor-not-allowed disabled:bg-[#F0ECE4] disabled:text-[#949085]"
           >
             {SESSION_MINUTE_OPTIONS.map((min) => (
               <option key={min} value={min}>
@@ -91,7 +102,7 @@ export function PreferencesForm({
         <div className="space-y-2">
           <label
             htmlFor="difficulty"
-            className="text-sm font-medium"
+            className="text-sm font-medium text-[#1A1917]"
           >
             Preferred difficulty
           </label>
@@ -105,7 +116,7 @@ export function PreferencesForm({
               }))
             }
             disabled={isDisabled}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+            className="w-full rounded-[8px] border border-[#E5E0D6] bg-[#FFFCF8] px-3 py-2.5 text-sm text-[#1A1917] focus:border-[#2D7A6E] focus:outline-none focus:ring-1 focus:ring-[#2D7A6E] disabled:cursor-not-allowed disabled:bg-[#F0ECE4] disabled:text-[#949085]"
           >
             {DIFFICULTY_OPTIONS.map((d) => (
               <option key={d} value={d}>
@@ -118,7 +129,7 @@ export function PreferencesForm({
         <div className="space-y-2">
           <label
             htmlFor="studyTime"
-            className="text-sm font-medium"
+            className="text-sm font-medium text-[#1A1917]"
           >
             Preferred study time
           </label>
@@ -132,7 +143,7 @@ export function PreferencesForm({
               }))
             }
             disabled={isDisabled}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+            className="w-full rounded-[8px] border border-[#E5E0D6] bg-[#FFFCF8] px-3 py-2.5 text-sm text-[#1A1917] focus:border-[#2D7A6E] focus:outline-none focus:ring-1 focus:ring-[#2D7A6E] disabled:cursor-not-allowed disabled:bg-[#F0ECE4] disabled:text-[#949085]"
           >
             {STUDY_TIME_OPTIONS.map((t) => (
               <option key={t} value={t}>
@@ -145,7 +156,7 @@ export function PreferencesForm({
         <div className="space-y-2">
           <label
             htmlFor="weeklyGoal"
-            className="text-sm font-medium"
+            className="text-sm font-medium text-[#1A1917]"
           >
             Weekly study goal (minutes)
           </label>
@@ -163,14 +174,15 @@ export function PreferencesForm({
               }))
             }
             disabled={isDisabled}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+            className="w-full rounded-[8px] border border-[#E5E0D6] bg-[#FFFCF8] px-3 py-2.5 text-sm text-[#1A1917] focus:border-[#2D7A6E] focus:outline-none focus:ring-1 focus:ring-[#2D7A6E] disabled:cursor-not-allowed disabled:bg-[#F0ECE4] disabled:text-[#949085]"
           />
-          <p className="text-xs text-muted-foreground">
-            {Math.round(values.weeklyGoalMinutes / 60 * 10) / 10} hours per week
+          <p className="text-xs text-[#5C5950]">
+            {Math.round((values.weeklyGoalMinutes / 60) * 10) / 10} hours per
+            week
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-start gap-3 rounded-[12px] border border-[#E5E0D6] bg-[#FAF6F0] px-4 py-3">
           <input
             id="studyReminders"
             type="checkbox"
@@ -179,30 +191,43 @@ export function PreferencesForm({
               setValues((v) => ({ ...v, studyReminders: e.target.checked }))
             }
             disabled={isDisabled}
-            className="size-4 rounded border-input"
+            className="mt-0.5 size-4 rounded border-[#CFC8BB] text-[#2D7A6E] accent-[#2D7A6E]"
           />
-          <label
-            htmlFor="studyReminders"
-            className="text-sm font-medium"
-          >
-            Enable study reminders
-          </label>
+          <div className="space-y-1">
+            <label
+              htmlFor="studyReminders"
+              className="block text-sm font-medium text-[#1A1917]"
+            >
+              Enable study reminders
+            </label>
+            <p className="block text-xs leading-5 text-[#5C5950]">
+              Keep revision nudges turned on when you want Swotta to help you
+              hold your weekly goal.
+            </p>
+          </div>
         </div>
       </div>
 
       {error && (
-        <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+        <div
+          role="alert"
+          className="rounded-[8px] border-l-[3px] border-[#D4654A] bg-[#FAEAE5] px-4 py-3 text-sm text-[#D4654A]"
+        >
           {error}
         </div>
       )}
 
       {success && (
-        <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400">
+        <div className="rounded-[8px] border-l-[3px] border-[#2D7A6E] bg-[#E4F0ED] px-4 py-3 text-sm text-[#2D7A6E]">
           Preferences saved
         </div>
       )}
 
-      <Button type="submit" disabled={isDisabled}>
+      <Button
+        type="submit"
+        disabled={isDisabled}
+        className="h-10 rounded-[8px] bg-[#2D7A6E] px-5 text-sm font-medium text-white hover:bg-[#256860]"
+      >
         {saving ? "Saving..." : "Save preferences"}
       </Button>
     </form>

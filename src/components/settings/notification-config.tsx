@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   notificationConfigSchema,
@@ -9,7 +9,9 @@ import {
 
 interface NotificationConfigProps {
   initialValues: NotificationConfigInput;
-  onSave: (values: NotificationConfigInput) => Promise<void>;
+  onSave: (
+    values: NotificationConfigInput
+  ) => Promise<{ success: boolean; error?: string }>;
   disabled?: boolean;
 }
 
@@ -22,6 +24,10 @@ export function NotificationConfig({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    setValues(initialValues);
+  }, [initialValues]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -37,7 +43,14 @@ export function NotificationConfig({
 
       setSaving(true);
       try {
-        await onSave(result.data);
+        const saveResult = await onSave(result.data);
+        if (!saveResult.success) {
+          setError(
+            saveResult.error ?? "Failed to save notification settings"
+          );
+          return;
+        }
+
         setSuccess(true);
         setTimeout(() => setSuccess(false), 3000);
       } catch (err) {
@@ -56,7 +69,7 @@ export function NotificationConfig({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-start gap-3 rounded-[12px] border border-[#E5E0D6] bg-[#FAF6F0] px-4 py-3">
           <input
             id="weeklyReport"
             type="checkbox"
@@ -68,22 +81,22 @@ export function NotificationConfig({
               }))
             }
             disabled={isDisabled}
-            className="size-4 rounded border-input"
+            className="mt-0.5 size-4 rounded border-[#CFC8BB] text-[#2D7A6E] accent-[#2D7A6E]"
           />
-          <div>
+          <div className="space-y-1">
             <label
               htmlFor="weeklyReport"
-              className="text-sm font-medium"
+              className="block text-sm font-medium text-[#1A1917]"
             >
               Weekly progress report
             </label>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs leading-5 text-[#5C5950]">
               Receive a summary of study activity and mastery changes each week
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-start gap-3 rounded-[12px] border border-[#E5E0D6] bg-[#FAF6F0] px-4 py-3">
           <input
             id="safetyFlags"
             type="checkbox"
@@ -92,16 +105,16 @@ export function NotificationConfig({
               setValues((v) => ({ ...v, receivesFlags: e.target.checked }))
             }
             disabled={isDisabled}
-            className="size-4 rounded border-input"
+            className="mt-0.5 size-4 rounded border-[#CFC8BB] text-[#2D7A6E] accent-[#2D7A6E]"
           />
-          <div>
+          <div className="space-y-1">
             <label
               htmlFor="safetyFlags"
-              className="text-sm font-medium"
+              className="block text-sm font-medium text-[#1A1917]"
             >
               Safety and engagement alerts
             </label>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs leading-5 text-[#5C5950]">
               Get notified about disengagement, avoidance patterns, or other concerns
             </p>
           </div>
@@ -109,18 +122,25 @@ export function NotificationConfig({
       </div>
 
       {error && (
-        <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+        <div
+          role="alert"
+          className="rounded-[8px] border-l-[3px] border-[#D4654A] bg-[#FAEAE5] px-4 py-3 text-sm text-[#D4654A]"
+        >
           {error}
         </div>
       )}
 
       {success && (
-        <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-800 dark:bg-green-950 dark:text-green-400">
+        <div className="rounded-[8px] border-l-[3px] border-[#2D7A6E] bg-[#E4F0ED] px-4 py-3 text-sm text-[#2D7A6E]">
           Notification settings saved
         </div>
       )}
 
-      <Button type="submit" disabled={isDisabled}>
+      <Button
+        type="submit"
+        disabled={isDisabled}
+        className="h-10 rounded-[8px] bg-[#2D7A6E] px-5 text-sm font-medium text-white hover:bg-[#256860]"
+      >
         {saving ? "Saving..." : "Save notification settings"}
       </Button>
     </form>
