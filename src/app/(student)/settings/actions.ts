@@ -103,7 +103,7 @@ export async function getPreferences(
 }
 
 export async function savePreferences(
-  input: PreferencesInput,
+  input: unknown,
   database: Database = db
 ): Promise<ActionResult> {
   const parsed = preferencesSchema.safeParse(input);
@@ -158,8 +158,7 @@ export async function getNotificationConfig(
 }
 
 export async function saveNotificationConfig(
-  input: NotificationConfigInput,
-  database: Database = db
+  input: unknown
 ): Promise<ActionResult> {
   const parsed = notificationConfigSchema.safeParse(input);
   if (!parsed.success) {
@@ -170,53 +169,12 @@ export async function saveNotificationConfig(
     };
   }
 
-  const learnerId = await resolveCurrentLearnerId(database);
-  const links = await loadGuardianNotificationLinks(learnerId, database);
-
-  if (links.length === 0) {
-    return {
-      success: false,
-      error: "No linked guardian notification settings to update",
-    };
-  }
-
-  if (links.length > 1) {
-    return {
-      success: false,
-      error:
-        "This learner has multiple guardians. Notification controls still need a per-guardian settings flow.",
-    };
-  }
-
-  const guardianUserId = links[0].guardianUserId;
-
-  try {
-    await database
-      .update(guardianLinks)
-      .set({
-        receivesWeeklyReport: parsed.data.receivesWeeklyReport,
-        receivesFlags: parsed.data.receivesFlags,
-      })
-      .where(
-        and(
-          eq(guardianLinks.learnerId, learnerId),
-          eq(guardianLinks.guardianUserId, guardianUserId)
-        )
-      );
-
-    structuredLog("notification_config.saved", {
-      guardianUserId,
-      learnerId,
-    });
-    return { success: true };
-  } catch (err) {
-    structuredLog("notification_config.save_error", {
-      guardianUserId,
-      learnerId,
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return { success: false, error: "Failed to save notification settings" };
-  }
+  // Guardian delivery preferences are owned by the linked guardian account.
+  return {
+    success: false,
+    error:
+      "Guardian notification settings must be updated from the linked guardian account.",
+  };
 }
 
 export async function loadSettingsPageData(

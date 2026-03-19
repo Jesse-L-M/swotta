@@ -1,13 +1,12 @@
 import { redirect } from "next/navigation";
 import { AuthError, getAuthContext } from "@/lib/auth";
+import { structuredLog } from "@/lib/logger";
 import { PreferencesForm } from "@/components/settings/preferences-form";
-import { NotificationConfig } from "@/components/settings/notification-config";
 import {
   loadSettingsPageData,
-  saveNotificationConfig,
   savePreferences,
   type SettingsPageData,
-} from "./actions";
+} from "@/app/(student)/settings/actions";
 
 export default async function SettingsPage() {
   const ctx = await getAuthContext();
@@ -17,6 +16,11 @@ export default async function SettingsPage() {
   try {
     settingsData = await loadSettingsPageData();
   } catch (error) {
+    structuredLog("settings.page_load_error", {
+      code: error instanceof AuthError ? error.code : "UNKNOWN",
+      error: error instanceof Error ? error.message : String(error),
+    });
+
     if (error instanceof AuthError) {
       redirect("/onboarding");
     }
@@ -75,10 +79,36 @@ export default async function SettingsPage() {
         </div>
 
         {settingsData.notificationConfig.mode === "single_guardian" ? (
-          <NotificationConfig
-            initialValues={settingsData.notificationConfig.initialValues}
-            onSave={saveNotificationConfig}
-          />
+          <div className="space-y-4 rounded-[12px] border border-[#E5E0D6] bg-[#FAF6F0] px-4 py-4">
+            <p className="text-sm leading-6 text-[#5C5950]">
+              Guardian notification preferences are managed from the linked
+              guardian account. The current delivery settings are shown here for
+              reference.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-[10px] border border-[#E5E0D6] bg-white px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#949085]">
+                  Weekly Progress Report
+                </p>
+                <p className="mt-2 text-sm font-medium text-[#1A1917]">
+                  {settingsData.notificationConfig.initialValues
+                    .receivesWeeklyReport
+                    ? "Enabled"
+                    : "Disabled"}
+                </p>
+              </div>
+              <div className="rounded-[10px] border border-[#E5E0D6] bg-white px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#949085]">
+                  Safety And Engagement Alerts
+                </p>
+                <p className="mt-2 text-sm font-medium text-[#1A1917]">
+                  {settingsData.notificationConfig.initialValues.receivesFlags
+                    ? "Enabled"
+                    : "Disabled"}
+                </p>
+              </div>
+            </div>
+          </div>
         ) : settingsData.notificationConfig.mode === "no_guardians" ? (
           <div className="rounded-[8px] border-l-[3px] border-[#949085] bg-[#F0ECE4] px-4 py-3 text-sm text-[#5C5950]">
             No guardian is linked to this learner yet, so there are no family
@@ -87,8 +117,8 @@ export default async function SettingsPage() {
         ) : (
           <div className="rounded-[8px] border-l-[3px] border-[#D4654A] bg-[#FAEAE5] px-4 py-3 text-sm text-[#D4654A]">
             {settingsData.notificationConfig.guardianCount} guardians are linked
-            to this learner. This screen still needs a per-guardian editing flow
-            before those notification settings can be changed safely.
+            to this learner. Each guardian will need to manage their own
+            notification settings from the guardian account.
           </div>
         )}
       </section>

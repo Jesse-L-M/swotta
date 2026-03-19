@@ -4,20 +4,18 @@ import { render, screen } from "@testing-library/react";
 import { getAuthContext } from "@/lib/auth";
 import {
   loadSettingsPageData,
-  saveNotificationConfig,
   savePreferences,
-} from "./actions";
-import SettingsPage from "./page";
+} from "@/app/(student)/settings/actions";
+import SettingsPage from "@/app/(student)/settings/page";
 
 vi.mock("@/lib/auth", () => ({
   getAuthContext: vi.fn(),
   AuthError: class AuthError extends Error {},
 }));
 
-vi.mock("./actions", () => ({
+vi.mock("@/app/(student)/settings/actions", () => ({
   loadSettingsPageData: vi.fn(),
   savePreferences: vi.fn(),
-  saveNotificationConfig: vi.fn(),
 }));
 
 const mockedGetAuthContext = vi.mocked(getAuthContext);
@@ -36,7 +34,6 @@ describe("SettingsPage", () => {
       roles: [{ orgId: "org-1", role: "learner" }],
     });
     vi.mocked(savePreferences).mockResolvedValue({ success: true });
-    vi.mocked(saveNotificationConfig).mockResolvedValue({ success: true });
   });
 
   it("renders real settings values from the server-backed loader", async () => {
@@ -72,9 +69,10 @@ describe("SettingsPage", () => {
         .checked
     ).toBe(false);
     expect(
-      (screen.getByLabelText("Weekly progress report") as HTMLInputElement)
-        .checked
-    ).toBe(false);
+      screen.getByText(/guardian notification preferences are managed/i)
+    ).toBeDefined();
+    expect(screen.getByText("Disabled")).toBeDefined();
+    expect(screen.getByText("Enabled")).toBeDefined();
   });
 
   it("surfaces the multi-guardian UX gap instead of rendering unsafe controls", async () => {
@@ -101,6 +99,8 @@ describe("SettingsPage", () => {
     expect(
       screen.getByText(/2 guardians are linked to this learner/i)
     ).toBeDefined();
-    expect(screen.queryByLabelText("Weekly progress report")).toBeNull();
+    expect(
+      screen.getByText(/each guardian will need to manage their own/i)
+    ).toBeDefined();
   });
 });
