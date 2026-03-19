@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db, type Database } from "@/lib/db";
 import { learnerPreferences, guardianLinks } from "@/db/schema";
 import { structuredLog } from "@/lib/logger";
