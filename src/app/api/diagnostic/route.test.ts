@@ -107,7 +107,6 @@ describe("diagnostic API route", () => {
         {
           action: "message",
           qualificationVersionId,
-          systemPrompt: "malicious client prompt",
           messages: [
             { role: "user", content: DIAGNOSTIC_START_MESSAGE },
             { role: "assistant", content: "Opening question" },
@@ -158,7 +157,6 @@ describe("diagnostic API route", () => {
         {
           action: "message",
           qualificationVersionId,
-          systemPrompt: "ignored",
           messages: [
             { role: "user", content: DIAGNOSTIC_START_MESSAGE },
             { role: "assistant", content: "Opening question" },
@@ -199,6 +197,76 @@ describe("diagnostic API route", () => {
       .from(learnerTopicState)
       .where(eq(learnerTopicState.learnerId, learner.id));
     expect(persistedStates).toHaveLength(0);
+  });
+
+  it("rejects extra message turns after the diagnostic is complete", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const { qualificationVersionId } = await createTestQualification();
+    await enrollLearnerInQualification(learner.id, qualificationVersionId);
+
+    requireLearnerMock.mockResolvedValue(buildLearnerContext(learner.id, org.id));
+
+    const diagnostic = await import("@/engine/diagnostic");
+    const sendSpy = vi
+      .spyOn(diagnostic, "sendDiagnosticMessage")
+      .mockResolvedValueOnce(
+        'Opening question <diagnostic_progress>{"explored":[],"current":"Unit 1","total":2}</diagnostic_progress>'
+      )
+      .mockResolvedValueOnce(
+        'All topics covered <diagnostic_progress>{"explored":["Unit 1","Unit 2"],"current":null,"total":2}</diagnostic_progress> <diagnostic_complete />'
+      );
+
+    const { POST } = await import("@/app/api/diagnostic/route");
+
+    const startResponse = await POST(
+      makeRequest({
+        action: "start",
+        qualificationVersionId,
+      }) as never
+    );
+    const startCookie = getSessionCookie(startResponse);
+
+    const messageResponse = await POST(
+      makeRequest(
+        {
+          action: "message",
+          qualificationVersionId,
+          messages: [
+            { role: "user", content: DIAGNOSTIC_START_MESSAGE },
+            { role: "assistant", content: "Opening question" },
+            { role: "user", content: "Here is what I know." },
+          ],
+        },
+        startCookie
+      ) as never
+    );
+    const completeCookie = getSessionCookie(messageResponse);
+
+    const extraMessageResponse = await POST(
+      makeRequest(
+        {
+          action: "message",
+          qualificationVersionId,
+          messages: [
+            { role: "user", content: DIAGNOSTIC_START_MESSAGE },
+            { role: "assistant", content: "Opening question" },
+            { role: "user", content: "Here is what I know." },
+            { role: "assistant", content: "All topics covered" },
+            { role: "user", content: "One more thing." },
+          ],
+        },
+        completeCookie
+      ) as never
+    );
+
+    expect(extraMessageResponse.status).toBe(409);
+    await expect(extraMessageResponse.json()).resolves.toMatchObject({
+      error: {
+        code: "DIAGNOSTIC_COMPLETE",
+      },
+    });
+    expect(sendSpy).toHaveBeenCalledTimes(2);
   });
 });
 

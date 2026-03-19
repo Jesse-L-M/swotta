@@ -14,6 +14,7 @@ import type {
 import { getTopicTree } from "@/engine/curriculum";
 import { processDiagnosticResult, initTopicStates } from "@/engine/mastery";
 import { structuredLog } from "@/lib/logger";
+import { getDiagnosticSessionEnv } from "@/lib/env";
 
 const DIAGNOSTIC_MODEL = "claude-sonnet-4-20250514";
 const DIAGNOSTIC_SESSION_TTL_MS = 2 * 60 * 60 * 1000;
@@ -181,7 +182,7 @@ export async function buildDiagnosticSystemPrompt(
 // --- Diagnostic session integrity ---
 
 export function getDiagnosticSessionSecret(): string {
-  const secret = process.env.DIAGNOSTIC_SESSION_SECRET;
+  const secret = getDiagnosticSessionEnv().DIAGNOSTIC_SESSION_SECRET;
   if (!secret && process.env.NODE_ENV === "production") {
     throw new Error(
       "DIAGNOSTIC_SESSION_SECRET environment variable is required in production"

@@ -39,7 +39,6 @@ const requestSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("message"),
     qualificationVersionId: z.string().uuid(),
-    systemPrompt: z.string().min(1),
     messages: z.array(messageSchema).min(1),
   }),
   z.object({
@@ -232,6 +231,23 @@ async function handleMessage(
       qualificationVersionId,
       "INVALID_DIAGNOSTIC_STATE",
       "Diagnostic session is invalid or has expired. Please restart the diagnostic."
+    );
+  }
+
+  if (sessionState.isComplete) {
+    structuredLog("diagnostic.message.after_complete", {
+      learnerId,
+      qualificationVersionId,
+      messageCount: sessionState.messageCount,
+    });
+    return NextResponse.json(
+      {
+        error: {
+          code: "DIAGNOSTIC_COMPLETE",
+          message: "Diagnostic is already complete. View your results or restart the diagnostic.",
+        },
+      },
+      { status: 409 }
     );
   }
 

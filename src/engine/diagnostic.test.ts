@@ -13,6 +13,7 @@ import type {
 } from "@/lib/types";
 import { learnerQualifications, learnerTopicState } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
+import { resetEnvCache } from "@/lib/env";
 import {
   DIAGNOSTIC_START_MESSAGE,
   getDiagnosticTopics,
@@ -33,6 +34,7 @@ import {
   verifyDiagnosticSessionToken,
   matchesDiagnosticTranscript,
   extendsDiagnosticTranscript,
+  getDiagnosticSessionSecret,
   normaliseDiagnosticResults,
   type DiagnosticTopic,
   type DiagnosticResult,
@@ -70,6 +72,7 @@ function createMockClientSequence(responses: string[]) {
 describe("diagnostic engine", () => {
   beforeEach(() => {
     clearDiagnosticPromptCache();
+    resetEnvCache();
   });
 
   describe("getDiagnosticTopics", () => {
@@ -207,6 +210,60 @@ describe("diagnostic engine", () => {
   });
 
   describe("diagnostic session state", () => {
+    it("reads the session secret through zod-backed env parsing", () => {
+      const env = process.env as Record<string, string | undefined>;
+      const previousSecret = env.DIAGNOSTIC_SESSION_SECRET;
+      const previousNodeEnv = env.NODE_ENV;
+
+      env.DIAGNOSTIC_SESSION_SECRET = "test-secret";
+      env.NODE_ENV = "test";
+      resetEnvCache();
+
+      try {
+        expect(getDiagnosticSessionSecret()).toBe("test-secret");
+      } finally {
+        if (previousSecret === undefined) {
+          delete env.DIAGNOSTIC_SESSION_SECRET;
+        } else {
+          env.DIAGNOSTIC_SESSION_SECRET = previousSecret;
+        }
+        if (previousNodeEnv === undefined) {
+          delete env.NODE_ENV;
+        } else {
+          env.NODE_ENV = previousNodeEnv;
+        }
+        resetEnvCache();
+      }
+    });
+
+    it("requires a session secret in production", () => {
+      const env = process.env as Record<string, string | undefined>;
+      const previousSecret = env.DIAGNOSTIC_SESSION_SECRET;
+      const previousNodeEnv = env.NODE_ENV;
+
+      delete env.DIAGNOSTIC_SESSION_SECRET;
+      env.NODE_ENV = "production";
+      resetEnvCache();
+
+      try {
+        expect(() => getDiagnosticSessionSecret()).toThrow(
+          "DIAGNOSTIC_SESSION_SECRET environment variable is required in production"
+        );
+      } finally {
+        if (previousSecret === undefined) {
+          delete env.DIAGNOSTIC_SESSION_SECRET;
+        } else {
+          env.DIAGNOSTIC_SESSION_SECRET = previousSecret;
+        }
+        if (previousNodeEnv === undefined) {
+          delete env.NODE_ENV;
+        } else {
+          env.NODE_ENV = previousNodeEnv;
+        }
+        resetEnvCache();
+      }
+    });
+
     it("round-trips a signed session token", () => {
       const messages = [
         { role: "user" as const, content: DIAGNOSTIC_START_MESSAGE },

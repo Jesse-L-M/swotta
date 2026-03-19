@@ -20,27 +20,36 @@ const envSchema = z.object({
 
   RESEND_API_KEY: z.string().min(1),
 
+  DIAGNOSTIC_SESSION_SECRET: z.string().min(1).optional(),
+
   INNGEST_EVENT_KEY: z.string().optional(),
   INNGEST_SIGNING_KEY: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
+type DiagnosticSessionEnv = Pick<Env, "DIAGNOSTIC_SESSION_SECRET">;
 
 let cached: Env | null = null;
+let cachedDiagnosticSessionEnv: DiagnosticSessionEnv | null = null;
+
+function formatEnvErrors(error: z.ZodError): string {
+  const formatted = error.format();
+  return Object.entries(formatted)
+    .filter(([key]) => key !== "_errors")
+    .map(([key, val]) => {
+      const field = val as unknown as { _errors?: string[] };
+      const errors = Array.isArray(field._errors) ? field._errors : [];
+      return `  ${key}: ${errors.join(", ")}`;
+    })
+    .join("\n");
+}
 
 export function getEnv(): Env {
   if (cached) return cached;
 
   const parsed = envSchema.safeParse(process.env);
   if (!parsed.success) {
-    const formatted = parsed.error.format();
-    const message = Object.entries(formatted)
-      .filter(([key]) => key !== "_errors")
-      .map(([key, val]) => {
-        const errors = (val as { _errors: string[] })._errors;
-        return `  ${key}: ${errors.join(", ")}`;
-      })
-      .join("\n");
+    const message = formatEnvErrors(parsed.error);
     throw new Error(`Missing or invalid environment variables:\n${message}`);
   }
 
@@ -48,6 +57,22 @@ export function getEnv(): Env {
   return cached;
 }
 
+export function getDiagnosticSessionEnv(): DiagnosticSessionEnv {
+  if (cachedDiagnosticSessionEnv) return cachedDiagnosticSessionEnv;
+
+  const parsed = envSchema
+    .pick({ DIAGNOSTIC_SESSION_SECRET: true })
+    .safeParse(process.env);
+  if (!parsed.success) {
+    const message = formatEnvErrors(parsed.error);
+    throw new Error(`Missing or invalid environment variables:\n${message}`);
+  }
+
+  cachedDiagnosticSessionEnv = parsed.data;
+  return cachedDiagnosticSessionEnv;
+}
+
 export function resetEnvCache(): void {
   cached = null;
+  cachedDiagnosticSessionEnv = null;
 }
