@@ -699,6 +699,93 @@ describe("generateReplaySummary", () => {
       result!.whatTrippedYouUp.some((s) => s.includes("Needed help"))
     ).toBe(true);
   });
+
+  it("uses the attempt linked to the requested session when a block is retried", async () => {
+    const { db, learner, topicA } = await setupTestData();
+
+    const [block] = await db
+      .insert(studyBlocks)
+      .values({
+        learnerId: learner.id,
+        topicId: topicA.id,
+        blockType: "retrieval_drill",
+        durationMinutes: 15,
+      })
+      .returning();
+
+    const firstStartedAt = new Date("2026-03-19T10:00:00.000Z");
+    const secondStartedAt = new Date("2026-03-20T10:00:00.000Z");
+
+    const [firstSession] = await db
+      .insert(studySessions)
+      .values({
+        learnerId: learner.id,
+        blockId: block.id,
+        status: "completed",
+        startedAt: firstStartedAt,
+        topicsCovered: [topicA.id],
+        totalDurationMinutes: 12,
+      })
+      .returning();
+
+    const [secondSession] = await db
+      .insert(studySessions)
+      .values({
+        learnerId: learner.id,
+        blockId: block.id,
+        status: "completed",
+        startedAt: secondStartedAt,
+        topicsCovered: [topicA.id],
+        totalDurationMinutes: 8,
+      })
+      .returning();
+
+    await db.insert(blockAttempts).values({
+      blockId: block.id,
+      startedAt: firstStartedAt,
+      completedAt: new Date("2026-03-19T10:12:00.000Z"),
+      score: "45.00",
+      rawInteraction: {
+        sessionId: firstSession.id,
+        extractedOutcome: {
+          misconceptions: [
+            {
+              description: "Confuses osmosis with diffusion",
+              severity: 2,
+            },
+          ],
+        },
+      },
+    });
+
+    await db.insert(blockAttempts).values({
+      blockId: block.id,
+      startedAt: secondStartedAt,
+      completedAt: new Date("2026-03-20T10:08:00.000Z"),
+      score: "91.00",
+      rawInteraction: {
+        sessionId: secondSession.id,
+      },
+    });
+
+    const firstReplay = await generateReplaySummary(
+      db,
+      firstSession.id as SessionId
+    );
+    const secondReplay = await generateReplaySummary(
+      db,
+      secondSession.id as SessionId
+    );
+
+    expect(firstReplay!.score).toBe(45);
+    expect(firstReplay!.misconceptions).toEqual([
+      {
+        description: "Confuses osmosis with diffusion",
+        severity: 2,
+      },
+    ]);
+    expect(secondReplay!.score).toBe(91);
+  });
 });
 
 describe("getRecentSessionCards", () => {
@@ -909,6 +996,71 @@ describe("getRecentSessionCards", () => {
     expect(cards[0].blockTypeLabel).toBeNull();
     expect(cards[0].score).toBeNull();
     expect(cards[0].topicName).toBe("Topic 1.1");
+  });
+
+  it("uses the attempt linked to each session when the same block is retried", async () => {
+    const { db, learner, topicA } = await setupTestData();
+
+    const [block] = await db
+      .insert(studyBlocks)
+      .values({
+        learnerId: learner.id,
+        topicId: topicA.id,
+        blockType: "retrieval_drill",
+        durationMinutes: 15,
+      })
+      .returning();
+
+    const firstStartedAt = new Date("2026-03-18T09:00:00.000Z");
+    const secondStartedAt = new Date("2026-03-19T09:00:00.000Z");
+
+    const [firstSession] = await db
+      .insert(studySessions)
+      .values({
+        learnerId: learner.id,
+        blockId: block.id,
+        status: "completed",
+        startedAt: firstStartedAt,
+        topicsCovered: [topicA.id],
+      })
+      .returning();
+
+    const [secondSession] = await db
+      .insert(studySessions)
+      .values({
+        learnerId: learner.id,
+        blockId: block.id,
+        status: "completed",
+        startedAt: secondStartedAt,
+        topicsCovered: [topicA.id],
+      })
+      .returning();
+
+    await db.insert(blockAttempts).values({
+      blockId: block.id,
+      startedAt: firstStartedAt,
+      score: "58.00",
+      rawInteraction: {
+        sessionId: firstSession.id,
+      },
+    });
+
+    await db.insert(blockAttempts).values({
+      blockId: block.id,
+      startedAt: secondStartedAt,
+      score: "87.00",
+      rawInteraction: {
+        sessionId: secondSession.id,
+      },
+    });
+
+    const cards = await getRecentSessionCards(db, learner.id as LearnerId);
+
+    expect(cards).toHaveLength(2);
+    expect(cards[0].sessionId).toBe(secondSession.id);
+    expect(cards[0].score).toBe(87);
+    expect(cards[1].sessionId).toBe(firstSession.id);
+    expect(cards[1].score).toBe(58);
   });
 });
 

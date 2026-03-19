@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Database } from "@/lib/db";
 import { studySessions, blockAttempts, studyBlocks, topics } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import {
   buildSystemPrompt,
   parseSessionStatus,
@@ -75,6 +75,238 @@ export interface EndSessionResult {
   summary: string;
 }
 
+export type SessionMessage = { role: "user" | "assistant"; content: string };
+
+export class SessionConflictError extends Error {
+  code:
+    | "SESSION_NOT_ACTIVE"
+    | "SESSION_TRANSCRIPT_MISSING"
+    | "SESSION_TRANSCRIPT_MISMATCH";
+
+  constructor(
+    code:
+      | "SESSION_NOT_ACTIVE"
+      | "SESSION_TRANSCRIPT_MISSING"
+      | "SESSION_TRANSCRIPT_MISMATCH",
+    message: string
+  ) {
+    super(message);
+    this.code = code;
+  }
+}
+
+interface StoredAttemptOutcome {
+  score: number | null;
+  confidenceBefore: number | null;
+  confidenceAfter: number | null;
+  helpRequested: boolean;
+  helpTiming: "before_attempt" | "after_attempt" | null;
+  retentionOutcome: "remembered" | "partial" | "forgotten" | null;
+  misconceptions: Array<{
+    description: string;
+    severity: 1 | 2 | 3;
+  }>;
+  summary: string;
+}
+
+interface StoredSessionTranscript {
+  attemptId: string;
+  systemPrompt: string;
+  messages: SessionMessage[];
+}
+
+function buildAttemptRawInteraction(
+  sessionId: SessionId,
+  options: {
+    messages?: SessionMessage[];
+    systemPrompt?: string;
+    extractedOutcome?: StoredAttemptOutcome;
+  } = {}
+): Record<string, unknown> {
+  const rawInteraction: Record<string, unknown> = {
+    sessionId,
+    messages: options.messages ?? [],
+  };
+
+  if (options.systemPrompt) {
+    rawInteraction.systemPrompt = options.systemPrompt;
+  }
+
+  if (options.extractedOutcome) {
+    rawInteraction.extractedOutcome = options.extractedOutcome;
+  }
+
+  return rawInteraction;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function getAttemptSessionId(rawInteraction: unknown): string | null {
+  if (!isRecord(rawInteraction)) {
+    return null;
+  }
+
+  return typeof rawInteraction.sessionId === "string"
+    ? rawInteraction.sessionId
+    : null;
+}
+
+export function getPersistedAttemptMisconceptions(
+  rawInteraction: unknown
+): Array<{ description: string; severity: number }> {
+  if (!isRecord(rawInteraction) || !isRecord(rawInteraction.extractedOutcome)) {
+    return [];
+  }
+
+  const { misconceptions } = rawInteraction.extractedOutcome;
+  if (!Array.isArray(misconceptions)) {
+    return [];
+  }
+
+  return misconceptions.flatMap((item) => {
+    if (!isRecord(item) || typeof item.description !== "string") {
+      return [];
+    }
+
+    const severity = Number(item.severity);
+    return [
+      {
+        description: item.description,
+        severity: Number.isFinite(severity) ? severity : 2,
+      },
+    ];
+  });
+}
+
+export function getStoredAttemptMessages(
+  rawInteraction: unknown
+): SessionMessage[] {
+  if (!isRecord(rawInteraction) || !Array.isArray(rawInteraction.messages)) {
+    return [];
+  }
+
+  return rawInteraction.messages.flatMap((message) => {
+    if (
+      !isRecord(message) ||
+      (message.role !== "user" && message.role !== "assistant") ||
+      typeof message.content !== "string"
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        role: message.role,
+        content: message.content,
+      },
+    ];
+  });
+}
+
+export function getStoredAttemptSystemPrompt(
+  rawInteraction: unknown
+): string | null {
+  if (!isRecord(rawInteraction) || typeof rawInteraction.systemPrompt !== "string") {
+    return null;
+  }
+
+  return rawInteraction.systemPrompt;
+}
+
+function areSessionMessagesEqual(
+  left: SessionMessage[],
+  right: SessionMessage[]
+): boolean {
+  return (
+    left.length === right.length &&
+    left.every(
+      (message, index) =>
+        message.role === right[index]?.role &&
+        message.content === right[index]?.content
+    )
+  );
+}
+
+export async function getStoredSessionTranscript(
+  dbLike: { select: Database["select"] },
+  sessionId: SessionId
+): Promise<StoredSessionTranscript | null> {
+  const [attempt] = await dbLike
+    .select({
+      id: blockAttempts.id,
+      rawInteraction: blockAttempts.rawInteraction,
+    })
+    .from(blockAttempts)
+    .where(sql`${blockAttempts.rawInteraction} ->> 'sessionId' = ${sessionId}`)
+    .orderBy(desc(blockAttempts.createdAt))
+    .limit(1);
+
+  if (!attempt) {
+    return null;
+  }
+
+  const systemPrompt = getStoredAttemptSystemPrompt(attempt.rawInteraction);
+  const messages = getStoredAttemptMessages(attempt.rawInteraction);
+  if (!systemPrompt || messages.length === 0) {
+    return null;
+  }
+
+  return {
+    attemptId: attempt.id,
+    systemPrompt,
+    messages,
+  };
+}
+
+async function findAttemptIdForSession(
+  dbLike: { select: Database["select"] },
+  blockId: BlockId,
+  sessionId: SessionId
+): Promise<string | null> {
+  const [linkedAttempt] = await dbLike
+    .select({ id: blockAttempts.id })
+    .from(blockAttempts)
+    .where(
+      and(
+        eq(blockAttempts.blockId, blockId),
+        sql`${blockAttempts.rawInteraction} ->> 'sessionId' = ${sessionId}`
+      )
+    )
+    .orderBy(desc(blockAttempts.createdAt))
+    .limit(1);
+
+  if (linkedAttempt) {
+    return linkedAttempt.id;
+  }
+
+  const [incompleteAttempt] = await dbLike
+    .select({ id: blockAttempts.id })
+    .from(blockAttempts)
+    .where(
+      and(
+        eq(blockAttempts.blockId, blockId),
+        sql`${blockAttempts.completedAt} IS NULL`
+      )
+    )
+    .orderBy(desc(blockAttempts.createdAt))
+    .limit(1);
+
+  if (incompleteAttempt) {
+    return incompleteAttempt.id;
+  }
+
+  const [latestAttempt] = await dbLike
+    .select({ id: blockAttempts.id })
+    .from(blockAttempts)
+    .where(eq(blockAttempts.blockId, blockId))
+    .orderBy(desc(blockAttempts.createdAt))
+    .limit(1);
+
+  return latestAttempt?.id ?? null;
+}
+
 export async function startSession(
   block: StudyBlock,
   learnerContext: LearnerContext
@@ -122,6 +354,15 @@ export async function startSession(
       .insert(blockAttempts)
       .values({
         blockId: block.id,
+        rawInteraction: buildAttemptRawInteraction(sess.id as SessionId, {
+          systemPrompt,
+          messages: [
+            {
+              role: "assistant",
+              content: initialMessage,
+            },
+          ],
+        }),
       });
 
     await tx
@@ -143,15 +384,44 @@ export async function startSession(
 export async function continueSession(
   sessionId: SessionId,
   messages: Array<{ role: "user" | "assistant"; content: string }>,
-  systemPrompt: string
+  _systemPrompt: string
 ): Promise<ContinueSessionResult> {
-  const { anthropic } = getDeps();
+  const { db, anthropic } = getDeps();
+  const transcript = await getStoredSessionTranscript(db, sessionId);
+  if (!transcript) {
+    throw new SessionConflictError(
+      "SESSION_TRANSCRIPT_MISSING",
+      "Stored session transcript is unavailable"
+    );
+  }
+
+  if (messages.length !== transcript.messages.length + 1) {
+    throw new SessionConflictError(
+      "SESSION_TRANSCRIPT_MISMATCH",
+      "Submitted messages do not match the stored session transcript"
+    );
+  }
+
+  const nextUserMessage = messages[messages.length - 1];
+  const submittedHistory = messages.slice(0, -1);
+  if (
+    !nextUserMessage ||
+    nextUserMessage.role !== "user" ||
+    !areSessionMessagesEqual(submittedHistory, transcript.messages)
+  ) {
+    throw new SessionConflictError(
+      "SESSION_TRANSCRIPT_MISMATCH",
+      "Submitted messages do not match the stored session transcript"
+    );
+  }
+
+  const fullMessages = [...transcript.messages, nextUserMessage];
 
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 1024,
-    system: systemPrompt,
-    messages: messages.map((m) => ({
+    system: transcript.systemPrompt,
+    messages: fullMessages.map((m) => ({
       role: m.role,
       content: m.content,
     })),
@@ -161,6 +431,22 @@ export async function continueSession(
     response.content[0].type === "text" ? response.content[0].text : "";
 
   const { isComplete, cleanReply } = parseSessionStatus(rawReply);
+
+  await db
+    .update(blockAttempts)
+    .set({
+      rawInteraction: buildAttemptRawInteraction(sessionId, {
+        systemPrompt: transcript.systemPrompt,
+        messages: [
+          ...fullMessages,
+          {
+            role: "assistant",
+            content: cleanReply,
+          },
+        ],
+      }),
+    })
+    .where(eq(blockAttempts.id, transcript.attemptId));
 
   return {
     reply: cleanReply,
@@ -218,9 +504,13 @@ function parseOutcomeJson(text: string): OutcomeExtractionResult {
 
 export async function endSession(
   sessionId: SessionId,
-  messages: Array<{ role: "user" | "assistant"; content: string }>,
+  messages: SessionMessage[],
   systemPrompt: string,
-  reason: "completed" | "abandoned" | "timeout"
+  reason: "completed" | "abandoned" | "timeout",
+  confidence?: {
+    before: number | null;
+    after: number | null;
+  }
 ): Promise<EndSessionResult> {
   const { db, anthropic } = getDeps();
 
@@ -228,6 +518,7 @@ export async function endSession(
     .select({
       id: studySessions.id,
       blockId: studySessions.blockId,
+      status: studySessions.status,
       startedAt: studySessions.startedAt,
       topicsCovered: studySessions.topicsCovered,
     })
@@ -239,6 +530,12 @@ export async function endSession(
   }
 
   const session = sessionRows[0];
+  if (session.status !== "active") {
+    throw new SessionConflictError(
+      "SESSION_NOT_ACTIVE",
+      "Study session is not active"
+    );
+  }
 
   let topicName = "Unknown Topic";
   let blockType: BlockType = "retrieval_drill";
@@ -290,14 +587,14 @@ export async function endSession(
   try {
     extracted = parseOutcomeJson(responseText);
   } catch (error: unknown) {
-    console.error(
+    process.stderr.write(
       JSON.stringify({
         level: "warn",
         msg: "Failed to parse outcome JSON",
         sessionId,
         reason,
         error: error instanceof Error ? error.message : String(error),
-      })
+      }) + "\n"
     );
     extracted = {
       score: null,
@@ -316,9 +613,11 @@ export async function endSession(
   );
 
   const blockId = session.blockId as BlockId | null;
+  const confidenceBefore = confidence?.before ?? null;
+  const confidenceAfter = confidence?.after ?? null;
 
   await db.transaction(async (tx) => {
-    await tx
+    const [updatedSession] = await tx
       .update(studySessions)
       .set({
         status: reason === "completed" ? "completed" : reason,
@@ -326,29 +625,54 @@ export async function endSession(
         summary: extracted.summary,
         totalDurationMinutes: durationMinutes,
       })
-      .where(eq(studySessions.id, sessionId));
+      .where(
+        and(
+          eq(studySessions.id, sessionId),
+          eq(studySessions.status, "active")
+        )
+      )
+      .returning({ id: studySessions.id });
+
+    if (!updatedSession) {
+      throw new SessionConflictError(
+        "SESSION_NOT_ACTIVE",
+        "Study session is not active"
+      );
+    }
 
     if (blockId) {
-      const existingAttempts = await tx
-        .select({ id: blockAttempts.id })
-        .from(blockAttempts)
-        .where(eq(blockAttempts.blockId, blockId));
+      const attemptId = await findAttemptIdForSession(tx, blockId, sessionId);
 
-      if (existingAttempts.length > 0) {
+      if (attemptId) {
         await tx
           .update(blockAttempts)
           .set({
             completedAt: endedAt,
             score: extracted.score?.toString() ?? null,
-            confidenceBefore: null,
-            confidenceAfter: null,
+            confidenceBefore:
+              confidenceBefore !== null ? confidenceBefore.toFixed(3) : null,
+            confidenceAfter:
+              confidenceAfter !== null ? confidenceAfter.toFixed(3) : null,
             helpRequested: extracted.helpRequested,
             helpTiming: extracted.helpTiming,
             misconceptionsDetected: extracted.misconceptions.length,
             notes: extracted.summary,
-            rawInteraction: { messages },
+            rawInteraction: buildAttemptRawInteraction(sessionId, {
+              messages,
+              systemPrompt,
+              extractedOutcome: {
+                score: extracted.score,
+                confidenceBefore,
+                confidenceAfter,
+                helpRequested: extracted.helpRequested,
+                helpTiming: extracted.helpTiming,
+                retentionOutcome: extracted.retentionOutcome,
+                misconceptions: extracted.misconceptions,
+                summary: extracted.summary,
+              },
+            }),
           })
-          .where(eq(blockAttempts.id, existingAttempts[0].id));
+          .where(eq(blockAttempts.id, attemptId));
       }
 
       const blockStatus = reason === "completed" ? "completed" : "pending";
@@ -362,8 +686,8 @@ export async function endSession(
   const outcome: AttemptOutcome = {
     blockId: blockId ?? ("" as BlockId),
     score: extracted.score,
-    confidenceBefore: null,
-    confidenceAfter: null,
+    confidenceBefore,
+    confidenceAfter,
     helpRequested: extracted.helpRequested,
     helpTiming: extracted.helpTiming,
     misconceptions: extracted.misconceptions.map((m) => ({
