@@ -661,6 +661,98 @@ describe("endSession", () => {
     expect(attempts[0].misconceptionsDetected).toBe(0);
   });
 
+  it("keeps repeated attempts on the same block separate", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qual = await createTestQualification();
+    const topicId = qual.topics[1].id;
+    const blockId = await createBlockInDb(learner.id, topicId);
+
+    const block = makeBlock(learner.id, topicId, blockId);
+
+    configureSessionRunner({
+      db,
+      anthropic: createMockAnthropicClient(["Welcome back!"]) as unknown as SessionRunnerDeps["anthropic"],
+      retrieveChunks: createMockRetrieveChunks(),
+    });
+    const firstSession = await startSession(block, makeLearnerContext());
+
+    configureSessionRunner({
+      db,
+      anthropic: createMockAnthropicClient([
+        JSON.stringify({
+          score: 65,
+          misconceptions: [],
+          helpRequested: false,
+          helpTiming: null,
+          retentionOutcome: "partial",
+          summary: "First attempt complete.",
+        }),
+      ]) as unknown as SessionRunnerDeps["anthropic"],
+      retrieveChunks: createMockRetrieveChunks(),
+    });
+    await endSession(
+      firstSession.sessionId,
+      [
+        { role: "assistant", content: "Q1" },
+        { role: "user", content: "A1" },
+      ],
+      "SP",
+      "completed",
+      { before: 0.2, after: 0.5 }
+    );
+
+    configureSessionRunner({
+      db,
+      anthropic: createMockAnthropicClient(["Let's retry."]) as unknown as SessionRunnerDeps["anthropic"],
+      retrieveChunks: createMockRetrieveChunks(),
+    });
+    const secondSession = await startSession(block, makeLearnerContext());
+
+    configureSessionRunner({
+      db,
+      anthropic: createMockAnthropicClient([
+        JSON.stringify({
+          score: 92,
+          misconceptions: [],
+          helpRequested: true,
+          helpTiming: "after_attempt",
+          retentionOutcome: "remembered",
+          summary: "Second attempt complete.",
+        }),
+      ]) as unknown as SessionRunnerDeps["anthropic"],
+      retrieveChunks: createMockRetrieveChunks(),
+    });
+    await endSession(
+      secondSession.sessionId,
+      [
+        { role: "assistant", content: "Q2" },
+        { role: "user", content: "A2" },
+      ],
+      "SP",
+      "completed",
+      { before: 0.7, after: 0.9 }
+    );
+
+    const attempts = await db
+      .select()
+      .from(blockAttempts)
+      .where(eq(blockAttempts.blockId, blockId));
+
+    const sortedAttempts = attempts.sort(
+      (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
+    );
+
+    expect(sortedAttempts).toHaveLength(2);
+    expect(sortedAttempts[0].score).toBe("65.00");
+    expect(sortedAttempts[0].confidenceBefore).toBe("0.200");
+    expect(sortedAttempts[0].confidenceAfter).toBe("0.500");
+    expect(sortedAttempts[1].score).toBe("92.00");
+    expect(sortedAttempts[1].helpRequested).toBe(true);
+    expect(sortedAttempts[1].confidenceBefore).toBe("0.700");
+    expect(sortedAttempts[1].confidenceAfter).toBe("0.900");
+  });
+
   it("sets block status to completed on successful end", async () => {
     const org = await createTestOrg();
     const learner = await createTestLearner(org.id);

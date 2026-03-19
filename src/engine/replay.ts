@@ -1,4 +1,4 @@
-import { eq, desc, inArray } from "drizzle-orm";
+import { and, eq, desc, inArray, sql } from "drizzle-orm";
 import { createHmac, timingSafeEqual } from "crypto";
 import type { Database } from "@/lib/db";
 import {
@@ -12,6 +12,7 @@ import type { LearnerId, SessionId, TopicId, BlockType } from "@/lib/types";
 import { BLOCK_TYPE_LABELS } from "@/lib/labels";
 import { calculateCalibration } from "@/engine/calibration";
 import { structuredLog } from "@/lib/logger";
+import { getPersistedAttemptMisconceptions } from "@/engine/session";
 
 const SHARE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
@@ -50,6 +51,78 @@ export interface SessionCard {
   status: string;
   startedAt: Date;
   summary: string | null;
+}
+
+interface AttemptReplayRow {
+  id: string;
+  score: string | null;
+  confidenceBefore: string | null;
+  confidenceAfter: string | null;
+  helpRequested: boolean;
+  misconceptionsDetected: number;
+  rawInteraction: unknown;
+  createdAt: Date;
+}
+
+async function findAttemptForSession(
+  db: Database,
+  blockId: string,
+  sessionId: string,
+  sessionStartedAt: Date
+): Promise<AttemptReplayRow | null> {
+  const [linkedAttempt] = await db
+    .select({
+      id: blockAttempts.id,
+      score: blockAttempts.score,
+      confidenceBefore: blockAttempts.confidenceBefore,
+      confidenceAfter: blockAttempts.confidenceAfter,
+      helpRequested: blockAttempts.helpRequested,
+      misconceptionsDetected: blockAttempts.misconceptionsDetected,
+      rawInteraction: blockAttempts.rawInteraction,
+      createdAt: blockAttempts.createdAt,
+    })
+    .from(blockAttempts)
+    .where(
+      and(
+        eq(blockAttempts.blockId, blockId),
+        sql`${blockAttempts.rawInteraction} ->> 'sessionId' = ${sessionId}`
+      )
+    )
+    .orderBy(desc(blockAttempts.createdAt))
+    .limit(1);
+
+  if (linkedAttempt) {
+    return linkedAttempt;
+  }
+
+  const attemptRows = await db
+    .select({
+      id: blockAttempts.id,
+      score: blockAttempts.score,
+      confidenceBefore: blockAttempts.confidenceBefore,
+      confidenceAfter: blockAttempts.confidenceAfter,
+      helpRequested: blockAttempts.helpRequested,
+      misconceptionsDetected: blockAttempts.misconceptionsDetected,
+      rawInteraction: blockAttempts.rawInteraction,
+      createdAt: blockAttempts.createdAt,
+    })
+    .from(blockAttempts)
+    .where(eq(blockAttempts.blockId, blockId))
+    .orderBy(desc(blockAttempts.createdAt));
+
+  if (attemptRows.length === 0) {
+    return null;
+  }
+
+  return attemptRows.reduce((closest, candidate) => {
+    const closestDistance = Math.abs(
+      closest.createdAt.getTime() - sessionStartedAt.getTime()
+    );
+    const candidateDistance = Math.abs(
+      candidate.createdAt.getTime() - sessionStartedAt.getTime()
+    );
+    return candidateDistance < closestDistance ? candidate : closest;
+  });
 }
 
 // --- Share token functions ---
@@ -316,20 +389,14 @@ export async function generateReplaySummary(
       blockTypeLabel = BLOCK_TYPE_LABELS[blockType] ?? blockType;
     }
 
-    const attemptRows = await db
-      .select({
-        id: blockAttempts.id,
-        score: blockAttempts.score,
-        confidenceBefore: blockAttempts.confidenceBefore,
-        confidenceAfter: blockAttempts.confidenceAfter,
-        helpRequested: blockAttempts.helpRequested,
-        misconceptionsDetected: blockAttempts.misconceptionsDetected,
-      })
-      .from(blockAttempts)
-      .where(eq(blockAttempts.blockId, session.blockId));
+    const attempt = await findAttemptForSession(
+      db,
+      session.blockId,
+      session.id,
+      session.startedAt
+    );
 
-    if (attemptRows.length > 0) {
-      const attempt = attemptRows[0];
+    if (attempt) {
       attemptId = attempt.id;
       score = attempt.score ? Number(attempt.score) : null;
       confidenceBefore = attempt.confidenceBefore
@@ -359,6 +426,21 @@ export async function generateReplaySummary(
         description: m.description,
         severity: m.severity,
       });
+    }
+
+    if (misconceptions.length === 0 && session.blockId) {
+      const linkedAttempt = await findAttemptForSession(
+        db,
+        session.blockId,
+        session.id,
+        session.startedAt
+      );
+
+      if (linkedAttempt) {
+        misconceptions.push(
+          ...getPersistedAttemptMisconceptions(linkedAttempt.rawInteraction)
+        );
+      }
     }
   }
 
@@ -473,13 +555,15 @@ export async function getRecentSessionCards(
         blockTypeLabel = BLOCK_TYPE_LABELS[blockType] ?? blockType;
       }
 
-      const attemptRows = await db
-        .select({ score: blockAttempts.score })
-        .from(blockAttempts)
-        .where(eq(blockAttempts.blockId, session.blockId));
+      const linkedAttempt = await findAttemptForSession(
+        db,
+        session.blockId,
+        session.id,
+        session.startedAt
+      );
 
-      if (attemptRows.length > 0 && attemptRows[0].score) {
-        sessionScore = Number(attemptRows[0].score);
+      if (linkedAttempt?.score) {
+        sessionScore = Number(linkedAttempt.score);
       }
     }
 

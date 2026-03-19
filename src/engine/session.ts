@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Database } from "@/lib/db";
 import { studySessions, blockAttempts, studyBlocks, topics } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import {
   buildSystemPrompt,
   parseSessionStatus,
@@ -75,6 +75,120 @@ export interface EndSessionResult {
   summary: string;
 }
 
+type SessionMessage = { role: "user" | "assistant"; content: string };
+
+interface StoredAttemptOutcome {
+  score: number | null;
+  confidenceBefore: number | null;
+  confidenceAfter: number | null;
+  helpRequested: boolean;
+  helpTiming: "before_attempt" | "after_attempt" | null;
+  retentionOutcome: "remembered" | "partial" | "forgotten" | null;
+  misconceptions: Array<{
+    description: string;
+    severity: 1 | 2 | 3;
+  }>;
+  summary: string;
+}
+
+function buildAttemptRawInteraction(
+  sessionId: SessionId,
+  messages: SessionMessage[] = [],
+  extractedOutcome?: StoredAttemptOutcome
+): Record<string, unknown> {
+  return extractedOutcome
+    ? { sessionId, messages, extractedOutcome }
+    : { sessionId, messages };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function getAttemptSessionId(rawInteraction: unknown): string | null {
+  if (!isRecord(rawInteraction)) {
+    return null;
+  }
+
+  return typeof rawInteraction.sessionId === "string"
+    ? rawInteraction.sessionId
+    : null;
+}
+
+export function getPersistedAttemptMisconceptions(
+  rawInteraction: unknown
+): Array<{ description: string; severity: number }> {
+  if (!isRecord(rawInteraction) || !isRecord(rawInteraction.extractedOutcome)) {
+    return [];
+  }
+
+  const { misconceptions } = rawInteraction.extractedOutcome;
+  if (!Array.isArray(misconceptions)) {
+    return [];
+  }
+
+  return misconceptions.flatMap((item) => {
+    if (!isRecord(item) || typeof item.description !== "string") {
+      return [];
+    }
+
+    const severity = Number(item.severity);
+    return [
+      {
+        description: item.description,
+        severity: Number.isFinite(severity) ? severity : 2,
+      },
+    ];
+  });
+}
+
+async function findAttemptIdForSession(
+  dbLike: { select: Database["select"] },
+  blockId: BlockId,
+  sessionId: SessionId
+): Promise<string | null> {
+  const [linkedAttempt] = await dbLike
+    .select({ id: blockAttempts.id })
+    .from(blockAttempts)
+    .where(
+      and(
+        eq(blockAttempts.blockId, blockId),
+        sql`${blockAttempts.rawInteraction} ->> 'sessionId' = ${sessionId}`
+      )
+    )
+    .orderBy(desc(blockAttempts.createdAt))
+    .limit(1);
+
+  if (linkedAttempt) {
+    return linkedAttempt.id;
+  }
+
+  const [incompleteAttempt] = await dbLike
+    .select({ id: blockAttempts.id })
+    .from(blockAttempts)
+    .where(
+      and(
+        eq(blockAttempts.blockId, blockId),
+        sql`${blockAttempts.completedAt} IS NULL`
+      )
+    )
+    .orderBy(desc(blockAttempts.createdAt))
+    .limit(1);
+
+  if (incompleteAttempt) {
+    return incompleteAttempt.id;
+  }
+
+  const [latestAttempt] = await dbLike
+    .select({ id: blockAttempts.id })
+    .from(blockAttempts)
+    .where(eq(blockAttempts.blockId, blockId))
+    .orderBy(desc(blockAttempts.createdAt))
+    .limit(1);
+
+  return latestAttempt?.id ?? null;
+}
+
 export async function startSession(
   block: StudyBlock,
   learnerContext: LearnerContext
@@ -122,6 +236,7 @@ export async function startSession(
       .insert(blockAttempts)
       .values({
         blockId: block.id,
+        rawInteraction: buildAttemptRawInteraction(sess.id as SessionId),
       });
 
     await tx
@@ -218,9 +333,13 @@ function parseOutcomeJson(text: string): OutcomeExtractionResult {
 
 export async function endSession(
   sessionId: SessionId,
-  messages: Array<{ role: "user" | "assistant"; content: string }>,
+  messages: SessionMessage[],
   systemPrompt: string,
-  reason: "completed" | "abandoned" | "timeout"
+  reason: "completed" | "abandoned" | "timeout",
+  confidence?: {
+    before: number | null;
+    after: number | null;
+  }
 ): Promise<EndSessionResult> {
   const { db, anthropic } = getDeps();
 
@@ -290,14 +409,14 @@ export async function endSession(
   try {
     extracted = parseOutcomeJson(responseText);
   } catch (error: unknown) {
-    console.error(
+    process.stderr.write(
       JSON.stringify({
         level: "warn",
         msg: "Failed to parse outcome JSON",
         sessionId,
         reason,
         error: error instanceof Error ? error.message : String(error),
-      })
+      }) + "\n"
     );
     extracted = {
       score: null,
@@ -316,6 +435,8 @@ export async function endSession(
   );
 
   const blockId = session.blockId as BlockId | null;
+  const confidenceBefore = confidence?.before ?? null;
+  const confidenceAfter = confidence?.after ?? null;
 
   await db.transaction(async (tx) => {
     await tx
@@ -329,26 +450,34 @@ export async function endSession(
       .where(eq(studySessions.id, sessionId));
 
     if (blockId) {
-      const existingAttempts = await tx
-        .select({ id: blockAttempts.id })
-        .from(blockAttempts)
-        .where(eq(blockAttempts.blockId, blockId));
+      const attemptId = await findAttemptIdForSession(tx, blockId, sessionId);
 
-      if (existingAttempts.length > 0) {
+      if (attemptId) {
         await tx
           .update(blockAttempts)
           .set({
             completedAt: endedAt,
             score: extracted.score?.toString() ?? null,
-            confidenceBefore: null,
-            confidenceAfter: null,
+            confidenceBefore:
+              confidenceBefore !== null ? confidenceBefore.toFixed(3) : null,
+            confidenceAfter:
+              confidenceAfter !== null ? confidenceAfter.toFixed(3) : null,
             helpRequested: extracted.helpRequested,
             helpTiming: extracted.helpTiming,
             misconceptionsDetected: extracted.misconceptions.length,
             notes: extracted.summary,
-            rawInteraction: { messages },
+            rawInteraction: buildAttemptRawInteraction(sessionId, messages, {
+              score: extracted.score,
+              confidenceBefore,
+              confidenceAfter,
+              helpRequested: extracted.helpRequested,
+              helpTiming: extracted.helpTiming,
+              retentionOutcome: extracted.retentionOutcome,
+              misconceptions: extracted.misconceptions,
+              summary: extracted.summary,
+            }),
           })
-          .where(eq(blockAttempts.id, existingAttempts[0].id));
+          .where(eq(blockAttempts.id, attemptId));
       }
 
       const blockStatus = reason === "completed" ? "completed" : "pending";
@@ -362,8 +491,8 @@ export async function endSession(
   const outcome: AttemptOutcome = {
     blockId: blockId ?? ("" as BlockId),
     score: extracted.score,
-    confidenceBefore: null,
-    confidenceAfter: null,
+    confidenceBefore,
+    confidenceAfter,
     helpRequested: extracted.helpRequested,
     helpTiming: extracted.helpTiming,
     misconceptions: extracted.misconceptions.map((m) => ({
