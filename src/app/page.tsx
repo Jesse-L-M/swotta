@@ -18,13 +18,13 @@ export default function Home() {
           <div className="hidden items-center gap-8 md:flex">
             <a
               href="#how-it-works"
-              className="text-sm text-stone-650 transition-colors hover:text-stone-750"
+              className="flex min-h-[44px] items-center text-sm text-stone-650 transition-colors hover:text-stone-750"
             >
               How it works
             </a>
             <a
               href="#for-parents"
-              className="text-sm text-stone-650 transition-colors hover:text-stone-750"
+              className="flex min-h-[44px] items-center text-sm text-stone-650 transition-colors hover:text-stone-750"
             >
               For parents
             </a>
@@ -32,13 +32,13 @@ export default function Home() {
           <div className="flex items-center gap-5">
             <Link
               href="/login"
-              className="text-sm text-stone-650 transition-colors hover:text-stone-750"
+              className="flex min-h-[44px] items-center text-sm text-stone-650 transition-colors hover:text-stone-750"
             >
               Log in
             </Link>
             <Link
               href="/signup"
-              className="rounded-lg bg-stone-750 px-4 py-2 text-sm font-medium text-cream-50 transition-all hover:bg-stone-650"
+              className="flex min-h-[44px] items-center rounded-lg bg-stone-750 px-5 py-2.5 text-sm font-medium text-cream-50 transition-colors hover:bg-stone-650"
             >
               Get started
             </Link>
