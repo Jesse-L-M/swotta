@@ -1,16 +1,14 @@
 # Swotta
 
-A curriculum-aware academic operating system for GCSE and A-Level revision. Built as a solo full-stack project by [Jesse Merrigan](https://github.com/Jesse-L-M).
+A revision system for GCSE and A-Level students that takes spaced repetition, mastery tracking, and AI tutoring seriously. Built as a solo project by [Jesse Merrigan](https://github.com/Jesse-L-M).
 
-## Why I built this
+## Why this project
 
-Students revising for GCSEs and A-Levels cobble together flashcard apps, YouTube playlists, and generic AI chatbots. None of these know the actual exam specification, none adapt to what the student struggles with, and parents are left asking "how did revision go?" with no way to verify the answer.
+I'm interested in how memory works — the biological kind and the computational kind. How spaced repetition exploits the forgetting curve. How retrieval practice strengthens recall more than re-reading ever does. How confidence calibration (knowing what you don't know) is arguably the skill most students lack and most revision tools ignore.
 
-I wanted to build a system where one product owns the full loop: curriculum structure, mastery tracking, adaptive AI study sessions, source ingestion, and parent reporting — all grounded on the real AQA/OCR/Edexcel specification.
+I'm also deep into agentic AI systems, specifically the memory problem: how you give an AI enough structured context about a person — what they know, what they've forgotten, where they're miscalibrated, what's worked before — that it can do something genuinely useful in the moment rather than just responding to a prompt.
 
-## What it does
-
-Swotta loads the full exam specification (topics, command words, mark scheme patterns), tracks per-topic mastery using spaced repetition, and uses Claude to run guided study sessions that adapt to the student's current understanding. Students upload their own notes, past papers, and class handouts — Swotta chunks, embeds, and maps them to the curriculum so sessions draw on the student's actual materials. Parents get weekly reports with mastery changes, misconception patterns, and confidence calibration — not just "studied for 3 hours."
+Swotta is where those interests meet. The practical goal is a system that helps students revise effectively for their actual exams. The deeper goal is building a working model of how structured memory (curriculum graphs, spaced repetition state, misconception tracking, confidence signals) can make AI interactions meaningfully better than a blank-context chatbot.
 
 ## Screenshots
 
@@ -18,7 +16,7 @@ Swotta loads the full exam specification (topics, command words, mark scheme pat
 
 ![Swotta landing page hero](docs/assets/swotta-hero.png)
 
-### Curriculum-aware specification loading
+### Curriculum structure
 
 ![Swotta curriculum-first section](docs/assets/swotta-curriculum.png)
 
@@ -26,71 +24,53 @@ Swotta loads the full exam specification (topics, command words, mark scheme pat
 
 ![Swotta parent reporting section](docs/assets/swotta-parents.png)
 
-## Technical highlights
+## How it works
 
-**Relational curriculum model, not document store.** The schema models qualification, topic tree, command words, misconception rules, and task rules as a proper relational graph with cross-cutting edges (prerequisites, builds-on, related). This lets the scheduler reason about learning dependencies — not just "what's overdue."
+Swotta loads a full exam specification — every topic, command word, and mark scheme pattern for a given qualification — into a relational topic graph with prerequisite edges. When a student signs up and picks their subjects, the system seeds their mastery state across every topic and starts scheduling study sessions.
 
-**Spaced repetition with exam proximity.** The mastery engine uses a modified SM-2 algorithm, but the scheduler also factors exam dates, topic weights from the specification, and behavioural signals (avoidance patterns, confidence miscalibration, study gaps). As exams approach, the block type mix shifts from exploratory sessions toward retrieval drills and timed practice.
+The **scheduling engine** uses a modified SM-2 spaced repetition algorithm, but it doesn't just track what's overdue. It factors exam proximity (shifting from exploratory sessions to retrieval drills as exams approach), topic weights from the actual specification, and behavioural signals like avoidance patterns and confidence miscalibration. The scheduler picks both *what* to study and *how* — retrieval drill, worked example, essay planning, mistake review, and five other session types, each with a distinct AI prompt.
 
-**Source ingestion pipeline.** Students upload PDFs, DOCX, and images. The pipeline extracts text, chunks at semantic boundaries, generates Voyage AI embeddings stored in pgvector, and uses Claude to classify each chunk against the curriculum topic graph with confidence scores. Study sessions then retrieve relevant chunks via vector similarity, scoped to the student's accessible sources.
+**Study sessions** are conversational, powered by Claude. The interesting part isn't the chat interface — it's the context assembly. Each session receives the student's mastery level for that topic, their known misconceptions, confirmed learning preferences, relevant chunks from their own uploaded materials (retrieved via pgvector similarity search), and the qualification's command word definitions and mark scheme structure. The AI guides rather than gives answers.
 
-**Embeddings colocated with relational data.** pgvector stores embeddings in the same Postgres instance as the relational schema. Source retrieval, mastery lookups, and scheduling decisions all happen in one transaction — no separate vector store to sync.
+**Source ingestion** handles the student's own materials. Upload a PDF of class notes or a past paper, and the pipeline extracts text, chunks it at semantic boundaries, generates embeddings, and uses Claude to classify each chunk against the curriculum topic graph. Sessions then pull from the student's actual materials, not generic content.
 
-**AI prompts as external Markdown.** All 15 study session prompts (retrieval drill, essay planning, worked example, mistake review, etc.) live as versioned Markdown files, not hardcoded strings. Each prompt receives structured context: qualification rules, learner mastery state, known misconceptions, confirmed memory, and retrieved source chunks.
+**Parent reporting** closes the loop. Weekly reports include mastery changes, misconception narratives ("recurring confusion between osmosis and diffusion — targeted across 3 sessions, now resolved"), confidence calibration ("he consistently underestimates himself on genetics"), and behavioural patterns. The goal is reports that tell parents something useful, not just "studied for 3 hours."
 
-**Multi-tenant from day one.** A household is just an organisation with type `household`. The same identity/membership/policy model supports B2C families and B2B schools. Policies resolve through five layers (global, qualification, org, class, learner) with most-specific-wins semantics.
+All of this sits on a **multi-tenant identity model** where a household is just an organisation. The same schema supports B2C families and B2B schools, with policies resolving through five layers (global, qualification, org, class, learner).
 
 ## Stack
 
 | Layer | Choice | Why |
 |-------|--------|-----|
-| Framework | Next.js 15, React 19 | Full-stack TypeScript, Server Components, streaming for AI sessions |
-| Database | PostgreSQL 16 + pgvector | Relational data + vector embeddings in one DB, atomic transactions |
-| ORM | Drizzle | Schema-as-TypeScript, fine-grained SQL for complex graph queries |
-| Auth | Firebase Auth | Google Sign-In (universal in UK schools), stays in GCP ecosystem |
+| Framework | Next.js 15, React 19 | Full-stack TypeScript, streaming for AI sessions |
+| Database | PostgreSQL 16 + pgvector | Relational data + vector embeddings in one DB, one transaction |
+| ORM | Drizzle | Schema-as-TypeScript, fine-grained SQL for graph queries |
+| Auth | Firebase Auth | Google Sign-In (universal in UK schools), GCP ecosystem |
 | AI | Claude API (Anthropic SDK) | Study sessions, material analysis, report generation |
-| Embeddings | Voyage AI (1024d) | Stored in pgvector alongside relational data |
-| File storage | Google Cloud Storage | Signed URLs for secure student uploads |
+| Embeddings | Voyage AI (1024d) | Colocated with relational data in pgvector |
+| File storage | Google Cloud Storage | Signed URLs for student uploads |
 | Background jobs | Inngest | Durable, retryable, typed async functions |
 | Email | Resend | Parent weekly reports |
-| Hosting | Cloud Run + Cloud SQL | Long request timeouts for AI sessions, auto-scaling, europe-west2 |
+| Hosting | Cloud Run + Cloud SQL | Long timeouts for AI sessions, europe-west2 |
 | Infrastructure | Terraform | Modular GCP config (networking, IAM, secrets, storage) |
-
-## What I built
-
-- Product concept, scope, and system design for a student-and-parent academic operating system.
-- The full data model: 40+ tables across five schema layers (identity, curriculum, sources, learner state, planning).
-- 16 engine modules: curriculum loading, ingestion pipeline, scheduler, mastery tracking, session runner, reporting, diagnostics, behaviour analysis, memory, notifications, exam proximity, and more.
-- 15 AI prompt templates for distinct study session modes.
-- Learner and guardian UI surfaces in Next.js: dashboard, onboarding, study sessions, source upload, parent reporting.
-- CI/CD pipeline (GitHub Actions: lint, typecheck, test on PR; deploy on merge).
-- Terraform infrastructure for GCP deployment.
-- 1600+ tests across 84 files (unit + e2e).
 
 ## Repository structure
 
 ```
 src/
-  app/          Route surfaces: marketing, auth, learner, guardian, API handlers
-  components/   UI: landing, dashboard, onboarding, sessions, sources, parent views
-  engine/       Core domain: curriculum, scheduling, mastery, sessions, reporting, diagnostics
-  ai/           Claude integration, Voyage embeddings, 15 prompt templates
-  db/schema/    Drizzle schema (5 layers, 40+ tables)
-  lib/          Auth, types, logging, database connection
-  email/        Resend templates for parent reports
-inngest/        Background job entry points
+  engine/       Core domain: scheduling, mastery, sessions, reporting, diagnostics, memory
+  ai/           Claude integration, Voyage embeddings, 15 prompt templates (Markdown)
+  db/schema/    Drizzle schema — 40+ tables across 5 layers
+  app/          Next.js routes: marketing, auth, learner, guardian, API
+  components/   UI: dashboard, onboarding, sessions, sources, parent views
+  lib/          Auth, types, logging, database
+  email/        Resend templates
+inngest/        Background jobs
 terraform/      GCP infrastructure modules
 tests/e2e/      Playwright flows
-docs/           Architecture, schema, interfaces, decisions, build plan
 ```
 
-## Documentation
-
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — system shape, data layers, engine flows
-- [`docs/SCHEMA.md`](docs/SCHEMA.md) — full relational schema with column-level detail
-- [`docs/INTERFACES.md`](docs/INTERFACES.md) — engine contracts and shared types
-- [`docs/DECISIONS.md`](docs/DECISIONS.md) — locked technical choices and rationale
-- [`DESIGN.md`](DESIGN.md) — design system (typography, colour, spacing, aesthetic direction)
+Detailed docs: [Architecture](docs/ARCHITECTURE.md) | [Schema](docs/SCHEMA.md) | [Interfaces](docs/INTERFACES.md) | [Decisions](docs/DECISIONS.md) | [Design system](DESIGN.md)
 
 ## Running locally
 
@@ -99,22 +79,18 @@ npm ci
 docker compose up -d        # Postgres + pgvector
 cp .env.example .env.local  # Fill in credentials
 npm run db:push             # Apply schema
-npm run dev                 # Start on localhost:3000
+npm run dev
 ```
 
-AI, auth, and file-ingestion features need real service credentials. The UI shell, schema, and most local development work can be exercised without them.
+AI, auth, and ingestion features need real service credentials. The UI shell, schema, and local development work without them.
 
 ## Verification
 
 ```bash
-npx tsc --noEmit       # TypeScript: passes
-npm run test:run       # Tests: 84 files, 1605 tests
-npx eslint src/        # Lint: 0 errors, 0 warnings
+npx tsc --noEmit       # Passes
+npm run test:run       # 84 files, 1605 tests
+npx eslint src/        # 0 errors, 0 warnings
 ```
-
-## Status
-
-Active build, not a frozen package. The architecture, schema, core engines, and user-facing surfaces exist. The product is still growing.
 
 ## License
 
