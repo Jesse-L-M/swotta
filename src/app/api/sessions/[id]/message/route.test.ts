@@ -1,10 +1,5 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  setupTestDatabase,
-  cleanupTestDatabase,
-  teardownTestDatabase,
-  getTestDb,
-} from "@/test/setup";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { getTestDb } from "@/test/setup";
 import {
   createTestOrg,
   createTestLearner,
@@ -76,22 +71,13 @@ vi.mock("@/app/api/sessions/_lib/session-runner", () => ({
 
 import { POST } from "./route";
 
-let db: ReturnType<typeof getTestDb>;
-
-beforeAll(async () => {
-  db = await setupTestDatabase();
-});
+const db = getTestDb();
 
 beforeEach(async () => {
-  await cleanupTestDatabase();
   resetFixtureCounter();
   requireLearnerMock.mockReset();
   continueSessionMock.mockReset();
   ensureSessionRunnerConfiguredMock.mockReset();
-});
-
-afterAll(async () => {
-  await teardownTestDatabase();
 });
 
 describe("POST /api/sessions/[id]/message", () => {

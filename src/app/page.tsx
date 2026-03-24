@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FadeIn, FadeInStagger, FadeInChild } from "@/components/landing/fade-in";
+import { FadeIn } from "@/components/landing/fade-in";
 import { DashboardMockup } from "@/components/landing/dashboard-mockup";
 import { SessionMockup } from "@/components/landing/session-mockup";
 import { ParentReportMockup } from "@/components/landing/parent-report-mockup";

@@ -11,6 +11,10 @@ export default defineConfig({
     setupFiles: ["./vitest.setup.ts"],
     include: ["src/**/*.test.ts", "src/**/*.test.tsx", "inngest/**/*.test.ts"],
     passWithNoTests: true,
+    // The suite shares one Postgres test database, so file-level parallelism
+    // creates avoidable lock contention and cross-test interference.
+    fileParallelism: false,
+    maxWorkers: 1,
   },
   resolve: {
     alias: {

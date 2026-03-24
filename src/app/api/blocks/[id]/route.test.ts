@@ -1,10 +1,5 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  setupTestDatabase,
-  cleanupTestDatabase,
-  teardownTestDatabase,
-  getTestDb,
-} from "@/test/setup";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { getTestDb } from "@/test/setup";
 import {
   createTestOrg,
   createTestLearner,
@@ -41,7 +36,7 @@ vi.mock("@/lib/auth", () => ({
 
 import { GET } from "./route";
 
-let db: ReturnType<typeof getTestDb>;
+const db = getTestDb();
 
 async function createBlock(learnerId: string, topicId: string) {
   const [plan] = await db
@@ -71,18 +66,9 @@ async function createBlock(learnerId: string, topicId: string) {
   return block;
 }
 
-beforeAll(async () => {
-  db = await setupTestDatabase();
-});
-
 beforeEach(async () => {
-  await cleanupTestDatabase();
   resetFixtureCounter();
   requireLearnerMock.mockReset();
-});
-
-afterAll(async () => {
-  await teardownTestDatabase();
 });
 
 describe("GET /api/blocks/[id]", () => {

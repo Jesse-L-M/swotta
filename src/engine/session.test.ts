@@ -1,10 +1,5 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from "vitest";
-import {
-  setupTestDatabase,
-  cleanupTestDatabase,
-  teardownTestDatabase,
-  getTestDb,
-} from "@/test/setup";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { getTestDb } from "@/test/setup";
 import {
   createTestOrg,
   createTestLearner,
@@ -38,7 +33,7 @@ import {
   type SessionRunnerDeps,
 } from "./session";
 
-let db: ReturnType<typeof getTestDb>;
+const db = getTestDb();
 
 function mockAnthropicResponse(text: string) {
   return {
@@ -172,17 +167,8 @@ async function createStartedSession(initialMessage = "Welcome!") {
   };
 }
 
-beforeAll(async () => {
-  db = await setupTestDatabase();
-});
-
 beforeEach(async () => {
-  await cleanupTestDatabase();
   resetFixtureCounter();
-});
-
-afterAll(async () => {
-  await teardownTestDatabase();
 });
 
 describe("startSession", () => {

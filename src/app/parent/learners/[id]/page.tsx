@@ -3,7 +3,6 @@ import {
   guardianLinks,
   learners,
   weeklyReports,
-  safetyFlags,
   learnerQualifications,
   qualificationVersions,
   qualifications,
@@ -13,7 +12,7 @@ import { eq, and, desc, gte } from "drizzle-orm";
 import { getAuthContext } from "@/lib/auth";
 import { ReportView } from "@/components/parent/report-view";
 import { computeExamCountdown } from "@/components/parent/exam-countdown";
-import type { WeeklyReportData, LearnerId, TopicId } from "@/lib/types";
+import type { WeeklyReportData, LearnerId } from "@/lib/types";
 
 interface PageProps {
   params: Promise<{ id: string }>;
