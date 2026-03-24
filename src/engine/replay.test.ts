@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
+import { createHmac } from "crypto";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { getTestDb } from "@/test/setup";
 import {
   createTestOrg,
@@ -15,7 +16,7 @@ import {
   misconceptionEvents,
   learnerTopicState,
 } from "@/db/schema";
-import type { LearnerId, SessionId, TopicId } from "@/lib/types";
+import type { LearnerId, SessionId } from "@/lib/types";
 import {
   getShareSecret,
   generateShareToken,
@@ -128,7 +129,6 @@ describe("verifyShareToken", () => {
 
   it("returns null for expired token", () => {
     // Manually craft an expired token
-    const { createHmac } = require("crypto") as typeof import("crypto");
     const pastMs = Date.now() - 1000;
     const payload = `session-123::${pastMs}`;
     const sig = createHmac("sha256", TEST_SECRET)
@@ -144,7 +144,6 @@ describe("verifyShareToken", () => {
   });
 
   it("returns null for non-numeric timestamp", () => {
-    const { createHmac } = require("crypto") as typeof import("crypto");
     const payload = "session-123::not-a-number";
     const sig = createHmac("sha256", TEST_SECRET)
       .update(payload)
@@ -1141,7 +1140,6 @@ describe("getSharedReplay", () => {
       .returning();
 
     // Craft expired token
-    const { createHmac } = require("crypto") as typeof import("crypto");
     const pastMs = Date.now() - 1000;
     const payload = `${session.id}::${pastMs}`;
     const sig = createHmac("sha256", TEST_SECRET)

@@ -9,13 +9,15 @@ const TEST_DATABASE_URL =
   process.env.DATABASE_TEST_URL ??
   "postgresql://swotta:swotta_test@localhost:5433/swotta_test";
 
-let migrationClient: ReturnType<typeof postgres>;
-let queryClient: ReturnType<typeof postgres>;
-let testDb: ReturnType<typeof drizzle<typeof schema>>;
+let migrationClient: ReturnType<typeof postgres> | undefined;
+let queryClient: ReturnType<typeof postgres> | undefined;
+let testDb: ReturnType<typeof drizzle<typeof schema>> | undefined;
 
 export function getTestDb() {
   if (!testDb) {
-    queryClient = postgres(TEST_DATABASE_URL, { max: 5 });
+    // Keep tests on a single connection so DB cleanup doesn't contend with
+    // pooled queries against the same shared test database.
+    queryClient = postgres(TEST_DATABASE_URL, { max: 1 });
     testDb = drizzle(queryClient, { schema });
   }
   return testDb;
@@ -62,5 +64,7 @@ export async function cleanupTestDatabase() {
 export async function teardownTestDatabase() {
   if (queryClient) {
     await queryClient.end();
+    queryClient = undefined;
+    testDb = undefined;
   }
 }

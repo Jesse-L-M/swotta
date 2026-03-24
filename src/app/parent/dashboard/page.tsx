@@ -12,7 +12,7 @@ import { eq, and, desc } from "drizzle-orm";
 import { getAuthContext } from "@/lib/auth";
 import { LearnerCard } from "@/components/parent/learner-card";
 import { computeExamCountdown } from "@/components/parent/exam-countdown";
-import type { WeeklyReportData, LearnerId, TopicId } from "@/lib/types";
+import type { WeeklyReportData, LearnerId } from "@/lib/types";
 
 export default async function ParentDashboardPage() {
   const ctx = await getAuthContext();

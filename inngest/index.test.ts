@@ -3,8 +3,8 @@ import { functions } from "./index";
 import { asTestable } from "./test-helpers";
 
 describe("inngest function registry", () => {
-  it("registers exactly 8 functions", () => {
-    expect(functions).toHaveLength(8);
+  it("registers exactly 9 functions", () => {
+    expect(functions).toHaveLength(9);
   });
 
   it("includes all expected function ids", () => {
@@ -18,6 +18,7 @@ describe("inngest function registry", () => {
     expect(ids).toContain("reporting/weekly-report-generate");
     expect(ids).toContain("reporting/detect-flags");
     expect(ids).toContain("notifications/daily-check");
+    expect(ids).toContain("student/weekly-email");
   });
 
   it("has correct event triggers", () => {
@@ -55,6 +56,9 @@ describe("inngest function registry", () => {
     ]);
     expect(triggerMap.get("notifications/daily-check")).toEqual([
       { cron: "0 17 * * *" },
+    ]);
+    expect(triggerMap.get("student/weekly-email")).toEqual([
+      { cron: "TZ=Europe/London 0 7 * * 1" },
     ]);
   });
 

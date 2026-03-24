@@ -3,12 +3,7 @@ import { eq, and } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { requireLearner, AuthError } from "@/lib/auth";
 import { studySessions } from "@/db/schema";
-import {
-  generateShareToken,
-  getSharedReplay,
-  generateReplaySummary,
-} from "@/engine/replay";
-import type { SessionId, LearnerId } from "@/lib/types";
+import { generateShareToken, getSharedReplay } from "@/engine/replay";
 
 export async function GET(
   request: NextRequest,

@@ -8,7 +8,7 @@ beforeAll(async () => {
   await setupTestDatabase();
 });
 
-afterEach(async () => {
+beforeEach(async () => {
   await cleanupTestDatabase();
 });
 

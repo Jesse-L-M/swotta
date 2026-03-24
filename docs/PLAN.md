@@ -4,6 +4,8 @@ This document defines the phased build plan with task breakdown. Each task is de
 
 For architecture context see `ARCHITECTURE.md`. For schema see `SCHEMA.md`. For interfaces see `INTERFACES.md`.
 
+Note: this is the original build plan. Some early-task details reflect the intended scaffold at the time they were written. When the current code differs, treat `DECISIONS.md` and the source tree as authoritative.
+
 ---
 
 ## Phase 0: Foundation
@@ -28,7 +30,7 @@ Files created:
 - `.env.example`
 - `.env.local` (gitignored)
 - `.gitignore`
-- `src/app/layout.tsx` (root layout with Clerk provider)
+- `src/app/layout.tsx` (root layout and global shell)
 - `src/app/page.tsx` (landing page stub)
 - `src/app/globals.css` (Tailwind imports)
 - `src/lib/db.ts` (Drizzle client singleton)
@@ -38,7 +40,7 @@ Files created:
 Dependencies:
 - next, react, react-dom
 - drizzle-orm, drizzle-kit, postgres (node-postgres driver)
-- @clerk/nextjs
+- firebase, firebase-admin
 - @anthropic-ai/sdk
 - inngest
 - tailwindcss, @tailwindcss/postcss
@@ -276,15 +278,15 @@ Do NOT touch: any files outside the ones listed above.
 
 Files you own:
 - `src/app/layout.tsx` (update with nav, sidebar)
-- `src/app/(auth)/sign-in/[[...sign-in]]/page.tsx`
-- `src/app/(auth)/sign-up/[[...sign-up]]/page.tsx`
+- `src/app/(auth)/login/page.tsx`
+- `src/app/(auth)/signup/page.tsx`
 - `src/app/(auth)/layout.tsx`
-- `src/middleware.ts` (Clerk auth middleware)
+- `src/middleware.ts` (auth middleware)
 - `src/components/nav/` (sidebar, header, user menu)
-- `src/lib/auth.ts` (helpers: getCurrentUser, requireAuth, requireRole)
+- `src/lib/auth.ts` (helpers: getAuthContext, requireAuth, requireRole)
 
 Acceptance criteria:
-- [ ] Clerk sign-in/sign-up flows work
+- [ ] Firebase login and signup flows work
 - [ ] Authenticated layout with sidebar navigation
 - [ ] Role-based route protection (learner vs guardian vs admin)
 - [ ] User menu shows org/role context

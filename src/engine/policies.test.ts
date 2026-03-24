@@ -1,10 +1,5 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
-import {
-  setupTestDatabase,
-  cleanupTestDatabase,
-  teardownTestDatabase,
-  getTestDb,
-} from "@/test/setup";
+import { describe, it, expect, beforeEach } from "vitest";
+import { getTestDb } from "@/test/setup";
 import {
   createTestOrg,
   createTestLearner,
@@ -28,19 +23,10 @@ import {
 } from "./policies";
 import type { LearnerId } from "@/lib/types";
 
-let db: ReturnType<typeof getTestDb>;
-
-beforeAll(async () => {
-  db = await setupTestDatabase();
-});
+const db = getTestDb();
 
 beforeEach(async () => {
-  await cleanupTestDatabase();
   resetFixtureCounter();
-});
-
-afterAll(async () => {
-  await teardownTestDatabase();
 });
 
 async function createQualificationVersion() {
