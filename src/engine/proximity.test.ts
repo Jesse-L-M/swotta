@@ -17,7 +17,6 @@ import { eq } from "drizzle-orm";
 import type {
   LearnerId,
   QualificationVersionId,
-  TopicId,
 } from "@/lib/types";
 import {
   calculateDaysToExam,

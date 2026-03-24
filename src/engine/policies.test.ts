@@ -3,7 +3,6 @@ import { getTestDb } from "@/test/setup";
 import {
   createTestOrg,
   createTestLearner,
-  createTestUser,
   resetFixtureCounter,
 } from "@/test/fixtures";
 import {

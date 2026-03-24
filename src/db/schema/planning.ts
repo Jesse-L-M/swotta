@@ -11,7 +11,6 @@ import {
   timestamp,
   inet,
   index,
-  check,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import {

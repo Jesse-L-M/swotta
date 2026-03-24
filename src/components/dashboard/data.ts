@@ -1,4 +1,4 @@
-import { eq, and, sql, count, sum, asc } from "drizzle-orm";
+import { eq, and, count, sum, asc } from "drizzle-orm";
 import {
   learners,
   learnerQualifications,

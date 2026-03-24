@@ -1,6 +1,6 @@
 # Interfaces
 
-This document defines the contracts between components. When multiple agents build in parallel, these interfaces are the boundaries. Each agent owns the implementation behind their interface but must match the signatures exactly.
+This document defines the contracts between components. When multiple tasks build in parallel, these interfaces are the boundaries. Each task owns the implementation behind its interface but must match the signatures exactly.
 
 All types reference the Drizzle schema. `InferSelectModel<typeof tableName>` gives the row type. These interfaces use simplified type aliases for clarity.
 
@@ -517,7 +517,7 @@ function resolveScopes(
 
 ### Shared test utilities (`src/test/`)
 
-All engine modules test against a real Postgres database (via docker-compose). To prevent 5 parallel agents from inventing incompatible test setups, shared test utilities are provided:
+All engine modules test against a real Postgres database (via docker-compose). To prevent parallel tasks from inventing incompatible test setups, shared test utilities are provided:
 
 ```typescript
 // src/test/setup.ts
@@ -535,7 +535,7 @@ function seedGCSEBiology(): Promise<{ qualificationVersionId: QualificationVersi
 // Loads the GCSE Biology AQA seed for integration tests
 ```
 
-All Phase 1 agents must use these shared fixtures. Do not create per-module test setup.
+All Phase 1 tasks must use these shared fixtures. Do not create per-module test setup.
 
 ---
 

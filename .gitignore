@@ -24,8 +24,9 @@ Thumbs.db
 # Debug
 npm-debug.log*
 
-# Conductor
 .context/
+CLAUDE.md
+TODOS.md
 
 # Vercel
 .vercel
@@ -34,7 +35,6 @@ npm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 coverage/
-.gstack/
 
 # Playwright
 test-results/

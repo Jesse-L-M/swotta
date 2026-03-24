@@ -1,6 +1,6 @@
 # Build Plan
 
-This document defines the phased build plan with task breakdown. Each task is designed to be picked up by a single agent in a Conductor workspace. Tasks within the same phase can run in parallel.
+This document defines the phased build plan with task breakdown. Tasks within the same phase are designed to run in parallel.
 
 For architecture context see `ARCHITECTURE.md`. For schema see `SCHEMA.md`. For interfaces see `INTERFACES.md`.
 
@@ -10,7 +10,7 @@ Note: this is the original build plan. Some early-task details reflect the inten
 
 ## Phase 0: Foundation
 
-**Sequential. One agent. Must complete before anything else starts.**
+**Sequential. Must complete before anything else starts.**
 
 Everything in Phase 1+ depends on the scaffolding and schema being in place.
 
@@ -89,17 +89,17 @@ Acceptance criteria:
 
 Files created:
 - `src/lib/types.ts` (all shared types from INTERFACES.md)
-- `CLAUDE.md` (project-level agent instructions)
+- `CLAUDE.md` (project-level development instructions)
 
 Acceptance criteria:
 - [ ] All branded ID types defined
 - [ ] All composite types (StudyBlock, AttemptOutcome, etc.) defined
 - [ ] All enum types match schema enums
-- [ ] CLAUDE.md points agents to docs/, sets conventions, lists file ownership rules
+- [ ] CLAUDE.md points to docs/, sets conventions, lists file ownership rules
 
 ### Task 0.4: Shared test utilities
 
-**Creates test infrastructure that all Phase 1 agents will use.**
+**Creates test infrastructure that all Phase 1 tasks will use.**
 
 Files created:
 - `src/test/setup.ts` (test DB connection, migration runner, cleanup)
@@ -113,19 +113,18 @@ Acceptance criteria:
 - [ ] Factory functions create valid test orgs, users, learners, qualifications
 - [ ] `seedGCSEBiology()` loads a minimal but real topic tree for integration tests
 - [ ] Database is cleaned between test runs (truncate, not drop)
-- [ ] All Phase 1 agents can import from `@/test/` and get working fixtures
+- [ ] All Phase 1 tasks can import from `@/test/` and get working fixtures
 
 ---
 
 ## Phase 1: Core Engines
 
-**Parallel. 5 agents. Start after Phase 0 is merged to main.**
+**Parallel. Start after Phase 0 is merged to main.**
 
 Each task owns specific files and has no file overlap with other Phase 1 tasks. All tasks import from `src/db/schema` and `src/lib/types.ts` but do not modify them.
 
 ### Task 1.1: Curriculum loader
 
-**Agent instructions:**
 Build the curriculum data loader that seeds qualification structures from JSON seed files. Start with GCSE Biology (AQA, spec 8461) as the first qualification.
 
 Files you own:
@@ -143,13 +142,12 @@ Acceptance criteria:
 - [ ] Idempotent: running loadQualification twice doesn't create duplicates
 - [ ] Tests cover: happy path, duplicate detection, invalid seed data
 - [ ] Topic edges correctly model prerequisites (e.g., cell structure → cell division)
-- [ ] Seed data format is compatible with `src/test/seed.ts` (produces fixtures usable by all Phase 1 agents)
+- [ ] Seed data format is compatible with `src/test/seed.ts` (produces fixtures usable by all Phase 1 tasks)
 
 Do NOT touch: any files outside the ones listed above.
 
 ### Task 1.2: Ingestion pipeline
 
-**Agent instructions:**
 Build the file processing pipeline that takes uploaded files and turns them into searchable, topic-mapped chunks with embeddings.
 
 Files you own:
@@ -174,11 +172,10 @@ Acceptance criteria:
 - [ ] Inngest function wraps processFile with retry logic
 - [ ] Tests cover: PDF processing, chunking, scope filtering, error handling
 
-Do NOT touch: any files outside the ones listed above. Assume the schema and Voyage/Claude API keys exist.
+Assume the schema and Voyage/Claude API keys exist.
 
 ### Task 1.3: Scheduler and mastery engine
 
-**Agent instructions:**
 Build the spaced repetition scheduler and mastery state manager. These are tightly coupled (mastery updates feed scheduling) so they're one task.
 
 Files you own:
@@ -206,7 +203,6 @@ Do NOT touch: any files outside the ones listed above.
 
 ### Task 1.4: Study session runner
 
-**Agent instructions:**
 Build the interactive study session engine that uses Claude to run study blocks with learners.
 
 Files you own:
@@ -238,11 +234,10 @@ Acceptance criteria:
 - [ ] Policy context is resolved and included in system prompts
 - [ ] Tests cover: session lifecycle, prompt construction, outcome extraction
 
-Do NOT touch: any files outside the ones listed above. Call `ingestion.retrieveChunks` for source material (import the interface, mock in tests).
+Call `ingestion.retrieveChunks` for source material (import the interface, mock in tests).
 
 ### Task 1.5: Reporting engine
 
-**Agent instructions:**
 Build the weekly reporting system, safety flag detection, and notification delivery.
 
 Files you own:
@@ -272,7 +267,7 @@ Do NOT touch: any files outside the ones listed above.
 
 ## Phase 2: UI
 
-**Parallel. 4 agents. Start after Phase 1 is merged to main.**
+**Parallel. Start after Phase 1 is merged to main.**
 
 ### Task 2.1: Auth and layout shell
 
@@ -342,7 +337,7 @@ Acceptance criteria:
 
 ## Phase 3: Infrastructure and deployment
 
-**Parallel. 3 agents. Can start alongside Phase 2.**
+**Parallel. Can start alongside Phase 2.**
 
 ### Task 3.1: GCP deployment
 
@@ -419,18 +414,3 @@ Phase 3 (Infra) ─── can start alongside Phase 2
 
 ---
 
-## Linear structure
-
-Suggested Linear project structure:
-
-**Project:** Swotta
-
-**Epics:**
-- Foundation (Phase 0)
-- Core Engines (Phase 1)
-- UI (Phase 2)
-- Infrastructure (Phase 3)
-
-**Issues:** One per task (0.1, 0.2, 0.3, 1.1, 1.2, etc.)
-
-Each issue should contain the full task spec from this document, including files owned, interface contract reference, and acceptance criteria. This is what gets pasted into a Conductor workspace.

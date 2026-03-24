@@ -44,7 +44,7 @@ export function TodayQueue({ blocks }: TodayQueueProps) {
 
   return (
     <div className="space-y-3">
-      {blocks.map((block, i) => {
+      {blocks.map((block) => {
         const Icon = blockTypeIcons[block.blockType];
         return (
           <a

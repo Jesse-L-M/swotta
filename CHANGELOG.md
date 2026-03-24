@@ -16,16 +16,52 @@ All notable changes to this project will be documented in this file.
 - Updated timed-problems session to include mark allocation guidance and pacing awareness
 - Expanded explanation and worked-example sessions with exam-style framing
 
-## [0.1.0] - Phase 4 Initial Release
+## [0.1.0] - Phase 4
 
 ### Added
-- Firebase Authentication (Google Sign-In)
-- Route protection middleware
-- Household organization model with learner/guardian membership
+- Firebase Authentication (Google Sign-In) with session cookies
+- Route protection middleware (learner and guardian role enforcement)
+- Household organization model with automatic signup provisioning
 - Guardian linking via invite codes
-- Session-based authentication with cookies
+- Integration fixes: `endSession` wired to mastery engine, `getNextBlocks` idempotency guard, `selectBlockType` reads task_rules
 
-### Fixed
-- Integrated `endSession` with mastery engine
-- Fixed `getNextBlocks` idempotency handling
-- Updated `selectBlockType` to read task_rules and fall back to heuristic
+## [0.0.4] - Phase 3: Infrastructure
+
+### Added
+- Cloud Run deployment configuration (europe-west2)
+- Terraform modules for Cloud SQL, Cloud Storage, IAM, networking, and secrets
+- GitHub Actions CI/CD: lint + typecheck + test on PR, deploy on merge to main
+- Inngest client and function wiring (file processing, queue updates, decay checks, weekly reports)
+- Playwright e2e tests for onboarding, parent view, source upload, and study sessions
+- Multi-stage Docker build for production
+
+## [0.0.3] - Phase 2: UI Surfaces
+
+### Added
+- Landing page with product framing sections (hero, curriculum-first, parent visibility)
+- Firebase-authenticated login and signup flows
+- Multi-step student onboarding (subjects, qualifications, exam dates)
+- Student dashboard with queue, mastery overview, streak tracking, and exam countdown
+- Conversational diagnostic flow that seeds initial mastery from AI conversation
+- AI-guided study session UI with streaming responses, confidence capture, and session summaries
+- Source upload with drag-and-drop, processing status, and collection views
+- Guardian dashboard with linked learner cards and report views
+
+## [0.0.2] - Phase 1: Core Engines
+
+### Added
+- Curriculum loader with idempotent qualification seeding from JSON (GCSE Biology AQA, 75 topics)
+- Ingestion pipeline: text extraction (PDF, DOCX), semantic chunking, Voyage AI embeddings, Claude-based topic classification
+- Scheduler and mastery engine: modified SM-2 spaced repetition, block type selection, weekly plan generation
+- Study session runner: 8 distinct session modes with external Markdown prompts, streaming Claude responses, structured outcome extraction
+- Reporting engine: weekly report generation, safety flag detection (avoidance, disengagement, distress), Resend email delivery
+- Policy engine with five-layer resolution (global, qualification, org, class, learner)
+
+## [0.0.1] - Phase 0: Foundation
+
+### Added
+- Project scaffolding: Next.js 15, TypeScript strict, Drizzle ORM, Tailwind CSS, shadcn/ui
+- Database schema: 40+ tables across 5 layers (identity, curriculum, sources, learner state, planning)
+- Shared types from interface contracts
+- Test infrastructure: fixtures, seed data, global setup with real Postgres via docker-compose
+- Docker Compose configuration for local Postgres + pgvector

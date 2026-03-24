@@ -16,11 +16,7 @@ import {
 } from "@/db/schema";
 import type { InferInsertModel } from "drizzle-orm";
 import type {
-  LearnerId,
-  OrgId,
-  UserId,
   QualificationVersionId,
-  TopicId,
 } from "@/lib/types";
 
 type OrgInsert = InferInsertModel<typeof organizations>;

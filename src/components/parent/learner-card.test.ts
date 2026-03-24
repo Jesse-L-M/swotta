@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { LearnerCard } from "./learner-card";
-import type { WeeklyReportData, LearnerId, TopicId } from "@/lib/types";
+import type { WeeklyReportData, LearnerId } from "@/lib/types";
 
 function render(element: React.ReactElement): string {
   return renderToStaticMarkup(element);

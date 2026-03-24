@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { createElement } from "react";
 import { SessionView, BLOCK_TYPE_LABELS, type SessionViewProps } from "./session-view";

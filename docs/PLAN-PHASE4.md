@@ -1,6 +1,6 @@
 # Phase 4+ Plan: Claude Code for Students
 
-This plan extends the original `PLAN.md` (Phases 0-3) with Phases 4-7. It was produced by `/office-hours` (product vision) and `/plan-ceo-review` (scope expansion).
+This plan extends the original `PLAN.md` (Phases 0-3) with Phases 4-7.
 
 See the design doc for the full product vision: the goal is a system where the AI has a complete mental model of the student's understanding, not just a quiz engine.
 
@@ -13,7 +13,7 @@ See the design doc for the full product vision: the goal is a system where the A
 
 ---
 
-## Phase 4: Integration + Auth (sequential, 1 agent)
+## Phase 4: Integration + Auth (sequential)
 
 Must happen first. Everything else depends on auth and the integration fixes.
 
@@ -75,7 +75,7 @@ Acceptance criteria:
 
 ---
 
-## Phase 5: Intelligence Layer (parallel, 6 agents)
+## Phase 5: Intelligence Layer (parallel)
 
 Each task owns its own files. All tasks import from the shared schema and types. No cross-task file dependencies.
 
@@ -220,7 +220,7 @@ Acceptance criteria:
 
 ---
 
-## Phase 6: Communication Layer (parallel, 4 agents)
+## Phase 6: Communication Layer (parallel)
 
 Depends on Phase 5 for data (memory, calibration, behaviour, proximity).
 
@@ -293,7 +293,7 @@ Acceptance criteria:
 
 ---
 
-## Phase 7: Student Experience (parallel, 3 agents)
+## Phase 7: Student Experience (parallel)
 
 Depends on Phases 5+6 for data and components.
 
@@ -349,7 +349,7 @@ Acceptance criteria:
 ## Dependency Graph
 
 ```
-Phase 4 (Integration + Auth) ─── sequential, 1 agent
+Phase 4 (Integration + Auth) ─── sequential
   ├── 4.1 Firebase Auth
   ├── 4.2 Close TODOs (depends on 4.1 for auth context)
   └── 4.3 GCP Deploy (depends on 4.1 for Firebase config)
@@ -377,10 +377,3 @@ Phase 7 (Student Experience) ─── all 3 tasks in parallel
   └── 7.3 Confidence + technique dashboard
 ```
 
----
-
-## Agent Prompt Template
-
-For each task, spin up a Conductor workspace with:
-
-> Read CLAUDE.md, DESIGN.md, and all docs in docs/ (including docs/PLAN-PHASE4.md). Execute Task [X.Y] from PLAN-PHASE4.md. You own [files listed]. Do not modify files outside your ownership list. Target 100% test coverage for all code you write — every function, branch, and edge case. Mock all external services (Claude API, Firebase, Voyage AI, Cloud Storage, Resend) in tests. Commit your work, push, and open a PR. Use gstack /plan-eng-review to review before opening the PR.

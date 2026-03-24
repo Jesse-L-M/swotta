@@ -4,8 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   BlockType,
   AttemptOutcome,
-  BlockId,
-  SessionId,
 } from "@/lib/types";
 
 export interface SessionMessage {

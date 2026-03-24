@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { getTestDb } from "@/test/setup";
 import { loadQualification, getTopicTree, qualificationSeedSchema } from "./curriculum";
 import {
@@ -13,7 +13,7 @@ import {
   questionTypes,
   misconceptionRules,
 } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type {
   QualificationSeed,
   QualificationVersionId,
@@ -577,7 +577,7 @@ describe("loadQualification", () => {
       ],
     };
 
-    const result = await loadQualification(db, seed);
+    await loadQualification(db, seed);
     const mrs = await db.select().from(misconceptionRules);
     expect(mrs).toHaveLength(0);
   });

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { getTestDb } from "@/test/setup";
 import {
   createTestOrg,
@@ -16,12 +16,11 @@ import {
   weeklyReports,
   notificationEvents,
 } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { LearnerId, UserId, TopicId } from "@/lib/types";
 import {
   generateWeeklyReport,
   generateEnhancedWeeklyReport,
-  sendEnhancedWeeklyReport,
   detectFlags,
   sendWeeklyReport,
   generateTeacherInsight,
@@ -29,14 +28,12 @@ import {
   computeSuggestions,
   mapEnrichmentToEmailProps,
   type ReportingDeps,
-  type DetectedFlag,
   type ReportEnrichment,
   type MisconceptionNarrative,
-  type ActionableSuggestion,
   type ExamPhaseContext,
 } from "./reporting";
-import type { BehaviourReport, EngagementTrend, AvoidedTopic } from "@/engine/behaviour";
-import type { CalibrationResult, TopicCalibration } from "@/engine/calibration";
+import type { BehaviourReport } from "@/engine/behaviour";
+import type { CalibrationResult } from "@/engine/calibration";
 import type { TechniqueMastery } from "@/engine/technique";
 import type { ExamPhase } from "@/engine/proximity";
 

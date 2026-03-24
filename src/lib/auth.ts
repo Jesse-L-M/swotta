@@ -1,7 +1,7 @@
 import { initializeApp, getApps, cert, type App } from "firebase-admin/app";
 import { getAuth, type DecodedIdToken } from "firebase-admin/auth";
 import { cookies } from "next/headers";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { users, memberships, learners, guardianLinks } from "@/db/schema";
 import type { Database } from "@/lib/db";

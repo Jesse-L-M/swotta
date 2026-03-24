@@ -13,11 +13,10 @@ import {
   notificationEvents,
   learnerTopicState,
   studySessions,
-  studyBlocks,
   studyPlans,
   learnerPreferences,
 } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { Database } from "@/lib/db";
 import type { LearnerId, TopicId } from "@/lib/types";
 import {
@@ -131,7 +130,7 @@ describe("processLearnerNotifications", () => {
     await enrollLearnerInQualification(learner.id, qual.qualificationVersionId);
 
     // Last session was 5 days ago
-    const plan = await createPlanForLearner(db, learner.id);
+    await createPlanForLearner(db, learner.id);
     await createSession(db, {
       learnerId: learner.id,
       status: "completed",
@@ -315,7 +314,7 @@ describe("processLearnerNotifications", () => {
 describe("hasRecentNotification", () => {
   it("returns false when no notifications exist", async () => {
     const db = getTestDb();
-    const org = await createTestOrg();
+    await createTestOrg();
     const user = await createTestUser();
 
     const result = await hasRecentNotification(
@@ -327,7 +326,7 @@ describe("hasRecentNotification", () => {
 
   it("returns true when notification already sent today", async () => {
     const db = getTestDb();
-    const org = await createTestOrg();
+    await createTestOrg();
     const user = await createTestUser();
     const now = new Date("2026-04-15T17:00:00Z");
 
@@ -491,7 +490,7 @@ describe("parent alerts", () => {
     // Create guardian with flags disabled
     const guardianUser = await createTestUser();
     await createTestMembership(guardianUser.id, org.id, "guardian");
-    const [link] = await db
+    await db
       .insert((await import("@/db/schema")).guardianLinks)
       .values({
         guardianUserId: guardianUser.id,

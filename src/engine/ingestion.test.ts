@@ -19,8 +19,6 @@ import { eq } from "drizzle-orm";
 import type {
   LearnerId,
   TopicId,
-  QualificationVersionId,
-  ChunkId,
 } from "@/lib/types";
 import {
   chunkText,
@@ -101,7 +99,7 @@ describe("chunkText", () => {
   });
 
   it("assigns sequential indices", () => {
-    const chunks = Array.from({ length: 5 }, (_, i) => "X".repeat(600));
+    const chunks = Array.from({ length: 5 }, () => "X".repeat(600));
     const text = chunks.join("\n\n");
     const result = chunkText(text, 200);
 

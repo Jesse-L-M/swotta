@@ -1,4 +1,4 @@
-import { eq, and, gte, sql, or, inArray, desc } from "drizzle-orm";
+import { eq, and, gte, sql, or, inArray } from "drizzle-orm";
 import type { Database } from "@/lib/db";
 import {
   studyBlocks,
