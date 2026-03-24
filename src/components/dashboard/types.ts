@@ -1,8 +1,4 @@
 import type {
-  BlockType,
-  LearnerId,
-  TopicId,
-  QualificationVersionId,
   StudyBlock,
 } from "@/lib/types";
 

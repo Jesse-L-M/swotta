@@ -4,7 +4,6 @@ import {
   createTestOrg,
   createTestLearner,
   createTestQualification,
-  enrollLearnerInQualification,
 } from "@/test/fixtures";
 import {
   studyBlocks,
@@ -13,11 +12,10 @@ import {
   blockAttempts,
   learnerTopicState,
   safetyFlags,
-  topicEdges,
 } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import type { Database } from "@/lib/db";
-import type { LearnerId, TopicId } from "@/lib/types";
+import type { LearnerId } from "@/lib/types";
 import { detectPatterns } from "./behaviour";
 
 // ---------------------------------------------------------------------------
@@ -26,10 +24,6 @@ import { detectPatterns } from "./behaviour";
 
 function daysAgo(days: number): Date {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-}
-
-function hoursAgo(hours: number): Date {
-  return new Date(Date.now() - hours * 60 * 60 * 1000);
 }
 
 function atHour(hour: number, daysBack = 0): Date {

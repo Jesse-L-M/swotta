@@ -1,37 +1,14 @@
 # Swotta
 
-Swotta is an academic operating system for GCSE and A-Level revision. It combines curriculum-aware planning, topic-level mastery tracking, AI-guided study sessions, source ingestion, and guardian reporting in one product.
+A revision system for GCSE and A-Level students that takes spaced repetition, mastery tracking, and AI tutoring seriously. Built as a solo project by [Jesse Merrigan](https://github.com/Jesse-L-M).
 
-This repository is the ongoing product build. It is being prepared as a public-facing showcase of the product thinking, architecture, and implementation work together, not as a finished library or template.
+## Why this project
 
-## What This Repo Demonstrates
+I'm interested in how memory works — the biological kind and the computational kind. How spaced repetition exploits the forgetting curve. How retrieval practice strengthens recall more than re-reading ever does. How confidence calibration (knowing what you don't know) is arguably the skill most students lack and most revision tools ignore.
 
-- Product design anchored in a real user problem: fragmented revision workflows for students and parents.
-- A full-stack TypeScript application with learner, guardian, and operational surfaces.
-- A relational academic data model spanning curriculum, source ingestion, learner state, planning, and reporting.
-- AI-native workflows for diagnostics, study sessions, content analysis, and weekly summaries.
-- Delivery discipline through colocated tests, documented architecture, CI/CD, and infrastructure definitions.
+I'm also deep into agentic AI systems, specifically the memory problem: how you give an AI enough structured context about a person — what they know, what they've forgotten, where they're miscalibrated, what's worked before — that it can do something genuinely useful in the moment rather than just responding to a prompt.
 
-## What I Built Personally
-
-- Product concept, scope, and system design for a student-and-parent academic operating system.
-- The application architecture, schema design, engine boundaries, and interface contracts.
-- Learner, guardian, and marketing surfaces in Next.js.
-- AI-native workflows for diagnostics, study sessions, source analysis, and reporting.
-- The deployment shape across Cloud Run, Cloud SQL, Cloud Storage, Firebase Auth, and Inngest.
-- The project documentation, planning artifacts, and verification scaffolding that keep the build legible as it grows.
-
-## What Exists Today
-
-- A designed landing page and product mockups in Next.js.
-- Firebase-authenticated learner and guardian flows.
-- Multi-step onboarding for subjects, qualifications, and exam dates.
-- A student dashboard with queue, mastery, streak, and exam countdown surfaces.
-- A conversational diagnostic flow that seeds initial mastery.
-- AI-guided study session UI with confidence capture and session summaries.
-- Source upload, file processing, chunking, embeddings, and topic mapping.
-- Guardian dashboards and weekly report views.
-- Background jobs, deployment config, and infrastructure definitions for Cloud Run, Cloud SQL, and Google Cloud Storage.
+Swotta is where those interests meet. The practical goal is a system that helps students revise effectively for their actual exams. The deeper goal is building a working model of how structured memory (curriculum graphs, spaced repetition state, misconception tracking, confidence signals) can make AI interactions meaningfully better than a blank-context chatbot.
 
 ## Screenshots
 
@@ -39,93 +16,82 @@ This repository is the ongoing product build. It is being prepared as a public-f
 
 ![Swotta landing page hero](docs/assets/swotta-hero.png)
 
-### Curriculum-first product framing
+### Curriculum structure
 
 ![Swotta curriculum-first section](docs/assets/swotta-curriculum.png)
 
-### Parent visibility and reporting
+### Parent reporting
 
 ![Swotta parent reporting section](docs/assets/swotta-parents.png)
 
+## How it works
+
+Swotta loads a full exam specification — every topic, command word, and mark scheme pattern for a given qualification — into a relational topic graph with prerequisite edges. When a student signs up and picks their subjects, the system seeds their mastery state across every topic and starts scheduling study sessions.
+
+The **scheduling engine** uses a modified SM-2 spaced repetition algorithm, but it doesn't just track what's overdue. It factors exam proximity (shifting from exploratory sessions to retrieval drills as exams approach), topic weights from the actual specification, and behavioural signals like avoidance patterns and confidence miscalibration. The scheduler picks both *what* to study and *how* — retrieval drill, worked example, essay planning, mistake review, and five other session types, each with a distinct AI prompt.
+
+**Study sessions** are conversational, powered by Claude. The interesting part isn't the chat interface — it's the context assembly. Each session receives the student's mastery level for that topic, their known misconceptions, confirmed learning preferences, relevant chunks from their own uploaded materials (retrieved via pgvector similarity search), and the qualification's command word definitions and mark scheme structure. The AI guides rather than gives answers.
+
+**Source ingestion** handles the student's own materials. Upload a PDF of class notes or a past paper, and the pipeline extracts text, chunks it at semantic boundaries, generates embeddings, and uses Claude to classify each chunk against the curriculum topic graph. Sessions then pull from the student's actual materials, not generic content.
+
+**Parent reporting** closes the loop. Weekly reports include mastery changes, misconception narratives ("recurring confusion between osmosis and diffusion — targeted across 3 sessions, now resolved"), confidence calibration ("he consistently underestimates himself on genetics"), and behavioural patterns. The goal is reports that tell parents something useful, not just "studied for 3 hours."
+
+All of this sits on a **multi-tenant identity model** where a household is just an organisation. The same schema supports B2C families and B2B schools, with policies resolving through five layers (global, qualification, org, class, learner).
+
 ## Stack
 
-- Next.js 15, React 19, TypeScript
-- Drizzle ORM + PostgreSQL 16 + pgvector
-- Firebase Auth
-- Anthropic Claude for analysis, sessions, and reporting
-- Voyage AI for embeddings
-- Google Cloud Storage for uploaded sources
-- Inngest for async workflows
-- Resend for guardian emails
-- Cloud Run, Cloud SQL, Cloud Build, and Terraform for deployment
+| Layer | Choice | Why |
+|-------|--------|-----|
+| Framework | Next.js 15, React 19 | Full-stack TypeScript, streaming for AI sessions |
+| Database | PostgreSQL 16 + pgvector | Relational data + vector embeddings in one DB, one transaction |
+| ORM | Drizzle | Schema-as-TypeScript, fine-grained SQL for graph queries |
+| Auth | Firebase Auth | Google Sign-In (universal in UK schools), GCP ecosystem |
+| AI | Claude API (Anthropic SDK) | Study sessions, material analysis, report generation |
+| Embeddings | Voyage AI (1024d) | Colocated with relational data in pgvector |
+| File storage | Google Cloud Storage | Signed URLs for student uploads |
+| Background jobs | Inngest | Durable, retryable, typed async functions |
+| Email | Resend | Parent weekly reports |
+| Hosting | Cloud Run + Cloud SQL | Long timeouts for AI sessions, europe-west2 |
+| Infrastructure | Terraform | Modular GCP config (networking, IAM, secrets, storage) |
 
-## Repository Guide
+## Repository structure
 
-- `src/app/` contains the route surfaces for marketing, auth, learner flows, guardian flows, and API handlers.
-- `src/components/` contains the UI systems for landing, dashboard, onboarding, sessions, diagnostics, sources, and parent reporting.
-- `src/engine/` contains the core domain logic: curriculum loading, ingestion, scheduling, mastery, reporting, diagnostics, memory, and behaviour analysis.
-- `src/db/schema/` defines the data model across identity, curriculum, sources, learner state, and planning.
-- `inngest/` contains background job entry points.
-- `tests/e2e/` contains Playwright flows for onboarding, parent view, source upload, and study sessions.
-- `terraform/` contains the infrastructure configuration for GCP deployment.
+```
+src/
+  engine/       Core domain: scheduling, mastery, sessions, reporting, diagnostics, memory
+  ai/           Claude integration, Voyage embeddings, 15 prompt templates (Markdown)
+  db/schema/    Drizzle schema — 40+ tables across 5 layers
+  app/          Next.js routes: marketing, auth, learner, guardian, API
+  components/   UI: dashboard, onboarding, sessions, sources, parent views
+  lib/          Auth, types, logging, database
+  email/        Resend templates
+inngest/        Background jobs
+terraform/      GCP infrastructure modules
+tests/e2e/      Playwright flows
+```
 
-## Documentation
+Detailed docs: [Architecture](docs/ARCHITECTURE.md) | [Schema](docs/SCHEMA.md) | [Interfaces](docs/INTERFACES.md) | [Decisions](docs/DECISIONS.md) | [Design system](DESIGN.md)
 
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): system shape, durable state layers, and core engine flows.
-- [`docs/DECISIONS.md`](docs/DECISIONS.md): locked technical choices and conventions.
-- [`docs/INTERFACES.md`](docs/INTERFACES.md): engine contracts and shared types.
-- [`docs/SCHEMA.md`](docs/SCHEMA.md): relational schema details.
-- [`docs/PLAN.md`](docs/PLAN.md): the original phased build plan.
-- [`docs/PLAN-PHASE4.md`](docs/PLAN-PHASE4.md): later-phase expansion around auth, integration, and intelligence features.
+## Running locally
 
-## Running Locally
+```bash
+npm ci
+docker compose up -d        # Postgres + pgvector
+cp .env.example .env.local  # Fill in credentials
+npm run db:push             # Apply schema
+npm run dev
+```
 
-1. Install dependencies:
-   ```bash
-   npm ci
-   ```
-2. Start local Postgres services:
-   ```bash
-   docker compose up -d
-   ```
-3. Copy the environment template:
-   ```bash
-   cp .env.example .env.local
-   ```
-4. Fill in the required credentials for Firebase, Anthropic, Voyage, Google Cloud Storage, and Resend.
-5. Apply the schema:
-   ```bash
-   npm run db:push
-   ```
-6. Start the app:
-   ```bash
-   npm run dev
-   ```
-
-Some flows are intentionally credential-backed. The UI shell, schema, and most local development work can be exercised without production infrastructure, but AI, auth, and file-ingestion features need real service configuration.
+AI, auth, and ingestion features need real service credentials. The UI shell, schema, and local development work without them.
 
 ## Verification
 
-Useful commands:
-
 ```bash
-npx tsc --noEmit
-npm run test:run
-npx eslint src/
+npx tsc --noEmit       # Passes
+npm run test:run       # 84 files, 1605 tests
+npx eslint src/        # 0 errors, 0 warnings
 ```
 
-Current status on this branch:
+## License
 
-- `npx tsc --noEmit` passes.
-- `npm run test:run` passes: 84 test files, 1605 tests.
-- `npx eslint src/` runs with warnings only. The remaining issues are mostly unused imports/variables and a couple of framework-specific template warnings.
-
-## Status
-
-Swotta is an active build rather than a frozen OSS package. The architecture, schema, core engines, and several user-facing surfaces already exist, but the product is still moving quickly. Treat this repo as a substantial in-progress product build.
-
-## Current Focus
-
-- Trim the remaining ESLint warnings and polish the public-facing repo surface.
-- Close the loop from completed study sessions into mastery-state updates and scheduling.
-- Replace the temporary guardian-linking fallback with real invite tokens.
+[Polyform Noncommercial 1.0](LICENSE) — you can read, learn from, and experiment with this code, but not use it commercially.

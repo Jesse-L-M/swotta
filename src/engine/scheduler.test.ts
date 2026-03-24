@@ -12,14 +12,12 @@ import {
   studyBlocks,
   studyPlans,
   reviewQueue,
-  topics,
 } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type {
   LearnerId,
   TopicId,
   QualificationVersionId,
-  BlockType,
   SchedulerConfig,
 } from "@/lib/types";
 import { initTopicStates } from "./mastery";
@@ -560,7 +558,7 @@ describe("buildWeeklyPlan", () => {
   });
 
   it("skips large blocks and still schedules smaller ones that fit", async () => {
-    const { db, learner, qual } = await setupPlanData();
+    const { db, learner } = await setupPlanData();
     const weekStart = new Date("2026-03-16");
 
     // Set one topic to high mastery + streak so it becomes timed_problems (20 min)

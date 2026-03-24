@@ -1,13 +1,13 @@
 # Technical Decisions
 
-This document records locked technical decisions. Agents should not revisit or second-guess these choices.
+This document records locked technical decisions. These choices are final and should not be revisited.
 
 ## Tech Stack
 
 | Layer | Choice | Rationale |
 |-------|--------|-----------|
 | **Framework** | Next.js 15 (App Router) | Full-stack TypeScript, Server Components, Server Actions, streaming responses for AI sessions |
-| **Language** | TypeScript (strict mode) | Single language across frontend + backend + schema. Every agent reasons about one codebase. |
+| **Language** | TypeScript (strict mode) | Single language across frontend + backend + schema. One language across the full stack. |
 | **ORM** | Drizzle ORM | Schema-as-TypeScript, fine-grained SQL control for complex relational queries, lighter than Prisma |
 | **Database** | PostgreSQL 16 + pgvector | Relational data + vector embeddings in one DB. No separate vector store. Atomic transactions across all five data layers. |
 | **Auth** | Firebase Auth | Authentication only (who are you?). Authorization handled by application layer via Drizzle schema (organizations, memberships, roles). Students sign in with Google accounts (universal in UK schools). Uses GCP credits. Schema column: `firebase_uid` on users table. |
@@ -42,7 +42,7 @@ This document records locked technical decisions. Agents should not revisit or s
 - **Not Prisma.** Drizzle gives better SQL control for the complex joins and graph queries in the curriculum/mastery layers.
 - **Not a separate vector DB (Pinecone/Weaviate/etc).** pgvector keeps embeddings colocated with the relational data they're scoped to. One transaction, one database.
 - **Not MongoDB/DynamoDB.** The data model is deeply relational (topic graphs, scoped permissions, learner state across subjects). Document stores would fight this.
-- **Not Python.** The AI calls are API calls — Python's ML library advantage doesn't apply. TypeScript everywhere reduces agent context-switching.
+- **Not Python.** The AI calls are API calls — Python's ML library advantage doesn't apply. TypeScript everywhere reduces context-switching.
 - **Not microservices.** One Next.js app to start. The engine modules are well-separated in code — extract to services later only if scale demands it.
 - **Not Supabase.** The multi-tenant RLS model for this schema would be overly complex. Firebase Auth + application-level scoping is cleaner.
 - **Not Clerk.** Clerk's org/membership features would duplicate the authorization model already built in the Drizzle schema (organizations, memberships, guardian_links). Firebase Auth is simpler: it handles authentication, the schema handles authorization. Also stays within GCP ecosystem.

@@ -1044,7 +1044,7 @@ describe("assembleLearnerContext", () => {
   });
 
   it("resolves policies for the learner", async () => {
-    const { db, learner, qual, topic } = await setupFullContext();
+    const { db, learner, topic } = await setupFullContext();
 
     // Global policy
     await db.insert(policies).values({

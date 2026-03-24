@@ -1,5 +1,4 @@
 import { describe, test, expect } from "vitest";
-import type { ExamPhaseName } from "@/engine/proximity";
 import {
   PHASE_ORDER,
   getPhaseLabel,

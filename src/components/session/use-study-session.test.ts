@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import {
   useStudySession,
   type StudySessionApi,
   type SessionBlockInfo,
 } from "./use-study-session";
-import type { AttemptOutcome, BlockId, TopicId } from "@/lib/types";
+import type { AttemptOutcome, BlockId } from "@/lib/types";
 
 function makeBlock(overrides?: Partial<SessionBlockInfo>): SessionBlockInfo {
   return {
@@ -504,9 +504,7 @@ describe("useStudySession with default API", () => {
   });
 
   it("calls start session endpoint", async () => {
-    let callCount = 0;
     globalThis.fetch = vi.fn().mockImplementation(async (url: string) => {
-      callCount++;
       if (typeof url === "string" && url.includes("/api/blocks/")) {
         return { ok: true, json: async () => ({ data: makeBlock() }) };
       }

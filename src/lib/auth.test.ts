@@ -7,8 +7,6 @@ import {
   createTestLearner,
   createTestGuardianLink,
 } from "@/test/fixtures";
-import { users, memberships, learners, guardianLinks } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import type { Database } from "@/lib/db";
 
 // Mock Firebase Admin SDK

@@ -11,16 +11,13 @@ import {
   commandWords,
   studyBlocks,
   blockAttempts,
-  learnerQualifications,
 } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import type { LearnerId } from "@/lib/types";
 import {
   getTechniqueMastery,
   getCommandWordsForQualification,
   formatCommandWordSection,
   type CommandWordContext,
-  type TechniqueMastery,
 } from "./technique";
 
 beforeEach(() => {

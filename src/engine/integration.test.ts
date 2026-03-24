@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { getTestDb } from "@/test/setup";
 import {
   createTestOrg,
@@ -13,19 +13,16 @@ import {
   taskRules,
   topics,
 } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type {
   LearnerId,
   TopicId,
-  QualificationVersionId,
   BlockId,
-  BlockType,
 } from "@/lib/types";
 import { initTopicStates, processAttemptOutcome } from "./mastery";
 import {
   getNextBlocks,
   selectBlockType,
-  selectBlockTypeSync,
 } from "./scheduler";
 import type { Database } from "@/lib/db";
 

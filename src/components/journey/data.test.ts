@@ -4,16 +4,12 @@ import {
   createTestOrg,
   createTestLearner,
   createTestQualification,
-  enrollLearnerInQualification,
 } from "@/test/fixtures";
 import {
   misconceptionEvents,
   studySessions,
-  studyBlocks,
   learnerTopicState,
-  studyPlans,
 } from "@/db/schema";
-import type { LearnerId, TopicId } from "@/lib/types";
 import {
   loadMisconceptionThreads,
   loadJourneyStats,

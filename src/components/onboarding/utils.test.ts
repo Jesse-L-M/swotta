@@ -62,8 +62,6 @@ describe("validateTargetGrade", () => {
 });
 
 describe("validateOnboardingSelection", () => {
-  const now = new Date(2026, 2, 18);
-
   test("returns error for empty selections", () => {
     expect(validateOnboardingSelection([])).toBe(
       "Select at least one qualification"

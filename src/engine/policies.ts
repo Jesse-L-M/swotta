@@ -1,4 +1,4 @@
-import { eq, and, or, isNull, inArray, sql } from "drizzle-orm";
+import { eq, and, or, isNull, inArray } from "drizzle-orm";
 import type { Database } from "@/lib/db";
 import {
   policies,

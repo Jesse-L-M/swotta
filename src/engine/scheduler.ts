@@ -1,4 +1,4 @@
-import { eq, and, lte, isNull, asc, inArray, sql } from "drizzle-orm";
+import { eq, and, isNull, asc } from "drizzle-orm";
 import type { Database } from "@/lib/db";
 import {
   learnerTopicState,

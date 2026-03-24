@@ -29,7 +29,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { sendEmail as defaultSendEmail, type EmailOptions, type EmailResult } from "@/email/send";
 import { renderWeeklyReportEmail } from "@/email/templates/weekly-report";
 import { detectPatterns, type BehaviourReport } from "@/engine/behaviour";
-import { calculateCalibration, type CalibrationResult, type TopicCalibration } from "@/engine/calibration";
+import { calculateCalibration, type CalibrationResult } from "@/engine/calibration";
 import { getTechniqueMastery, type TechniqueMastery } from "@/engine/technique";
 import { getExamPhase, type ExamPhase, type ExamPhaseName, calculateDaysToExam } from "@/engine/proximity";
 
@@ -1416,7 +1416,7 @@ export function computeSuggestions(
 
 export function mapEnrichmentToEmailProps(
   enrichment: ReportEnrichment,
-  learnerName: string,
+  _learnerName: string,
 ): Record<string, unknown> {
   const props: Record<string, unknown> = {};
 
