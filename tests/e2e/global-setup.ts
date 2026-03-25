@@ -1,8 +1,8 @@
 /**
  * Playwright global setup.
- * Firebase Auth doesn't need a testing token setup like Clerk did.
- * E2E tests use session cookies set directly via the API.
+ * The Playwright config injects a per-run secret used by the local-only
+ * E2E auth endpoint to mint signed session cookies.
  */
 export default async function globalSetup() {
-  // No-op — Firebase Auth session cookies are set per-test via API calls
+  // No-op — session cookies are minted per-test via the E2E auth endpoint.
 }

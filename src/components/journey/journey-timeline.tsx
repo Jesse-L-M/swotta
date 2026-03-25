@@ -15,7 +15,7 @@ function EmptyJourney() {
       className="rounded-xl border border-[#E5E0D6] bg-white p-8 text-center"
       data-testid="journey-empty"
     >
-      <p className="font-[family-name:var(--font-instrument-serif)] text-xl text-[#1A1917]">
+      <p className="font-[family-name:var(--font-serif)] text-xl text-[#1A1917]">
         Your learning journey starts here
       </p>
       <p className="mt-2 text-sm text-[#5C5950]">
@@ -36,7 +36,7 @@ export function JourneyTimeline({ data }: JourneyTimelineProps) {
 
       {data.milestones.length > 0 && (
         <section data-testid="milestones-section">
-          <h2 className="mb-4 font-[family-name:var(--font-instrument-serif)] text-xl text-[#1A1917]">
+          <h2 className="mb-4 font-[family-name:var(--font-serif)] text-xl text-[#1A1917]">
             Recent milestones
           </h2>
           <div className="space-y-3">
@@ -51,7 +51,7 @@ export function JourneyTimeline({ data }: JourneyTimelineProps) {
 
       {data.active.length > 0 && (
         <section data-testid="active-section">
-          <h2 className="mb-4 font-[family-name:var(--font-instrument-serif)] text-xl text-[#1A1917]">
+          <h2 className="mb-4 font-[family-name:var(--font-serif)] text-xl text-[#1A1917]">
             Active misconceptions
             <span className="ml-2 inline-flex items-center rounded-full bg-[#FAEAE5] px-2 py-0.5 text-xs font-medium text-[#D4654A]">
               {data.active.length}
@@ -67,7 +67,7 @@ export function JourneyTimeline({ data }: JourneyTimelineProps) {
 
       {data.conquered.length > 0 && (
         <section data-testid="conquered-section">
-          <h2 className="mb-4 font-[family-name:var(--font-instrument-serif)] text-xl text-[#1A1917]">
+          <h2 className="mb-4 font-[family-name:var(--font-serif)] text-xl text-[#1A1917]">
             Conquered misconceptions
             <span className="ml-2 inline-flex items-center rounded-full bg-[#E4F0ED] px-2 py-0.5 text-xs font-medium text-[#2D7A6E]">
               {data.conquered.length}
