@@ -13,7 +13,23 @@ steps:
         NEXT_PUBLIC_FIREBASE_PROJECT_ID=${_NEXT_PUBLIC_FIREBASE_PROJECT_ID}
         EOF
 
-  # Step 2: Build Docker image
+  # Step 2: Log the deploy target and image tags for easier build triage
+  - name: "ubuntu"
+    id: "deploy-context"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        echo "Deploy context:"
+        echo "  project: ${PROJECT_ID}"
+        echo "  region: ${_REGION}"
+        echo "  service: ${_CLOUD_RUN_SERVICE}"
+        echo "  migrator job: ${_MIGRATOR_JOB}"
+        echo "  image tag: ${_IMAGE_TAG}"
+        echo "  app image: ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/swotta:${_IMAGE_TAG}"
+        echo "  migrator image: ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/swotta-migrator:${_IMAGE_TAG}"
+
+  # Step 3: Build Docker image
   - name: "gcr.io/cloud-builders/docker"
     id: "build-app"
     args:
@@ -26,7 +42,7 @@ steps:
       - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/swotta:latest"
       - "."
 
-  # Step 3: Build migration image
+  # Step 4: Build migration image
   - name: "gcr.io/cloud-builders/docker"
     id: "build-migrator"
     args:
@@ -39,7 +55,7 @@ steps:
       - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/swotta-migrator:latest"
       - "."
 
-  # Step 4: Push app image to Artifact Registry
+  # Step 5: Push app image to Artifact Registry
   - name: "gcr.io/cloud-builders/docker"
     id: "push-app"
     args:
@@ -47,7 +63,7 @@ steps:
       - "--all-tags"
       - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/swotta"
 
-  # Step 5: Push migration image to Artifact Registry
+  # Step 6: Push migration image to Artifact Registry
   - name: "gcr.io/cloud-builders/docker"
     id: "push-migrator"
     args:
@@ -55,7 +71,7 @@ steps:
       - "--all-tags"
       - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/swotta-migrator"
 
-  # Step 6: Update and execute the migration job
+  # Step 7: Update and execute the migration job
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     id: "migrate"
     entrypoint: "gcloud"
@@ -85,7 +101,7 @@ steps:
       - "--quiet"
     waitFor: ["migrate"]
 
-  # Step 7: Deploy to Cloud Run
+  # Step 8: Deploy to Cloud Run
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     id: "deploy"
     entrypoint: "gcloud"
@@ -143,5 +159,10 @@ images:
   - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/swotta:latest"
   - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/swotta-migrator:${_IMAGE_TAG}"
   - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/swotta-migrator:latest"
+
+tags:
+  - "swotta"
+  - "production"
+  - "deploy"
 
 timeout: "1200s"
