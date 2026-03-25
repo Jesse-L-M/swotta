@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getTestDb } from "@/test/setup";
+import { cleanupTestDatabase, getTestDb } from "@/test/setup";
 import {
   createTestOrg,
   createTestLearner,
@@ -74,6 +74,7 @@ import { POST } from "./route";
 const db = getTestDb();
 
 beforeEach(async () => {
+  await cleanupTestDatabase();
   resetFixtureCounter();
   requireLearnerMock.mockReset();
   continueSessionMock.mockReset();
@@ -236,6 +237,41 @@ describe("POST /api/sessions/[id]/message", () => {
 
     expect(response.status).toBe(404);
     expect(body.error.code).toBe("NOT_FOUND");
+    expect(continueSessionMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 when the session is not active", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const [session] = await db
+      .insert(studySessions)
+      .values({
+        learnerId: learner.id,
+        status: "completed",
+        topicsCovered: [],
+      })
+      .returning();
+
+    requireLearnerMock.mockResolvedValue({
+      learnerId: learner.id,
+      orgId: org.id,
+    });
+
+    const response = await POST(
+      new Request(`http://localhost/api/sessions/${session.id}/message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemPrompt: "prompt",
+          messages: [{ role: "user", content: "answer" }],
+        }),
+      }),
+      { params: Promise.resolve({ id: session.id }) }
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.error.code).toBe("SESSION_NOT_ACTIVE");
     expect(continueSessionMock).not.toHaveBeenCalled();
   });
 });

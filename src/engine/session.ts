@@ -387,6 +387,19 @@ export async function continueSession(
   _systemPrompt: string
 ): Promise<ContinueSessionResult> {
   const { db, anthropic } = getDeps();
+  const [session] = await db
+    .select({ status: studySessions.status })
+    .from(studySessions)
+    .where(eq(studySessions.id, sessionId))
+    .limit(1);
+
+  if (!session || session.status !== "active") {
+    throw new SessionConflictError(
+      "SESSION_NOT_ACTIVE",
+      "Study session is not active"
+    );
+  }
+
   const transcript = await getStoredSessionTranscript(db, sessionId);
   if (!transcript) {
     throw new SessionConflictError(
@@ -431,6 +444,24 @@ export async function continueSession(
     response.content[0].type === "text" ? response.content[0].text : "";
 
   const { isComplete, cleanReply } = parseSessionStatus(rawReply);
+
+  const [activeSession] = await db
+    .select({ id: studySessions.id })
+    .from(studySessions)
+    .where(
+      and(
+        eq(studySessions.id, sessionId),
+        eq(studySessions.status, "active")
+      )
+    )
+    .limit(1);
+
+  if (!activeSession) {
+    throw new SessionConflictError(
+      "SESSION_NOT_ACTIVE",
+      "Study session is not active"
+    );
+  }
 
   await db
     .update(blockAttempts)
