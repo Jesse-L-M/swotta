@@ -10,7 +10,6 @@ env:
   NODE_VERSION: "20"
   REGION: europe-west2
   CLOUD_RUN_SERVICE: swotta-app-production
-  ARTIFACT_REPO: swotta
 
 jobs:
   # ---------- CI: runs on every PR ----------
@@ -79,6 +78,8 @@ jobs:
           NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
           NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
         run: |
+          set -euo pipefail
+
           missing=()
           required=(
             GCP_WIF_PROVIDER
@@ -112,9 +113,186 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Submit build to Cloud Build
+        id: submit-build
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
         run: |
-          gcloud builds submit \
-            --config cloudbuild.yaml \
-            --project ${{ secrets.GCP_PROJECT_ID }} \
-            --service-account projects/${{ secrets.GCP_PROJECT_ID }}/serviceAccounts/${{ secrets.GCP_WIF_SERVICE_ACCOUNT }} \
-            --substitutions="_REGION=${REGION},_CLOUD_RUN_SERVICE=${CLOUD_RUN_SERVICE},_ARTIFACT_REPO=${ARTIFACT_REPO},_IMAGE_TAG=${GITHUB_SHA::7},_NEXT_PUBLIC_FIREBASE_API_KEY=${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }},_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }},_NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}"
+          set -euo pipefail
+
+          IMAGE_TAG="${GITHUB_SHA::7}"
+          SUBMIT_OUTPUT="$(
+            gcloud builds submit \
+              --async \
+              --format=json \
+              --config cloudbuild.yaml \
+              --project "${GCP_PROJECT_ID}" \
+              --service-account "projects/${GCP_PROJECT_ID}/serviceAccounts/${{ secrets.GCP_WIF_SERVICE_ACCOUNT }}" \
+              --substitutions="_REGION=${REGION},_CLOUD_RUN_SERVICE=${CLOUD_RUN_SERVICE},_IMAGE_TAG=${IMAGE_TAG},_NEXT_PUBLIC_FIREBASE_API_KEY=${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }},_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }},_NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}"
+          )"
+
+          BUILD_ID="$(
+            SUBMIT_OUTPUT="${SUBMIT_OUTPUT}" python3 -c 'import json, os; payload = json.loads(os.environ["SUBMIT_OUTPUT"]); print(payload.get("id") or payload.get("metadata", {}).get("build", {}).get("id") or payload.get("metadata", {}).get("id") or "")'
+          )"
+
+          if [ -z "${BUILD_ID}" ]; then
+            echo "::error title=Cloud Build submission failed::gcloud returned a response, but no build ID could be extracted."
+            echo "Submission payload:"
+            echo "${SUBMIT_OUTPUT}"
+            exit 1
+          fi
+
+          BUILD_URL="$(
+            gcloud builds describe "${BUILD_ID}" \
+              --project "${GCP_PROJECT_ID}" \
+              --format='value(logUrl)' 2>/dev/null || true
+          )"
+
+          if [ -z "${BUILD_URL}" ]; then
+            BUILD_URL="https://console.cloud.google.com/cloud-build/builds/${BUILD_ID}?project=${GCP_PROJECT_ID}"
+          fi
+
+          echo "build_id=${BUILD_ID}" >> "${GITHUB_OUTPUT}"
+          echo "build_url=${BUILD_URL}" >> "${GITHUB_OUTPUT}"
+          echo "image_tag=${IMAGE_TAG}" >> "${GITHUB_OUTPUT}"
+
+          echo "::notice title=Cloud Build submitted::Build ID ${BUILD_ID}"
+          echo "::notice title=Cloud Build logs::${BUILD_URL}"
+
+          {
+            echo "## Deploy"
+            echo "- Cloud Build ID: \`${BUILD_ID}\`"
+            echo "- Cloud Build logs: ${BUILD_URL}"
+            echo "- Image tag: \`${IMAGE_TAG}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Wait for Cloud Build
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          BUILD_ID: ${{ steps.submit-build.outputs.build_id }}
+          BUILD_URL: ${{ steps.submit-build.outputs.build_url }}
+        run: |
+          set -euo pipefail
+
+          echo "Waiting for Cloud Build ${BUILD_ID}"
+          echo "Cloud Build logs: ${BUILD_URL}"
+
+          last_status=""
+
+          while true; do
+            status="$(
+              gcloud builds describe "${BUILD_ID}" \
+                --project "${GCP_PROJECT_ID}" \
+                --format='value(status)'
+            )"
+
+            if [ "${status}" = "${last_status}" ]; then
+              echo "Cloud Build still ${status}..."
+            else
+              echo "Cloud Build status: ${status}"
+              last_status="${status}"
+            fi
+
+            case "${status}" in
+              SUCCESS)
+                echo "Cloud Build completed successfully."
+                break
+                ;;
+              FAILURE|INTERNAL_ERROR|TIMEOUT|CANCELLED|EXPIRED)
+                echo "::error title=Cloud Build failed::Build ${BUILD_ID} finished with status ${status}. Common causes here have been missing secrets or stale substitutions. Inspect ${BUILD_URL}"
+                echo "Cloud Build summary:"
+                gcloud builds describe "${BUILD_ID}" \
+                  --project "${GCP_PROJECT_ID}" \
+                  --format='yaml(status,logUrl,createTime,startTime,finishTime,substitutions,images)' || true
+                exit 1
+                ;;
+              QUEUED|PENDING|WORKING)
+                sleep 15
+                ;;
+              *)
+                echo "Cloud Build returned unexpected status ${status}; continuing to poll."
+                sleep 15
+                ;;
+            esac
+          done
+
+      - name: Verify deployed service health
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          BUILD_URL: ${{ steps.submit-build.outputs.build_url }}
+        run: |
+          set -euo pipefail
+
+          SERVICE_URL="$(
+            gcloud run services describe "${CLOUD_RUN_SERVICE}" \
+              --project "${GCP_PROJECT_ID}" \
+              --region "${REGION}" \
+              --format='value(status.url)'
+          )"
+          READY_REVISION="$(
+            gcloud run services describe "${CLOUD_RUN_SERVICE}" \
+              --project "${GCP_PROJECT_ID}" \
+              --region "${REGION}" \
+              --format='value(status.latestReadyRevisionName)'
+          )"
+
+          if [ -z "${SERVICE_URL}" ]; then
+            echo "::error title=Cloud Run verification failed::No service URL was returned for ${CLOUD_RUN_SERVICE} in ${REGION}."
+            exit 1
+          fi
+
+          HEALTH_URL="${SERVICE_URL%/}/api/health"
+          response_file="$(mktemp)"
+          curl_args=()
+
+          if ID_TOKEN="$(gcloud auth print-identity-token --audiences="${SERVICE_URL}" 2>/dev/null)"; then
+            curl_args=(--header "Authorization: Bearer ${ID_TOKEN}")
+            echo "Using an identity token for the health check request."
+          else
+            echo "No identity token was available; retrying the health check without an Authorization header."
+          fi
+
+          echo "Latest ready revision: ${READY_REVISION}"
+          echo "Health check URL: ${HEALTH_URL}"
+
+          for attempt in 1 2 3 4 5 6; do
+            : > "${response_file}"
+
+            if http_code="$(
+              curl \
+                --silent \
+                --show-error \
+                --location \
+                --connect-timeout 10 \
+                --max-time 30 \
+                --output "${response_file}" \
+                --write-out '%{http_code}' \
+                "${curl_args[@]}" \
+                "${HEALTH_URL}"
+            )"; then
+              :
+            else
+              http_code="000"
+            fi
+
+            if [ "${http_code}" = "200" ] && grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"' "${response_file}"; then
+              echo "Health check passed on attempt ${attempt}."
+              cat "${response_file}"
+              {
+                echo "- Cloud Run service: \`${CLOUD_RUN_SERVICE}\`"
+                echo "- Cloud Run URL: ${SERVICE_URL}"
+                echo "- Latest ready revision: \`${READY_REVISION}\`"
+                echo "- Health check: ${HEALTH_URL} returned HTTP 200 with \`status: ok\`"
+              } >> "${GITHUB_STEP_SUMMARY}"
+              exit 0
+            fi
+
+            echo "Health check attempt ${attempt} failed with HTTP ${http_code}."
+            if [ -s "${response_file}" ]; then
+              echo "Response body:"
+              cat "${response_file}"
+            fi
+            sleep 10
+          done
+
+          echo "::error title=Post-deploy health check failed::Deploy completed, but ${HEALTH_URL} did not return the expected health payload after 6 attempts. Inspect ${BUILD_URL}"
+          exit 1
