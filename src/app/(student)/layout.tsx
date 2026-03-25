@@ -1,4 +1,5 @@
 import { Instrument_Serif } from "next/font/google";
+import { StudentShell } from "@/components/student/student-shell";
 
 const instrumentSerif = Instrument_Serif({
   subsets: ["latin"],
@@ -14,7 +15,7 @@ export default function StudentLayout({
 }) {
   return (
     <div className={`${instrumentSerif.variable} min-h-screen bg-[#FFFBF5]`}>
-      <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
+      <StudentShell>{children}</StudentShell>
     </div>
   );
 }

@@ -23,8 +23,11 @@ type OrgInsert = InferInsertModel<typeof organizations>;
 type UserInsert = InferInsertModel<typeof users>;
 
 let counter = 0;
+const runId = Math.random().toString(36).slice(2, 10);
+
 function nextId() {
-  return ++counter;
+  counter += 1;
+  return `${runId}${counter}`;
 }
 
 export async function createTestOrg(

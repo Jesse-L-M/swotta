@@ -11,6 +11,16 @@ All notable changes to this project will be documented in this file.
 - Updated Cloud Build to publish a separate `swotta-migrator` image, update the migration job to the release image, execute migrations, and only then deploy the app service
 - Wired Terraform Cloud Run configuration to manage the migration job, its database secret, and its production runtime settings
 
+## [0.1.5] - 2026-03-25
+
+### Added
+- Added a reusable student shell with top-level navigation across the learner dashboard, journey, sources, and settings pages
+- Added a signed local-only E2E auth flow with a dedicated cookie minting route for Playwright
+
+### Changed
+- Updated student-facing journey, dashboard empty state, milestone, post-exam summary, and replay headings to use the shared serif font token consistently
+- Replaced the old non-production magic session-cookie bypass with secret-gated signed E2E sessions and tightened auth regression coverage
+
 ## [0.1.3] - 2026-03-25
 
 ### Added

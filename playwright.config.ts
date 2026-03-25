@@ -1,4 +1,7 @@
+import { randomUUID } from "node:crypto";
 import { defineConfig, devices } from "@playwright/test";
+
+process.env.E2E_AUTH_BYPASS_SECRET ??= randomUUID();
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -21,7 +24,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev",
+    command: `E2E_AUTH_BYPASS_SECRET=${process.env.E2E_AUTH_BYPASS_SECRET} npm run dev`,
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

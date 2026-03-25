@@ -39,7 +39,7 @@ export function ReplayCard({ session, onShare, onViewDetails }: ReplayCardProps)
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h3
-            className="truncate font-[family-name:var(--font-instrument-serif)] text-lg font-normal text-[#1A1917]"
+            className="truncate font-[family-name:var(--font-serif)] text-lg font-normal text-[#1A1917]"
             data-testid="replay-topic"
           >
             {session.topicName}

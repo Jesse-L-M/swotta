@@ -10,9 +10,9 @@ export function EmptyState({ learnerName }: EmptyStateProps) {
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-teal-50">
         <BookOpen className="h-8 w-8 text-teal-600" />
       </div>
-      <h2 className="mt-6 font-[family-name:var(--font-serif)] text-2xl text-[#1A1A2E]">
+      <h1 className="mt-6 font-[family-name:var(--font-serif)] text-2xl text-[#1A1A2E]">
         Welcome to Swotta, {learnerName}
-      </h2>
+      </h1>
       <p className="mt-2 max-w-md text-[#6B7280]">
         Let&apos;s get you set up. Add your subjects and exam dates so we can
         build your personalised study plan.
