@@ -27,31 +27,31 @@ function makeProps(overrides?: Partial<WeeklyReportEmailProps>): WeeklyReportEma
 }
 
 describe("renderWeeklyReportEmail", () => {
-  it("renders DOCTYPE and basic HTML structure", () => {
-    const html = renderWeeklyReportEmail(makeProps());
+  it("renders DOCTYPE and basic HTML structure", async () => {
+    const html = await renderWeeklyReportEmail(makeProps());
     expect(html).toContain("<!DOCTYPE html>");
     expect(html).toContain("<html");
     expect(html).toContain("</html>");
   });
 
-  it("renders learner name in header", () => {
-    const html = renderWeeklyReportEmail(makeProps({ learnerName: "Charlie Jones" }));
+  it("renders learner name in header", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({ learnerName: "Charlie Jones" }));
     expect(html).toContain("Charlie Jones");
   });
 
-  it("renders weekly study report title", () => {
-    const html = renderWeeklyReportEmail(makeProps());
+  it("renders weekly study report title", async () => {
+    const html = await renderWeeklyReportEmail(makeProps());
     expect(html).toContain("Weekly Study Report");
   });
 
-  it("renders date range in header", () => {
-    const html = renderWeeklyReportEmail(makeProps());
+  it("renders date range in header", async () => {
+    const html = await renderWeeklyReportEmail(makeProps());
     expect(html).toContain("9 March 2026");
     expect(html).toContain("15 March 2026");
   });
 
-  it("renders key metrics with serif font", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("renders key metrics with serif font", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       data: makeReport({
         sessionsCompleted: 7,
         totalStudyMinutes: 200,
@@ -67,16 +67,16 @@ describe("renderWeeklyReportEmail", () => {
     expect(html).toContain("Georgia");
   });
 
-  it("renders summary section", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("renders summary section", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       data: makeReport({ summary: "Great progress this week!" }),
     }));
     expect(html).toContain("Summary");
     expect(html).toContain("Great progress this week!");
   });
 
-  it("renders strengths section for positive mastery changes", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("renders strengths section for positive mastery changes", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       data: makeReport({
         masteryChanges: [
           { topicId: "t1" as TopicId, topicName: "Cell Biology", before: 0.4, after: 0.7, delta: 0.3 },
@@ -90,8 +90,8 @@ describe("renderWeeklyReportEmail", () => {
     expect(html).toContain("#059669");
   });
 
-  it("does not render strengths section when no positive changes", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("does not render strengths section when no positive changes", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       data: makeReport({
         masteryChanges: [
           { topicId: "t1" as TopicId, topicName: "X", before: 0.5, after: 0.3, delta: -0.2 },
@@ -101,8 +101,8 @@ describe("renderWeeklyReportEmail", () => {
     expect(html).not.toContain("Strengths");
   });
 
-  it("renders areas to watch section for negative mastery changes", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("renders areas to watch section for negative mastery changes", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       data: makeReport({
         masteryChanges: [
           { topicId: "t1" as TopicId, topicName: "Ecology", before: 0.7, after: 0.5, delta: -0.2 },
@@ -116,8 +116,8 @@ describe("renderWeeklyReportEmail", () => {
     expect(html).toContain("#d97706");
   });
 
-  it("renders areas to watch for low mastery even with positive delta", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("renders areas to watch for low mastery even with positive delta", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       data: makeReport({
         masteryChanges: [
           { topicId: "t1" as TopicId, topicName: "Weak Topic", before: 0.2, after: 0.3, delta: 0.1 },
@@ -129,8 +129,8 @@ describe("renderWeeklyReportEmail", () => {
     expect(html).toContain("needs attention");
   });
 
-  it("does not render areas to watch when all topics are healthy", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("does not render areas to watch when all topics are healthy", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       data: makeReport({
         masteryChanges: [
           { topicId: "t1" as TopicId, topicName: "Good", before: 0.5, after: 0.7, delta: 0.2 },
@@ -140,8 +140,8 @@ describe("renderWeeklyReportEmail", () => {
     expect(html).not.toContain("Areas to Watch");
   });
 
-  it("renders multiple strengths with spacing between items", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("renders multiple strengths with spacing between items", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       data: makeReport({
         masteryChanges: [
           { topicId: "t1" as TopicId, topicName: "Bio", before: 0.3, after: 0.6, delta: 0.3 },
@@ -154,8 +154,8 @@ describe("renderWeeklyReportEmail", () => {
     expect(html).toContain("Strengths");
   });
 
-  it("renders multiple areas to watch with spacing between items", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("renders multiple areas to watch with spacing between items", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       data: makeReport({
         masteryChanges: [
           { topicId: "t1" as TopicId, topicName: "Decline1", before: 0.7, after: 0.5, delta: -0.2 },
@@ -168,8 +168,8 @@ describe("renderWeeklyReportEmail", () => {
     expect(html).toContain("Areas to Watch");
   });
 
-  it("renders mastery progress table", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("renders mastery progress table", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       data: makeReport({
         masteryChanges: [
           { topicId: "t1" as TopicId, topicName: "Cell Biology", before: 0.4, after: 0.6, delta: 0.2 },
@@ -184,15 +184,15 @@ describe("renderWeeklyReportEmail", () => {
     expect(html).toContain("-20%");
   });
 
-  it("does not render mastery progress when no changes", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("does not render mastery progress when no changes", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       data: makeReport({ masteryChanges: [] }),
     }));
     expect(html).not.toContain("Mastery Progress");
   });
 
-  it("renders mastery delta with green for positive, red for negative", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("renders mastery delta with green for positive, red for negative", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       data: makeReport({
         masteryChanges: [
           { topicId: "t1" as TopicId, topicName: "Up", before: 0.4, after: 0.6, delta: 0.2 },
@@ -206,8 +206,8 @@ describe("renderWeeklyReportEmail", () => {
     expect(html).toContain("#dc2626");
   });
 
-  it("renders flags section with three-state left-border alerts", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("renders flags section with three-state left-border alerts", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       data: makeReport({
         flags: [
           { type: "disengagement", description: "No sessions", severity: "high" },
@@ -226,15 +226,15 @@ describe("renderWeeklyReportEmail", () => {
     expect(html).toContain(`border-left:3px solid #6b7280`); // low → muted
   });
 
-  it("does not render flags section when no flags", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("does not render flags section when no flags", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       data: makeReport({ flags: [] }),
     }));
     expect(html).not.toContain("Attention Needed");
   });
 
-  it("renders flag severity backgrounds", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("renders flag severity backgrounds", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       data: makeReport({
         flags: [
           { type: "high", description: "Critical", severity: "high" },
@@ -248,18 +248,18 @@ describe("renderWeeklyReportEmail", () => {
     expect(html).toContain("#f9fafb"); // default bg
   });
 
-  it("renders footer", () => {
-    const html = renderWeeklyReportEmail(makeProps());
+  it("renders footer", async () => {
+    const html = await renderWeeklyReportEmail(makeProps());
     expect(html).toContain("generated by Swotta");
   });
 
-  it("renders without optional exam countdown", () => {
-    const html = renderWeeklyReportEmail(makeProps());
+  it("renders without optional exam countdown", async () => {
+    const html = await renderWeeklyReportEmail(makeProps());
     expect(html).not.toContain("Exam Countdown");
   });
 
-  it("renders exam countdown section when provided", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("renders exam countdown section when provided", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       examCountdown: [
         { qualificationName: "GCSE Biology", daysRemaining: 89, examDateFormatted: "15 June 2026" },
         { qualificationName: "GCSE Chemistry", daysRemaining: 12, examDateFormatted: "31 March 2026" },
@@ -272,8 +272,8 @@ describe("renderWeeklyReportEmail", () => {
     expect(html).toContain("12 days");
   });
 
-  it("renders red text for exams within 14 days", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("renders red text for exams within 14 days", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       examCountdown: [
         { qualificationName: "Exam", daysRemaining: 10, examDateFormatted: "28 March" },
       ],
@@ -281,8 +281,8 @@ describe("renderWeeklyReportEmail", () => {
     expect(html).toContain("#dc2626"); // red
   });
 
-  it("renders amber text for exams within 30 days", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("renders amber text for exams within 30 days", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       examCountdown: [
         { qualificationName: "Exam", daysRemaining: 25, examDateFormatted: "12 April" },
       ],
@@ -290,8 +290,8 @@ describe("renderWeeklyReportEmail", () => {
     expect(html).toContain("#d97706"); // amber
   });
 
-  it("renders 'Today' for 0 days remaining", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("renders 'Today' for 0 days remaining", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       examCountdown: [
         { qualificationName: "Exam", daysRemaining: 0, examDateFormatted: "Today" },
       ],
@@ -299,8 +299,8 @@ describe("renderWeeklyReportEmail", () => {
     expect(html).toContain("Today");
   });
 
-  it("renders 'Tomorrow' for 1 day remaining", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("renders 'Tomorrow' for 1 day remaining", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       examCountdown: [
         { qualificationName: "Exam", daysRemaining: 1, examDateFormatted: "Tomorrow" },
       ],
@@ -308,13 +308,13 @@ describe("renderWeeklyReportEmail", () => {
     expect(html).toContain("Tomorrow");
   });
 
-  it("does not render exam countdown for empty array", () => {
-    const html = renderWeeklyReportEmail(makeProps({ examCountdown: [] }));
+  it("does not render exam countdown for empty array", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({ examCountdown: [] }));
     expect(html).not.toContain("Exam Countdown");
   });
 
-  it("renders study patterns section when provided", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("renders study patterns section when provided", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       studyPatterns: {
         dailyBreakdown: [
           { dayLabel: "Mon", minutes: 30 },
@@ -333,13 +333,13 @@ describe("renderWeeklyReportEmail", () => {
     expect(html).toContain("Wed");
   });
 
-  it("does not render study patterns when not provided", () => {
-    const html = renderWeeklyReportEmail(makeProps());
+  it("does not render study patterns when not provided", async () => {
+    const html = await renderWeeklyReportEmail(makeProps());
     expect(html).not.toContain("Study Patterns");
   });
 
-  it("renders study patterns with daily breakdown bars", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("renders study patterns with daily breakdown bars", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       studyPatterns: {
         dailyBreakdown: [
           { dayLabel: "Mon", minutes: 30 },
@@ -353,8 +353,8 @@ describe("renderWeeklyReportEmail", () => {
     expect(html).toContain("#2563eb");
   });
 
-  it("renders with all sections simultaneously", () => {
-    const html = renderWeeklyReportEmail({
+  it("renders with all sections simultaneously", async () => {
+    const html = await renderWeeklyReportEmail({
       data: makeReport({
         sessionsCompleted: 10,
         totalStudyMinutes: 300,
@@ -388,8 +388,8 @@ describe("renderWeeklyReportEmail", () => {
     expect(html).toContain("Attention Needed");
   });
 
-  it("backward compatible: renders correctly with only data and learnerName", () => {
-    const html = renderWeeklyReportEmail({
+  it("backward compatible: renders correctly with only data and learnerName", async () => {
+    const html = await renderWeeklyReportEmail({
       data: makeReport({
         sessionsCompleted: 3,
         totalStudyMinutes: 60,
@@ -406,8 +406,8 @@ describe("renderWeeklyReportEmail", () => {
     expect(html).not.toContain("Exam Countdown");
   });
 
-  it("renders zero mastery delta with muted color", () => {
-    const html = renderWeeklyReportEmail(makeProps({
+  it("renders zero mastery delta with muted color", async () => {
+    const html = await renderWeeklyReportEmail(makeProps({
       data: makeReport({
         masteryChanges: [
           { topicId: "t1" as TopicId, topicName: "Stable", before: 0.5, after: 0.5, delta: 0 },

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.3] - 2026-03-25
+
+### Added
+- Added a production bootstrap script to provision the GitHub `production` environment, sync deploy secrets, and publish required Secret Manager values from local credentials
+
+### Changed
+- Fixed production email rendering by switching the weekly email templates to async `@react-email/render`
+- Wrapped the login and diagnostic pages in `Suspense` so the production build no longer fails on `useSearchParams()`
+- Hardened the deploy path across GitHub Actions, Cloud Build, and Terraform with explicit secret validation, Cloud Run runtime settings, public invoker IAM, and production secret shells
+
 ## [0.1.2] - 2026-03-25
 
 ### Changed

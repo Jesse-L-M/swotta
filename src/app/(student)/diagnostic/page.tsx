@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { Suspense, useState, useRef, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   IntroScreen,
@@ -18,7 +18,7 @@ import type {
   DiagnosticPhase,
 } from "@/components/diagnostic";
 
-export default function DiagnosticPage() {
+function DiagnosticPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const qualificationVersionId = searchParams.get("qualificationVersionId");
@@ -261,5 +261,19 @@ export default function DiagnosticPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function DiagnosticPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <p className="text-[#5C5950]">Loading diagnostic...</p>
+        </div>
+      }
+    >
+      <DiagnosticPageContent />
+    </Suspense>
   );
 }

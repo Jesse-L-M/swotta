@@ -19,11 +19,6 @@ resource "google_sql_database_instance" "main" {
       private_network = var.vpc_network_id
     }
 
-    database_flags {
-      name  = "cloudsql.enable_pgvector"
-      value = "on"
-    }
-
     backup_configuration {
       enabled                        = true
       point_in_time_recovery_enabled = true
