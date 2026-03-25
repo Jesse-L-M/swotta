@@ -1,7 +1,7 @@
 import { inngest } from "../client";
 import { db } from "@/lib/db";
 import { learnerTopicState, reviewQueue } from "@/db/schema";
-import { lt, and, isNull, eq, sql } from "drizzle-orm";
+import { lt, and, sql } from "drizzle-orm";
 import { structuredLog } from "@/lib/logger";
 
 /**
