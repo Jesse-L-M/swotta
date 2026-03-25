@@ -455,34 +455,53 @@ Claude generates natural-language weekly summaries from structured data (mastery
 
 ## Deployment
 
+Production deploys are now intentionally split into CI orchestration, image build, migration, and rollout so database changes happen from inside the production network rather than from the default Cloud Build network.
+
 ```
-┌─────────────────────┐
-│   Cloud Run          │──▶ Next.js app (containerised)
-│   (europe-west2)     │    Auto-scales 0 → N instances
-└──────────┬──────────┘
-           │
-┌──────────▼──────────┐
-│   Cloud SQL          │──▶ Postgres 16 + pgvector
-│   (europe-west2)     │    Private IP, no public access
-└─────────────────────┘
-
-┌─────────────────────┐
-│   Cloud Storage      │──▶ Student uploads
-│   (europe-west2)     │    Lifecycle rules for cleanup
-└─────────────────────┘
-
-┌─────────────────────┐
-│   Inngest (hosted)   │──▶ Background jobs
-│                      │    Calls Cloud Run via HTTPS
-└─────────────────────┘
-
-┌─────────────────────┐
-│   Firebase Auth      │──▶ Authentication (Google Sign-In)
-└─────────────────────┘
-
-┌─────────────────────┐
-│   Resend (hosted)    │──▶ Transactional email
-└─────────────────────┘
+┌────────────────────────────────────────────────────────────────────┐
+│ GitHub Actions (`push` to `main`, environment: `production`)      │
+│ - validates deploy-time environment secrets                       │
+│ - uses Workload Identity Federation into GCP                      │
+└──────────────────────────────┬─────────────────────────────────────┘
+                               │
+                               ▼
+┌────────────────────────────────────────────────────────────────────┐
+│ Cloud Build (`cloudbuild.yaml`)                                   │
+│ - writes `.env.production` for Next.js build-time Firebase vars   │
+│ - builds and pushes `swotta` and `swotta-migrator`                │
+└───────────────┬───────────────────────────────┬────────────────────┘
+                │                               │
+                │                               ▼
+                │                 ┌──────────────────────────────────┐
+                │                 │ Cloud Run Job                    │
+                │                 │ `swotta-migrate-production`      │
+                │                 │ - runs inside production VPC     │
+                │                 │ - reads `DATABASE_URL` from      │
+                │                 │   Secret Manager                 │
+                │                 │ - runs Drizzle migrations        │
+                │                 └──────────────┬───────────────────┘
+                │                                │
+                └────────────────────────────────┘
+                               │
+                               ▼
+┌────────────────────────────────────────────────────────────────────┐
+│ Cloud Run service `swotta-app-production`                         │
+│ - deployed only after migration job succeeds                      │
+│ - reads runtime secrets from Secret Manager                       │
+│ - reaches Cloud SQL over private IP via Serverless VPC Access     │
+└──────────────────────────────┬─────────────────────────────────────┘
+                               │
+                               ▼
+┌────────────────────────────────────────────────────────────────────┐
+│ Cloud SQL + pgvector (private IP), Cloud Storage, Firebase Auth,  │
+│ Claude, Voyage, Resend, and hosted Inngest                        │
+└────────────────────────────────────────────────────────────────────┘
 ```
+
+GitHub Actions only stores the deploy-time values needed for Workload Identity Federation and the public Firebase build-time config. Runtime credentials stay in Secret Manager and are injected by Cloud Build when it deploys the Cloud Run service.
+
+The older pattern where Cloud Build itself reaches the database directly is no longer the intended production path. Migrations now run through the dedicated Cloud Run job so they execute with the same VPC posture as the app service against the private Cloud SQL instance.
+
+Operationally, keep two caveats in mind: provider secrets for Anthropic, Voyage, and Resend may still be placeholders, and Cloud Build plus Terraform both currently define parts of the Cloud Run runtime configuration. See `docs/DEPLOYMENT.md` for the exact secret inventory and current operational notes.
 
 Local development uses Docker Compose for Postgres + pgvector. Everything else connects to hosted services (Firebase Auth, Inngest dev server).
