@@ -40,19 +40,25 @@ steps:
     id: "migrate"
     entrypoint: "sh"
     args:
+      - "-eu"
       - "-c"
       - |
+        PROXY_PID=""
+        cleanup() {
+          if [ -n "$$PROXY_PID" ]; then
+            kill "$$PROXY_PID" 2>/dev/null || true
+          fi
+        }
+        trap cleanup EXIT
+
         # Install Cloud SQL Auth Proxy
         wget -q -O /usr/local/bin/cloud-sql-proxy \
           https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.14.3/cloud-sql-proxy.linux.amd64
         chmod +x /usr/local/bin/cloud-sql-proxy
 
         # Start proxy in background
-        /usr/local/bin/cloud-sql-proxy --port 5432 "${_DB_INSTANCE}" &
+        /usr/local/bin/cloud-sql-proxy --private-ip --port 5432 "${_DB_INSTANCE}" &
         PROXY_PID=$$!
-
-        # Wait for proxy to be ready
-        sleep 3
 
         # Install dependencies (includes drizzle-kit)
         npm ci
@@ -60,15 +66,21 @@ steps:
         # Enable pgvector extension (must exist before migration creates vector columns)
         # Install postgresql-client for psql
         apk add --no-cache postgresql-client
+        ATTEMPTS=0
+        until PGPASSWORD="$$DB_PASSWORD" psql -h 127.0.0.1 -U swotta -d swotta -c "SELECT 1" >/dev/null 2>&1; do
+          ATTEMPTS=$$((ATTEMPTS + 1))
+          if [ "$$ATTEMPTS" -ge 15 ]; then
+            echo "Cloud SQL proxy did not become ready" >&2
+            exit 1
+          fi
+          sleep 2
+        done
         PGPASSWORD="$$DB_PASSWORD" psql -h 127.0.0.1 -U swotta -d swotta \
           -c "CREATE EXTENSION IF NOT EXISTS vector;"
 
         # Run Drizzle migrations
         DATABASE_URL="postgresql://swotta:$$DB_PASSWORD@127.0.0.1:5432/swotta" \
           npx drizzle-kit migrate
-
-        # Clean up proxy
-        kill $$PROXY_PID 2>/dev/null || true
     secretEnv: ["DB_PASSWORD"]
     waitFor: ["push"]
 
