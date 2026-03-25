@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db, type Database } from "@/lib/db";
 import { requireLearner } from "@/lib/auth";
+import { inngest } from "../../../../inngest/client";
 import {
   sourceCollections,
   sourceFiles,
@@ -49,6 +50,9 @@ const uploadFailureReportSchema = z.object({
     .trim()
     .min(1, "Error message is required")
     .max(1000, "Error message too long"),
+});
+const uploadCompletionSchema = z.object({
+  fileId: fileIdSchema,
 });
 
 interface LearnerScope {
@@ -363,6 +367,16 @@ async function markFileFailed(
   await database
     .update(sourceFiles)
     .set({ status: "failed", errorMessage })
+    .where(eq(sourceFiles.id, fileId));
+}
+
+async function markFileProcessing(
+  fileId: string,
+  database: Database
+): Promise<void> {
+  await database
+    .update(sourceFiles)
+    .set({ status: "processing", errorMessage: null })
     .where(eq(sourceFiles.id, fileId));
 }
 
@@ -716,6 +730,75 @@ export async function reportUploadFailure(
     fileId: file.id,
     filename: file.filename,
     error: parsed.data.errorMessage,
+  });
+  revalidateSourcesViews();
+
+  return { success: true };
+}
+
+export async function queueUploadedFile(
+  input: z.infer<typeof uploadCompletionSchema>,
+  database: Database = db
+): Promise<{ success: boolean; error?: string }> {
+  const parsed = uploadCompletionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message };
+  }
+
+  const scope = await getLearnerScope(database);
+  const [file] = await listFilesByIds(scope.learnerId, [parsed.data.fileId], database);
+
+  if (!file) {
+    return { success: false, error: "File not found" };
+  }
+
+  if (file.status === "processing" || file.status === "ready") {
+    return { success: true };
+  }
+
+  if (file.status === "failed") {
+    return {
+      success: false,
+      error: file.errorMessage ?? "File is already marked as failed",
+    };
+  }
+
+  try {
+    await inngest.send({
+      name: "source.file.uploaded",
+      data: { fileId: file.id },
+    });
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : "Failed to queue file for processing";
+    await markFileFailed(file.id, errorMessage, database);
+    structuredLog("upload.queue_error", {
+      userId: scope.userId,
+      fileId: file.id,
+      filename: file.filename,
+      error: errorMessage,
+    });
+    revalidateSourcesViews();
+    return { success: false, error: errorMessage };
+  }
+
+  try {
+    await markFileProcessing(file.id, database);
+  } catch (error) {
+    structuredLog("upload.processing_mark_error", {
+      userId: scope.userId,
+      fileId: file.id,
+      filename: file.filename,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  structuredLog("upload.queued", {
+    userId: scope.userId,
+    fileId: file.id,
+    filename: file.filename,
   });
   revalidateSourcesViews();
 

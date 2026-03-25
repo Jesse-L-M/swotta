@@ -70,7 +70,7 @@ export async function POST(
   }
 
   const [session] = await db
-    .select({ id: studySessions.id })
+    .select({ id: studySessions.id, status: studySessions.status })
     .from(studySessions)
     .where(
       and(
@@ -89,6 +89,18 @@ export async function POST(
         },
       },
       { status: 404 }
+    );
+  }
+
+  if (session.status !== "active") {
+    return NextResponse.json(
+      {
+        error: {
+          code: "SESSION_NOT_ACTIVE",
+          message: "Study session is not active",
+        },
+      },
+      { status: 409 }
     );
   }
 

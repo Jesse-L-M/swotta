@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   prepareSourceUploads,
+  queueUploadedFile,
   reportUploadFailure,
 } from "@/app/(student)/sources/actions";
 import { UploadDropzone } from "@/components/sources/upload-dropzone";
@@ -409,13 +410,6 @@ async function uploadPreparedFile({
     await uploadFileToSignedUrl(file.uploadUrl, localFile, (progress) =>
       onProgress(progressId, progress)
     );
-
-    return {
-      fileId,
-      filename: file.filename,
-      progress: 100,
-      status: "processing",
-    };
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Failed to upload file";
@@ -434,6 +428,27 @@ async function uploadPreparedFile({
       errorMessage,
     };
   }
+
+  const queueResult = await queueUploadedFile({
+    fileId: file.fileId,
+  });
+
+  if (!queueResult.success) {
+    return {
+      fileId,
+      filename: file.filename,
+      progress: 100,
+      status: "error",
+      errorMessage: queueResult.error ?? "Failed to queue file for processing",
+    };
+  }
+
+  return {
+    fileId,
+    filename: file.filename,
+    progress: 100,
+    status: "processing",
+  };
 }
 
 function uploadFileToSignedUrl(
