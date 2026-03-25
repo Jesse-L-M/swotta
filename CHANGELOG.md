@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.4] - 2026-03-25
+
+### Added
+- Added a dedicated Cloud Run migration job and release image entrypoint so database migrations run inside the production VPC instead of the default Cloud Build network
+
+### Changed
+- Updated Cloud Build to publish a separate `swotta-migrator` image, update the migration job to the release image, execute migrations, and only then deploy the app service
+- Wired Terraform Cloud Run configuration to manage the migration job, its database secret, and its production runtime settings
+
 ## [0.1.3] - 2026-03-25
 
 ### Added

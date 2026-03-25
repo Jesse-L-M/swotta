@@ -15,6 +15,11 @@ variable "image" {
   type        = string
 }
 
+variable "migration_image" {
+  description = "Container image for the migration job"
+  type        = string
+}
+
 variable "vpc_connector_id" {
   description = "Serverless VPC Access connector ID"
   type        = string
@@ -28,6 +33,11 @@ variable "service_account_email" {
 variable "secret_ids" {
   description = "Map of env var name to Secret Manager secret ID"
   type        = map(string)
+}
+
+variable "migration_database_url_secret_id" {
+  description = "Secret Manager secret ID for DATABASE_URL used by the migration job"
+  type        = string
 }
 
 variable "gcs_bucket_name" {
