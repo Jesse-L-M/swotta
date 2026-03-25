@@ -125,7 +125,11 @@ module "cloud_run" {
   image               = var.cloud_run_image
   vpc_connector_id    = module.networking.vpc_connector_id
   service_account_email = module.iam.app_service_account_email
-  secret_ids          = module.secrets.secret_ids
+  secret_ids = {
+    for key, secret_id in module.secrets.secret_ids :
+    key => secret_id
+    if !contains(["INNGEST_EVENT_KEY", "INNGEST_SIGNING_KEY"], key)
+  }
   gcs_bucket_name     = local.uploads_bucket_name
   min_instances       = var.min_instances
   max_instances       = var.max_instances

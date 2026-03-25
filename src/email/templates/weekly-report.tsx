@@ -1,5 +1,5 @@
 import React from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderEmail } from "@/email/render";
 import type { WeeklyReportData } from "@/lib/types";
 
 export interface WeeklyReportEmailProps {
@@ -122,7 +122,6 @@ export function WeeklyReportEmail({
 
   return (
     <html lang="en">
-      {/* eslint-disable-next-line @next/next/no-head-element */}
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -990,11 +989,8 @@ export function WeeklyReportEmail({
   );
 }
 
-export function renderWeeklyReportEmail(
+export async function renderWeeklyReportEmail(
   props: WeeklyReportEmailProps,
-): string {
-  const markup = renderToStaticMarkup(
-    React.createElement(WeeklyReportEmail, props),
-  );
-  return `<!DOCTYPE html>${markup}`;
+): Promise<string> {
+  return renderEmail(React.createElement(WeeklyReportEmail, props));
 }

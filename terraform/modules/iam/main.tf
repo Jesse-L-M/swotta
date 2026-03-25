@@ -62,6 +62,12 @@ resource "google_project_iam_member" "build_logs" {
   member  = "serviceAccount:${google_service_account.cloudbuild.email}"
 }
 
+resource "google_project_iam_member" "build_storage" {
+  project = var.project_id
+  role    = "roles/storage.objectViewer"
+  member  = "serviceAccount:${google_service_account.cloudbuild.email}"
+}
+
 # Allow Cloud Build SA to act as the app SA (for deploying Cloud Run)
 resource "google_service_account_iam_member" "build_act_as_app" {
   service_account_id = google_service_account.app.name

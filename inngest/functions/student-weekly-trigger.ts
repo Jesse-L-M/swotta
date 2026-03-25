@@ -219,7 +219,7 @@ export const studentWeeklyTrigger = inngest.createFunction(
             phaseName: closestPhase,
           };
 
-          const html = renderStudentWeeklyEmail(emailProps);
+          const html = await renderStudentWeeklyEmail(emailProps);
           const subject = `Your week ahead, ${learner.firstName}`;
 
           await sendEmail({ to: learner.email, subject, html });

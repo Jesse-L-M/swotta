@@ -489,7 +489,7 @@ export async function sendWeeklyReport(
       continue;
     }
 
-    const html = renderWeeklyReportEmail({
+    const html = await renderWeeklyReportEmail({
       data: reportData,
       learnerName,
     });
@@ -1085,7 +1085,7 @@ export async function sendEnhancedWeeklyReport(
       continue;
     }
 
-    const html = renderWeeklyReportEmail({
+    const html = await renderWeeklyReportEmail({
       data: reportData,
       learnerName,
       ...mapEnrichmentToEmailProps(enrichment, learnerName),

@@ -62,12 +62,47 @@ jobs:
     name: Build & Deploy
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
+    environment: production
     permissions:
       contents: read
       id-token: write
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate deploy secrets
+        env:
+          GCP_WIF_PROVIDER: ${{ secrets.GCP_WIF_PROVIDER }}
+          GCP_WIF_SERVICE_ACCOUNT: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT }}
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+          GCP_DB_INSTANCE_CONNECTION_NAME: ${{ secrets.GCP_DB_INSTANCE_CONNECTION_NAME }}
+        run: |
+          missing=()
+          required=(
+            GCP_WIF_PROVIDER
+            GCP_WIF_SERVICE_ACCOUNT
+            GCP_PROJECT_ID
+            NEXT_PUBLIC_FIREBASE_API_KEY
+            NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+            NEXT_PUBLIC_FIREBASE_PROJECT_ID
+            GCP_DB_INSTANCE_CONNECTION_NAME
+          )
+
+          for name in "${required[@]}"; do
+            if [ -z "${!name}" ]; then
+              missing+=("$name")
+            fi
+          done
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error title=Missing GitHub Actions environment secrets::Configure these environment secrets before running deploy: ${missing[*]}"
+            echo "This deploy job runs in the GitHub Actions environment: production."
+            echo "Add these as environment secrets under Settings -> Environments -> production."
+            exit 1
+          fi
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
@@ -83,4 +118,5 @@ jobs:
           gcloud builds submit \
             --config cloudbuild.yaml \
             --project ${{ secrets.GCP_PROJECT_ID }} \
+            --service-account projects/${{ secrets.GCP_PROJECT_ID }}/serviceAccounts/${{ secrets.GCP_WIF_SERVICE_ACCOUNT }} \
             --substitutions="_REGION=${REGION},_CLOUD_RUN_SERVICE=${CLOUD_RUN_SERVICE},_ARTIFACT_REPO=${ARTIFACT_REPO},_NEXT_PUBLIC_FIREBASE_API_KEY=${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }},_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }},_NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }},_DB_INSTANCE=${{ secrets.GCP_DB_INSTANCE_CONNECTION_NAME }}"

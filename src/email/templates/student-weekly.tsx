@@ -1,5 +1,5 @@
 import React from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderEmail } from "@/email/render";
 import type { ExamPhaseName } from "@/engine/proximity";
 
 export type { ExamPhaseName } from "@/engine/proximity";
@@ -156,7 +156,6 @@ export function StudentWeeklyEmail(
 
   return (
     <html lang="en">
-      {/* eslint-disable-next-line @next/next/no-head-element */}
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -560,11 +559,8 @@ export function StudentWeeklyEmail(
   );
 }
 
-export function renderStudentWeeklyEmail(
+export async function renderStudentWeeklyEmail(
   props: StudentWeeklyEmailProps,
-): string {
-  const markup = renderToStaticMarkup(
-    React.createElement(StudentWeeklyEmail, props),
-  );
-  return `<!DOCTYPE html>${markup}`;
+): Promise<string> {
+  return renderEmail(React.createElement(StudentWeeklyEmail, props));
 }

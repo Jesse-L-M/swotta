@@ -15,6 +15,12 @@ export default [
     },
   },
   {
+    files: ["src/email/templates/*.tsx"],
+    rules: {
+      "@next/next/no-head-element": "off",
+    },
+  },
+  {
     ignores: [".next/", "next-env.d.ts", "node_modules/", "terraform/"],
   },
 ];

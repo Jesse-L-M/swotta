@@ -97,3 +97,11 @@ resource "google_cloud_run_v2_service" "app" {
 
   labels = var.labels
 }
+
+resource "google_cloud_run_v2_service_iam_member" "public_invoker" {
+  project  = google_cloud_run_v2_service.app.project
+  location = google_cloud_run_v2_service.app.location
+  name     = google_cloud_run_v2_service.app.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}

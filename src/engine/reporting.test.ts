@@ -1119,7 +1119,7 @@ describe("email template rendering", () => {
       "@/email/templates/weekly-report"
     );
 
-    const html = renderWeeklyReportEmail({
+    const html = await renderWeeklyReportEmail({
       data: {
         learnerId: "test-id" as LearnerId,
         periodStart: new Date("2026-03-09"),
@@ -1166,7 +1166,7 @@ describe("email template rendering", () => {
       "@/email/templates/weekly-report"
     );
 
-    const html = renderWeeklyReportEmail({
+    const html = await renderWeeklyReportEmail({
       data: {
         learnerId: "test-id" as LearnerId,
         periodStart: new Date("2026-03-09"),
@@ -1192,7 +1192,7 @@ describe("email template rendering", () => {
       "@/email/templates/weekly-report"
     );
 
-    const html = renderWeeklyReportEmail({
+    const html = await renderWeeklyReportEmail({
       data: {
         learnerId: "test-id" as LearnerId,
         periodStart: new Date("2026-03-09"),
@@ -1884,7 +1884,7 @@ describe("enhanced email template rendering", () => {
       "@/email/templates/weekly-report"
     );
 
-    const html = renderWeeklyReportEmail({
+    const html = await renderWeeklyReportEmail({
       data: {
         learnerId: "test-id" as LearnerId,
         periodStart: new Date("2026-03-09"),
@@ -1915,7 +1915,7 @@ describe("enhanced email template rendering", () => {
       "@/email/templates/weekly-report"
     );
 
-    const html = renderWeeklyReportEmail({
+    const html = await renderWeeklyReportEmail({
       data: {
         learnerId: "test-id" as LearnerId,
         periodStart: new Date("2026-03-09"),
@@ -1945,7 +1945,7 @@ describe("enhanced email template rendering", () => {
       "@/email/templates/weekly-report"
     );
 
-    const html = renderWeeklyReportEmail({
+    const html = await renderWeeklyReportEmail({
       data: {
         learnerId: "test-id" as LearnerId,
         periodStart: new Date("2026-03-09"),
@@ -1985,7 +1985,7 @@ describe("enhanced email template rendering", () => {
       "@/email/templates/weekly-report"
     );
 
-    const html = renderWeeklyReportEmail({
+    const html = await renderWeeklyReportEmail({
       data: {
         learnerId: "test-id" as LearnerId,
         periodStart: new Date("2026-03-09"),
@@ -2015,7 +2015,7 @@ describe("enhanced email template rendering", () => {
       "@/email/templates/weekly-report"
     );
 
-    const html = renderWeeklyReportEmail({
+    const html = await renderWeeklyReportEmail({
       data: {
         learnerId: "test-id" as LearnerId,
         periodStart: new Date("2026-03-09"),
@@ -2048,7 +2048,7 @@ describe("enhanced email template rendering", () => {
       "@/email/templates/weekly-report"
     );
 
-    const html = renderWeeklyReportEmail({
+    const html = await renderWeeklyReportEmail({
       data: {
         learnerId: "test-id" as LearnerId,
         periodStart: new Date("2026-03-09"),
@@ -2077,7 +2077,7 @@ describe("enhanced email template rendering", () => {
       "@/email/templates/weekly-report"
     );
 
-    const html = renderWeeklyReportEmail({
+    const html = await renderWeeklyReportEmail({
       data: {
         learnerId: "test-id" as LearnerId,
         periodStart: new Date("2026-03-09"),
@@ -2106,7 +2106,7 @@ describe("enhanced email template rendering", () => {
       "@/email/templates/weekly-report"
     );
 
-    const html = renderWeeklyReportEmail({
+    const html = await renderWeeklyReportEmail({
       data: {
         learnerId: "test-id" as LearnerId,
         periodStart: new Date("2026-03-09"),
