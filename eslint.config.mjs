@@ -15,6 +15,6 @@ export default [
     },
   },
   {
-    ignores: [".next/", "node_modules/", "terraform/"],
+    ignores: [".next/", "next-env.d.ts", "node_modules/", "terraform/"],
   },
 ];

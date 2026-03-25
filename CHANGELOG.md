@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2] - 2026-03-25
+
+### Changed
+- Reduced dependency surface by removing unused lint and test packages, moving `@types/pdf-parse` to dev-only, and switching the lint script from `next lint` to `eslint .`
+- Updated `next` to `15.5.14`, upgraded `drizzle-kit` to `0.31.10`, and pinned `fast-xml-parser` to `5.5.9` via overrides
+- Adjusted the ESLint config to ignore generated `next-env.d.ts` and cleaned an unused-import warning in the decay-check Inngest function
+
 ## [0.1.1] - 2026-03-18
 
 ### Added
