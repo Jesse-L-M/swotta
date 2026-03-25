@@ -105,3 +105,54 @@ resource "google_cloud_run_v2_service_iam_member" "public_invoker" {
   role     = "roles/run.invoker"
   member   = "allUsers"
 }
+
+resource "google_cloud_run_v2_job" "migration" {
+  name     = "swotta-migrate-${var.environment}"
+  location = var.region
+
+  template {
+    task_count  = 1
+    parallelism = 1
+
+    template {
+      service_account = var.service_account_email
+      max_retries     = 0
+      timeout         = "600s"
+
+      vpc_access {
+        connector = var.vpc_connector_id
+        egress    = "PRIVATE_RANGES_ONLY"
+      }
+
+      containers {
+        image   = var.migration_image
+        command = ["/bin/sh"]
+        args    = ["/app/scripts/run-migrations.sh"]
+
+        resources {
+          limits = {
+            cpu    = "1"
+            memory = "512Mi"
+          }
+        }
+
+        env {
+          name  = "NODE_ENV"
+          value = "production"
+        }
+
+        env {
+          name = "DATABASE_URL"
+          value_source {
+            secret_key_ref {
+              secret  = var.migration_database_url_secret_id
+              version = "latest"
+            }
+          }
+        }
+      }
+    }
+  }
+
+  labels = var.labels
+}

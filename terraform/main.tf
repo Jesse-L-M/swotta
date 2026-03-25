@@ -39,6 +39,7 @@ locals {
     managed_by = "terraform"
   }
   uploads_bucket_name = "swotta-uploads-${var.environment}"
+  migration_image     = replace(var.cloud_run_image, "/swotta:", "/swotta-migrator:")
 }
 
 # Enable required GCP APIs
@@ -86,13 +87,13 @@ module "iam" {
 module "database" {
   source = "./modules/database"
 
-  project_id         = var.project_id
-  region             = var.region
-  environment        = var.environment
-  vpc_network_id     = module.networking.vpc_network_id
-  db_tier            = var.db_tier
+  project_id          = var.project_id
+  region              = var.region
+  environment         = var.environment
+  vpc_network_id      = module.networking.vpc_network_id
+  db_tier             = var.db_tier
   deletion_protection = var.environment == "production"
-  labels             = local.labels
+  labels              = local.labels
 
   depends_on = [module.networking]
 }
@@ -100,12 +101,12 @@ module "database" {
 module "storage" {
   source = "./modules/storage"
 
-  project_id  = var.project_id
-  region      = var.region
-  environment = var.environment
-  bucket_name = local.uploads_bucket_name
+  project_id    = var.project_id
+  region        = var.region
+  environment   = var.environment
+  bucket_name   = local.uploads_bucket_name
   custom_domain = var.domain
-  labels      = local.labels
+  labels        = local.labels
 }
 
 module "secrets" {
@@ -119,21 +120,23 @@ module "secrets" {
 module "cloud_run" {
   source = "./modules/cloud-run"
 
-  project_id          = var.project_id
-  region              = var.region
-  environment         = var.environment
-  image               = var.cloud_run_image
-  vpc_connector_id    = module.networking.vpc_connector_id
-  service_account_email = module.iam.app_service_account_email
+  project_id                       = var.project_id
+  region                           = var.region
+  environment                      = var.environment
+  image                            = var.cloud_run_image
+  migration_image                  = local.migration_image
+  vpc_connector_id                 = module.networking.vpc_connector_id
+  service_account_email            = module.iam.app_service_account_email
+  migration_database_url_secret_id = module.secrets.secret_ids["DATABASE_URL"]
   secret_ids = {
     for key, secret_id in module.secrets.secret_ids :
     key => secret_id
     if !contains(["INNGEST_EVENT_KEY", "INNGEST_SIGNING_KEY"], key)
   }
-  gcs_bucket_name     = local.uploads_bucket_name
-  min_instances       = var.min_instances
-  max_instances       = var.max_instances
-  labels              = local.labels
+  gcs_bucket_name = local.uploads_bucket_name
+  min_instances   = var.min_instances
+  max_instances   = var.max_instances
+  labels          = local.labels
 
   depends_on = [module.networking, module.iam, module.secrets]
 }

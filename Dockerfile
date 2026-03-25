@@ -11,6 +11,13 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN mkdir -p public && npm run build
 
+FROM deps AS migrator
+WORKDIR /app
+RUN apk add --no-cache postgresql-client
+COPY . .
+RUN chmod +x scripts/run-migrations.sh
+CMD ["./scripts/run-migrations.sh"]
+
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
