@@ -11,6 +11,9 @@ All notable changes to this project will be documented in this file.
 - Updated Cloud Build to publish a separate `swotta-migrator` image, update the migration job to the release image, execute migrations, and only then deploy the app service
 - Wired Terraform Cloud Run configuration to manage the migration job, its database secret, and its production runtime settings
 
+### Documentation
+- Documented the shipped production deploy path across GitHub Actions `production`, Cloud Build, the Cloud Run migration job, and the remaining provider-secret caveats
+
 ## [0.1.3] - 2026-03-25
 
 ### Added

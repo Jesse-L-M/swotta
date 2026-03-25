@@ -108,8 +108,8 @@ Cloud Run stays stateless. Conversation history is managed client-side; only out
 - Policy engine: five-layer resolution with most-specific-wins semantics
 - Student and guardian UI: onboarding, dashboard, study sessions, source upload, parent reporting
 - Firebase Auth with session cookies, role-based route protection
-- CI/CD: GitHub Actions (lint, typecheck, test on PR; deploy on merge)
-- Terraform modules for GCP deployment (Cloud Run, Cloud SQL, Cloud Storage, IAM, networking)
+- CI/CD: GitHub Actions CI on pull requests; production deploys on pushes to `main` via the GitHub `production` environment, Cloud Build, a dedicated Cloud Run migration job, and Cloud Run
+- Terraform-managed GCP deployment (Cloud Run service + migration job, Cloud SQL, Cloud Storage, IAM, networking, Secret Manager shells)
 
 ## What I'm building next
 
@@ -163,7 +163,7 @@ terraform/      GCP infrastructure modules
 tests/e2e/      Playwright flows
 ```
 
-Documentation: [Architecture](docs/ARCHITECTURE.md) | [Schema](docs/SCHEMA.md) | [Interfaces](docs/INTERFACES.md) | [Decisions](docs/DECISIONS.md) | [Design system](DESIGN.md) | [Learner memory](LEARNER_MEMORY.md) | [Evals](EVALS.md) | [Roadmap](ROADMAP.md)
+Documentation: [Architecture](docs/ARCHITECTURE.md) | [Deployment](docs/DEPLOYMENT.md) | [Schema](docs/SCHEMA.md) | [Interfaces](docs/INTERFACES.md) | [Decisions](docs/DECISIONS.md) | [Design system](DESIGN.md) | [Learner memory](LEARNER_MEMORY.md) | [Evals](EVALS.md) | [Roadmap](ROADMAP.md)
 
 ## Running locally
 
@@ -176,6 +176,14 @@ npm run dev
 ```
 
 AI, auth, and ingestion features need real service credentials. The UI shell, schema, and local development work without them.
+
+## Production deploys
+
+Production deploys now run from [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) on pushes to `main`. GitHub Actions uses the `production` environment for Workload Identity Federation and the public Firebase build-time variables, then submits [`cloudbuild.yaml`](cloudbuild.yaml).
+
+Cloud Build writes `.env.production`, builds both the app image (`swotta`) and the release image (`swotta-migrator`), updates and executes the `swotta-migrate-production` Cloud Run Job inside the production VPC, and only then deploys `swotta-app-production`. The previous Cloud Build plus direct database migration path is no longer the intended production architecture.
+
+Runtime secrets come from Secret Manager, not GitHub Actions. See [Deployment](docs/DEPLOYMENT.md) for the exact GitHub `production` environment secrets, the bootstrap command, the end-to-end rollout flow, and current caveats. If `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`, or `RESEND_API_KEY` are still placeholders in Secret Manager, deploys can pass while AI sessions, embeddings/ingestion, or email delivery remain unready in production.
 
 ## Verification
 
