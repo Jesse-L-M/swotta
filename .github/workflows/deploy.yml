@@ -179,7 +179,52 @@ jobs:
           echo "Waiting for Cloud Build ${BUILD_ID}"
           echo "Cloud Build logs: ${BUILD_URL}"
 
+          cancel_requested=0
           last_status=""
+
+          cancel_cloud_build() {
+            if [ "${cancel_requested}" -eq 1 ]; then
+              return
+            fi
+            cancel_requested=1
+
+            echo "::warning title=GitHub deploy canceled::Canceling Cloud Build ${BUILD_ID} because this deploy job was canceled."
+
+            status="$(
+              gcloud builds describe "${BUILD_ID}" \
+                --project "${GCP_PROJECT_ID}" \
+                --format='value(status)' 2>/dev/null || true
+            )"
+
+            case "${status}" in
+              SUCCESS|FAILURE|INTERNAL_ERROR|TIMEOUT|CANCELLED|EXPIRED)
+                echo "Cloud Build ${BUILD_ID} is already ${status}; no remote cancellation needed."
+                return
+                ;;
+            esac
+
+            if gcloud builds cancel "${BUILD_ID}" --project "${GCP_PROJECT_ID}"; then
+              echo "Sent cancel request for Cloud Build ${BUILD_ID}."
+            else
+              echo "::warning title=Cloud Build cancellation may have failed::Unable to cancel Cloud Build ${BUILD_ID}. Inspect ${BUILD_URL}"
+            fi
+          }
+
+          handle_cancellation() {
+            local signal="$1"
+            trap - INT TERM
+            echo "Received ${signal}; cleaning up remote Cloud Build."
+            cancel_cloud_build
+
+            if [ "${signal}" = "SIGTERM" ]; then
+              exit 143
+            fi
+
+            exit 130
+          }
+
+          trap 'handle_cancellation SIGINT' INT
+          trap 'handle_cancellation SIGTERM' TERM
 
           while true; do
             status="$(
