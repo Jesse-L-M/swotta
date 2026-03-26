@@ -61,6 +61,9 @@ jobs:
     name: Build & Deploy
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
+    concurrency:
+      group: deploy-main
+      cancel-in-progress: true
     environment: production
     permissions:
       contents: read
