@@ -1,8 +1,16 @@
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { getAuthContext } from "@/lib/auth";
+import { getAuthContext, type AuthContext } from "@/lib/auth";
 import { learners } from "@/db/schema";
+
+function getNonLearnerRedirect(ctx: AuthContext): string {
+  if (ctx.roles.some((membership) => membership.role === "guardian")) {
+    return "/parent/dashboard";
+  }
+
+  return "/";
+}
 
 export async function requireStudentPageAuth(
   redirectTarget: string
@@ -20,6 +28,6 @@ export async function requireStudentPageAuth(
     .limit(1);
 
   if (!learner) {
-    redirect("/onboarding");
+    redirect(getNonLearnerRedirect(ctx));
   }
 }

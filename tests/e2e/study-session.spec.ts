@@ -151,6 +151,36 @@ test.describe("Study session flow", () => {
     await expect(submitBtn).toBeEnabled();
   });
 
+  test("keeps confidence choices compact on narrow mobile screens", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.goto(`/session/${MOCK_BLOCK_ID}`);
+
+    await expect(
+      page.getByTestId("session-confidence-before")
+    ).toBeVisible({ timeout: 10_000 });
+
+    const widths = await page.getByRole("radio").evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const el = button as HTMLElement;
+        return {
+          clientWidth: el.clientWidth,
+          scrollWidth: el.scrollWidth,
+        };
+      })
+    );
+
+    for (const width of widths) {
+      expect(width.scrollWidth).toBeLessThanOrEqual(width.clientWidth + 1);
+    }
+
+    await page.getByTestId("confidence-3").click();
+    await expect(page.getByTestId("confidence-selection-label")).toHaveText(
+      "Somewhat"
+    );
+  });
+
   test("chat input is disabled during streaming", async ({ page }) => {
     // Use a slow mock for the message endpoint to keep streaming state
     await page.route("**/api/sessions/*/message", async (route) => {
