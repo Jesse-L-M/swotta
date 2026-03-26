@@ -17,6 +17,10 @@ function isImmersiveRoute(pathname: string): boolean {
     || pathname.startsWith("/session/");
 }
 
+function isSessionRoute(pathname: string): boolean {
+  return pathname.startsWith("/session/");
+}
+
 function isActiveRoute(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -30,6 +34,10 @@ export function StudentShell({
   const immersiveRoute = isImmersiveRoute(pathname);
 
   if (immersiveRoute) {
+    if (isSessionRoute(pathname)) {
+      return <main>{children}</main>;
+    }
+
     return <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>;
   }
 

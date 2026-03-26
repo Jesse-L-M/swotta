@@ -1,19 +1,14 @@
-"use client";
+import { requireStudentPageAuth } from "../../student-page-auth";
+import { SessionPageClient } from "./session-page-client";
 
-import { useParams, useRouter } from "next/navigation";
-import { SessionView } from "@/components/session";
+interface SessionPageProps {
+  params: Promise<{
+    blockId: string;
+  }>;
+}
 
-export default function SessionPage() {
-  const params = useParams<{ blockId: string }>();
-  const router = useRouter();
-
-  return (
-    <div className="flex h-dvh flex-col bg-background">
-      <SessionView
-        blockId={params.blockId}
-        onNextBlock={() => router.push("/dashboard")}
-        onBackToDashboard={() => router.push("/dashboard")}
-      />
-    </div>
-  );
+export default async function SessionPage({ params }: SessionPageProps) {
+  const { blockId } = await params;
+  await requireStudentPageAuth(`/session/${blockId}`);
+  return <SessionPageClient blockId={blockId} />;
 }

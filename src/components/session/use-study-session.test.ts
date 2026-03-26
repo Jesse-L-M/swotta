@@ -121,9 +121,10 @@ describe("useStudySession", () => {
     });
 
     expect(result.current.confidenceBefore).toBe(0.6);
-    expect(result.current.phase).toBe("active");
+    expect(result.current.phase).toBe("starting");
 
     await waitFor(() => expect(result.current.sessionId).toBe("session-1"));
+    expect(result.current.phase).toBe("active");
     expect(result.current.messages).toHaveLength(1);
     expect(result.current.messages[0].role).toBe("assistant");
     expect(result.current.messages[0].content).toBe(
@@ -162,6 +163,51 @@ describe("useStudySession", () => {
     act(() => result.current.submitConfidenceBefore(0.5));
     await waitFor(() => expect(result.current.phase).toBe("error"));
     expect(result.current.error).toBe("Failed to start session");
+  });
+
+  it("keeps the session out of active mode until startSession resolves", async () => {
+    let resolveStart:
+      | ((value: {
+          sessionId: string;
+          systemPrompt: string;
+          initialMessage: string;
+        }) => void)
+      | null = null;
+    const startSession = vi.fn().mockReturnValue(
+      new Promise<{
+        sessionId: string;
+        systemPrompt: string;
+        initialMessage: string;
+      }>((resolve) => {
+        resolveStart = resolve;
+      })
+    );
+    const api = makeMockApi({ startSession });
+    const { result } = renderHook(() =>
+      useStudySession({ blockId: "block-1", api })
+    );
+
+    await waitFor(() => expect(result.current.phase).toBe("confidence-before"));
+
+    act(() => {
+      result.current.submitConfidenceBefore(0.6);
+    });
+
+    expect(result.current.phase).toBe("starting");
+    expect(result.current.sessionId).toBeNull();
+    expect(result.current.messages).toHaveLength(0);
+
+    await act(async () => {
+      resolveStart?.({
+        sessionId: "session-1",
+        systemPrompt: "You are Swotta...",
+        initialMessage: "Welcome! Let's review Cell Biology.",
+      });
+    });
+
+    await waitFor(() => expect(result.current.phase).toBe("active"));
+    expect(result.current.sessionId).toBe("session-1");
+    expect(result.current.messages).toHaveLength(1);
   });
 
   it("sends a message and receives a streamed response", async () => {

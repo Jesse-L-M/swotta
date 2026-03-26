@@ -59,6 +59,14 @@ describe("ConfidenceSlider", () => {
     expect(btn.getAttribute("aria-checked")).toBe("true");
   });
 
+  it("shows the selected label outside the button row for compact layouts", () => {
+    render(h({ label: "Test", description: "Test", onSubmit: vi.fn() }));
+    fireEvent.click(screen.getByTestId("confidence-3"));
+    expect(screen.getByTestId("confidence-selection-label").textContent).toBe(
+      "Somewhat"
+    );
+  });
+
   it("has correct aria roles", () => {
     render(h({ label: "Test label", description: "Test", onSubmit: vi.fn() }));
     expect(screen.getByRole("radiogroup")).toBeTruthy();
