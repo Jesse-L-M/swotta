@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { POST } from "./route";
@@ -26,14 +29,28 @@ function makeRequest(
 }
 
 describe("POST /api/auth/e2e-session", () => {
+  let tempDir: string | null = null;
+
   beforeEach(() => {
     vi.stubEnv("NODE_ENV", "test");
     delete process.env.E2E_AUTH_BYPASS_SECRET;
+    delete process.env.E2E_AUTH_BYPASS_SECRET_FILE;
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
+    if (tempDir) {
+      rmSync(tempDir, { recursive: true, force: true });
+      tempDir = null;
+    }
   });
+
+  function configureSecretFile(secret: string) {
+    tempDir = mkdtempSync(path.join(os.tmpdir(), "swotta-e2e-auth-"));
+    const secretFilePath = path.join(tempDir, "e2e-auth-bypass-secret");
+    writeFileSync(secretFilePath, `${secret}\n`, "utf8");
+    process.env.E2E_AUTH_BYPASS_SECRET_FILE = secretFilePath;
+  }
 
   it("returns a signed session cookie when authorized locally", async () => {
     process.env.E2E_AUTH_BYPASS_SECRET = "local-test-secret";
@@ -91,5 +108,22 @@ describe("POST /api/auth/e2e-session", () => {
     );
 
     expect(response.status).toBe(404);
+  });
+
+  it("reads the bypass secret from the shared file when env is unset", async () => {
+    configureSecretFile("local-file-secret");
+
+    const response = await POST(
+      makeRequest(
+        { kind: "student" },
+        { secret: "local-file-secret" }
+      )
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(verifyE2ESessionCookie(body.data.sessionCookie)?.uid).toBe(
+      "e2e-test-student"
+    );
   });
 });

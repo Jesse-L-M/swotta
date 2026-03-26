@@ -1,7 +1,11 @@
-import { randomUUID } from "node:crypto";
 import { defineConfig, devices } from "@playwright/test";
+import {
+  ensureE2EAuthBypassSecret,
+  getE2EAuthSecretFilePath,
+} from "./src/lib/e2e-auth-secret";
 
-process.env.E2E_AUTH_BYPASS_SECRET ??= randomUUID();
+const e2eAuthBypassSecret = ensureE2EAuthBypassSecret();
+const e2eAuthSecretFilePath = getE2EAuthSecretFilePath();
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -24,7 +28,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `E2E_AUTH_BYPASS_SECRET=${process.env.E2E_AUTH_BYPASS_SECRET} npm run dev`,
+    command: "npm run dev",
+    env: {
+      E2E_AUTH_BYPASS_SECRET: e2eAuthBypassSecret,
+      E2E_AUTH_BYPASS_SECRET_FILE: e2eAuthSecretFilePath,
+    },
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

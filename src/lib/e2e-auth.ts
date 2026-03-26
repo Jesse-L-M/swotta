@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import type { DecodedIdToken } from "firebase-admin/auth";
+import { getConfiguredE2EAuthSecret } from "@/lib/e2e-auth-secret";
 
 const E2E_SESSION_PREFIX = "e2e";
 const E2E_SESSION_TTL_SECONDS = 60 * 10;
@@ -18,11 +19,6 @@ interface E2ESessionPayload {
   uid: string;
   exp: number;
   iat: number;
-}
-
-function getE2EAuthSecret(): string | null {
-  const secret = process.env.E2E_AUTH_BYPASS_SECRET?.trim();
-  return secret ? secret : null;
 }
 
 function signPayload(payloadBase64: string, secret: string): string {
@@ -76,11 +72,12 @@ export function isLocalHostname(hostname: string): boolean {
     hostname === "localhost"
     || hostname === "127.0.0.1"
     || hostname === "::1"
+    || hostname === "[::1]"
   );
 }
 
 export function createE2ESessionCookie(kind: E2EFixtureKind): string | null {
-  const secret = getE2EAuthSecret();
+  const secret = getConfiguredE2EAuthSecret();
   if (!secret) {
     return null;
   }
@@ -101,7 +98,7 @@ export function createE2ESessionCookie(kind: E2EFixtureKind): string | null {
 export function verifyE2ESessionCookie(
   sessionCookie: string
 ): DecodedIdToken | null {
-  const secret = getE2EAuthSecret();
+  const secret = getConfiguredE2EAuthSecret();
   if (!secret) {
     return null;
   }

@@ -4,22 +4,18 @@ import {
   createE2ESessionCookie,
   isLocalHostname,
 } from "@/lib/e2e-auth";
+import { getConfiguredE2EAuthSecret } from "@/lib/e2e-auth-secret";
 
 const requestSchema = z.object({
   kind: z.enum(["student", "parent"]),
 });
-
-function getConfiguredSecret(): string | null {
-  const secret = process.env.E2E_AUTH_BYPASS_SECRET?.trim();
-  return secret ? secret : null;
-}
 
 function isE2EAuthRouteEnabled(request: NextRequest): boolean {
   if (process.env.NODE_ENV === "production") {
     return false;
   }
 
-  const secret = getConfiguredSecret();
+  const secret = getConfiguredE2EAuthSecret();
   if (!secret) {
     return false;
   }
@@ -28,7 +24,7 @@ function isE2EAuthRouteEnabled(request: NextRequest): boolean {
 }
 
 function isAuthorized(request: NextRequest): boolean {
-  const secret = getConfiguredSecret();
+  const secret = getConfiguredE2EAuthSecret();
   if (!secret) {
     return false;
   }
