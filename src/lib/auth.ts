@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { users, memberships, learners, guardianLinks } from "@/db/schema";
 import type { Database } from "@/lib/db";
+import { verifyE2ESessionCookie } from "@/lib/e2e-auth";
 
 let adminApp: App | null = null;
 
@@ -31,6 +32,11 @@ export function getFirebaseAdmin(): App {
 export async function verifySessionCookie(
   sessionCookie: string
 ): Promise<DecodedIdToken | null> {
+  const e2eToken = verifyE2ESessionCookie(sessionCookie);
+  if (e2eToken) {
+    return e2eToken;
+  }
+
   try {
     const app = getFirebaseAdmin();
     const auth = getAuth(app);

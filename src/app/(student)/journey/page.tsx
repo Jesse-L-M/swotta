@@ -43,7 +43,7 @@ export default async function JourneyPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-[family-name:var(--font-instrument-serif)] text-3xl text-[#1A1917]">
+        <h1 className="font-[family-name:var(--font-serif)] text-3xl text-[#1A1917]">
           Your learning journey
         </h1>
         <p className="mt-1 text-[#5C5950]">
@@ -56,7 +56,7 @@ export default async function JourneyPage() {
 
       {postExamSummaries.length > 0 && (
         <section data-testid="post-exam-section">
-          <h2 className="mb-4 font-[family-name:var(--font-instrument-serif)] text-xl text-[#1A1917]">
+          <h2 className="mb-4 font-[family-name:var(--font-serif)] text-xl text-[#1A1917]">
             Exam summaries
           </h2>
           <div className="space-y-4">

@@ -23,7 +23,7 @@ export function MilestoneCard({ milestone }: MilestoneCardProps) {
         </span>
         <div className="min-w-0">
           <p
-            className="font-[family-name:var(--font-instrument-serif)] text-lg text-[#1A1917]"
+            className="font-[family-name:var(--font-serif)] text-lg text-[#1A1917]"
             data-testid="milestone-message"
           >
             {buildMilestoneMessage(milestone.description, milestone.topicName)}
