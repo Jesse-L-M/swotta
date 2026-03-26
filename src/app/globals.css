@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *), @media (prefers-color-scheme: dark));
 
@@ -177,7 +179,7 @@
 @keyframes fadeSlideIn {
   from {
     opacity: 0;
-    transform: translateY(var(--fade-slide-start-y, 8px));
+    transform: translateY(8px);
   }
   to {
     opacity: 1;

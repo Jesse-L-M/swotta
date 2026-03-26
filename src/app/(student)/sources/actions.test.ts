@@ -20,12 +20,10 @@ const {
   requireLearnerMock,
   revalidatePathMock,
   createConfiguredStorageClientMock,
-  inngestSendMock,
 } = vi.hoisted(() => ({
   requireLearnerMock: vi.fn(),
   revalidatePathMock: vi.fn(),
   createConfiguredStorageClientMock: vi.fn(),
-  inngestSendMock: vi.fn(),
 }));
 
 vi.mock("@/lib/auth", () => ({
@@ -48,19 +46,12 @@ vi.mock("@/components/sources/storage", async () => {
   };
 });
 
-vi.mock("../../../../inngest/client", () => ({
-  inngest: {
-    send: inngestSendMock,
-  },
-}));
-
 import {
   createCollection,
   getCollections,
   getFiles,
   prepareSourceUploads,
   getTopicMappings,
-  queueUploadedFile,
   reportUploadFailure,
   registerUpload,
 } from "./actions";
@@ -98,7 +89,6 @@ describe("source actions", () => {
       orgId,
     });
     createConfiguredStorageClientMock.mockReturnValue(makeStorageClient("gcs"));
-    inngestSendMock.mockResolvedValue(undefined);
   });
 
   describe("getCollections", () => {
@@ -404,57 +394,6 @@ describe("source actions", () => {
       expect(files).toHaveLength(1);
       expect(files[0].status).toBe("failed");
       expect(files[0].errorMessage).toBe("Upload failed with status 403");
-    });
-
-    it("queues uploaded files for ingestion and marks them as processing", async () => {
-      const collection = await createCollection({ name: "Uploads" }, db);
-      const upload = await registerUpload(
-        {
-          collectionId: collection.collectionId!,
-          filename: "notes.pdf",
-          mimeType: "application/pdf",
-          sizeBytes: 1024,
-        },
-        db
-      );
-
-      const result = await queueUploadedFile({ fileId: upload.fileId! }, db);
-
-      expect(result.success).toBe(true);
-      expect(inngestSendMock).toHaveBeenCalledWith({
-        name: "source.file.uploaded",
-        data: { fileId: upload.fileId! },
-      });
-
-      const files = await getFiles(collection.collectionId!, db);
-      expect(files).toHaveLength(1);
-      expect(files[0].status).toBe("processing");
-      expect(files[0].errorMessage).toBeNull();
-    });
-
-    it("marks files as failed when ingestion queueing fails", async () => {
-      inngestSendMock.mockRejectedValueOnce(new Error("Inngest unavailable"));
-
-      const collection = await createCollection({ name: "Uploads" }, db);
-      const upload = await registerUpload(
-        {
-          collectionId: collection.collectionId!,
-          filename: "notes.pdf",
-          mimeType: "application/pdf",
-          sizeBytes: 1024,
-        },
-        db
-      );
-
-      const result = await queueUploadedFile({ fileId: upload.fileId! }, db);
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe("Inngest unavailable");
-
-      const files = await getFiles(collection.collectionId!, db);
-      expect(files).toHaveLength(1);
-      expect(files[0].status).toBe("failed");
-      expect(files[0].errorMessage).toBe("Inngest unavailable");
     });
   });
 

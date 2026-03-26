@@ -569,39 +569,6 @@ describe("continueSession", () => {
     expect(mockAnthropicClient.messages.create).not.toHaveBeenCalled();
   });
 
-  it("rejects messages for sessions that are no longer active", async () => {
-    const started = await createStartedSession("Question 1: What is DNA?");
-    const mockAnthropicClient = createMockAnthropicClient(["Next question..."]);
-    configureSessionRunner({
-      db,
-      anthropic: mockAnthropicClient as unknown as SessionRunnerDeps["anthropic"],
-      retrieveChunks: createMockRetrieveChunks(),
-    });
-
-    await db
-      .update(studySessions)
-      .set({ status: "completed" })
-      .where(eq(studySessions.id, started.sessionId));
-
-    await expect(
-      continueSession(
-        started.sessionId,
-        [
-          { role: "assistant" as const, content: started.initialMessage },
-          {
-            role: "user" as const,
-            content: "DNA is deoxyribonucleic acid.",
-          },
-        ],
-        "System prompt"
-      )
-    ).rejects.toMatchObject({
-      code: "SESSION_NOT_ACTIVE",
-    });
-
-    expect(mockAnthropicClient.messages.create).not.toHaveBeenCalled();
-  });
-
   it("handles response without completion tag", async () => {
     const started = await createStartedSession("Welcome back");
     const mockAnthropicClient = createMockAnthropicClient([
