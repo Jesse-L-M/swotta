@@ -8,6 +8,7 @@ import {
   createTestGuardianLink,
 } from "@/test/fixtures";
 import type { Database } from "@/lib/db";
+import { createE2ESessionCookie } from "@/lib/e2e-auth";
 
 // Mock Firebase Admin SDK
 vi.mock("firebase-admin/app", () => ({
@@ -42,6 +43,7 @@ describe("auth module", () => {
   beforeEach(() => {
     db = getTestDb() as unknown as Database;
     vi.clearAllMocks();
+    delete process.env.E2E_AUTH_BYPASS_SECRET;
   });
 
   describe("AuthError", () => {
@@ -75,6 +77,16 @@ describe("auth module", () => {
   });
 
   describe("verifySessionCookie", () => {
+    it("accepts signed e2e session cookies when the bypass secret is configured", async () => {
+      process.env.E2E_AUTH_BYPASS_SECRET = "test-e2e-secret";
+
+      const { verifySessionCookie } = await import("@/lib/auth");
+      const sessionCookie = createE2ESessionCookie("student");
+      const result = await verifySessionCookie(sessionCookie!);
+
+      expect(result?.uid).toBe("e2e-test-student");
+    });
+
     it("returns null on invalid cookie", async () => {
       const { getAuth } = await import("firebase-admin/auth");
       const mockAuth = {
@@ -86,6 +98,31 @@ describe("auth module", () => {
 
       const { verifySessionCookie } = await import("@/lib/auth");
       const result = await verifySessionCookie("bad-cookie");
+      expect(result).toBeNull();
+    });
+
+    it("rejects unsigned legacy e2e cookie values", async () => {
+      const { getAuth } = await import("firebase-admin/auth");
+      const mockAuth = {
+        verifySessionCookie: vi.fn().mockRejectedValue(new Error("invalid")),
+        verifyIdToken: vi.fn(),
+        createSessionCookie: vi.fn(),
+      };
+      vi.mocked(getAuth).mockReturnValue(mockAuth as unknown as ReturnType<typeof getAuth>);
+
+      const { verifySessionCookie } = await import("@/lib/auth");
+      const result = await verifySessionCookie("e2e-test-student-session");
+      expect(result).toBeNull();
+    });
+
+    it("rejects tampered signed e2e session cookies", async () => {
+      process.env.E2E_AUTH_BYPASS_SECRET = "test-e2e-secret";
+
+      const { verifySessionCookie } = await import("@/lib/auth");
+      const sessionCookie = createE2ESessionCookie("student");
+      const tamperedCookie = `${sessionCookie}tampered`;
+      const result = await verifySessionCookie(tamperedCookie);
+
       expect(result).toBeNull();
     });
 

@@ -84,7 +84,7 @@ export function PostExamSummary({ summary }: PostExamSummaryProps) {
       className="rounded-xl bg-[#1A1917] p-6 text-white"
       data-testid="post-exam-summary"
     >
-      <h2 className="font-[family-name:var(--font-instrument-serif)] text-2xl text-[#F0ECE4]">
+      <h2 className="font-[family-name:var(--font-serif)] text-2xl text-[#F0ECE4]">
         Exam Summary
       </h2>
       <p className="mt-1 text-sm text-[#949085]">
