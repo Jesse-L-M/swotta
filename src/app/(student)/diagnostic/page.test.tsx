@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import DiagnosticPage from "./page";
+import DiagnosticPageClient from "./diagnostic-page-client";
 
 const pushMock = vi.fn();
 
@@ -73,7 +73,7 @@ describe("DiagnosticPage", () => {
 
     global.fetch = fetchMock as typeof fetch;
 
-    render(<DiagnosticPage />);
+    render(<DiagnosticPageClient />);
 
     fireEvent.click(screen.getByTestId("start-btn"));
     await waitFor(() => expect(screen.getByTestId("chat-input")).toBeDefined());

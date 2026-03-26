@@ -15,6 +15,7 @@ export interface SessionMessage {
 
 export type SessionPhase =
   | "loading"
+  | "starting"
   | "confidence-before"
   | "active"
   | "streaming"
@@ -215,7 +216,7 @@ export function useStudySession({
   const submitConfidenceBefore = useCallback(
     (value: number) => {
       setConfidenceBefore(value);
-      setPhase("active");
+      setPhase("starting");
 
       // Start the session
       void (async () => {
@@ -232,6 +233,7 @@ export function useStudySession({
               timestamp: new Date(),
             },
           ]);
+          setPhase("active");
         } catch (err: unknown) {
           setError(
             err instanceof Error ? err.message : "Failed to start session"

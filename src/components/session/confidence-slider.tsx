@@ -27,7 +27,7 @@ export function ConfidenceSlider({
 
   return (
     <div
-      className="mx-auto flex max-w-md flex-col items-center gap-6 p-6"
+      className="mx-auto flex w-full max-w-md flex-col items-center gap-6 px-4 py-6 sm:px-6"
       data-testid="confidence-slider"
     >
       <div className="text-center">
@@ -45,7 +45,7 @@ export function ConfidenceSlider({
             aria-label={level.label}
             onClick={() => setSelected(level.value)}
             className={cn(
-              "flex flex-1 flex-col items-center gap-1 rounded-xl border-2 p-3 transition-all",
+              "flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl border-2 p-3 text-center transition-all",
               selected === level.value
                 ? "border-teal-500 bg-teal-50 text-teal-700"
                 : "border-border hover:border-muted-foreground/30"

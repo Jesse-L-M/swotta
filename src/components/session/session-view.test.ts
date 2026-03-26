@@ -115,6 +115,7 @@ describe("SessionView", () => {
     await waitFor(() => expect(screen.getByTestId("session-confidence-before")).toBeTruthy());
     fireEvent.click(screen.getByTestId("confidence-3"));
     fireEvent.click(screen.getByTestId("confidence-submit"));
+    await waitFor(() => expect(screen.getByText("Starting study session...")).toBeTruthy());
     await waitFor(() => expect(screen.getByTestId("session-active")).toBeTruthy());
     expect(screen.getByTestId("chat-interface")).toBeTruthy();
     expect(screen.getByTestId("session-timer")).toBeTruthy();

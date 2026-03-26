@@ -28,7 +28,7 @@ export function SessionView({
 }: SessionViewProps) {
   const session = useStudySession({ blockId, api });
 
-  if (session.phase === "loading") {
+  if (session.phase === "loading" || session.phase === "starting") {
     return (
       <div
         className="flex h-full items-center justify-center"
@@ -37,7 +37,9 @@ export function SessionView({
         <div className="text-center">
           <div className="mx-auto mb-3 size-8 animate-spin rounded-full border-2 border-muted border-t-teal-500" />
           <p className="text-sm text-muted-foreground">
-            Loading study session...
+            {session.phase === "starting"
+              ? "Starting study session..."
+              : "Loading study session..."}
           </p>
         </div>
       </div>
