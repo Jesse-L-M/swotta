@@ -43,6 +43,7 @@ export const blockStatusEnum = pgEnum("block_status", [
 
 export const fileStatusEnum = pgEnum("file_status", [
   "pending",
+  "queueing",
   "processing",
   "ready",
   "failed",

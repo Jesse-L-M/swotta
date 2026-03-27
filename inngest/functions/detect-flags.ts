@@ -1,8 +1,9 @@
 import { inngest } from "../client";
 import { db } from "@/lib/db";
-import { learnerQualifications, safetyFlags } from "@/db/schema";
+import { learnerQualifications } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { detectFlags, mapFlagTypeToEnum } from "@/engine/reporting";
+import { upsertUnresolvedSafetyFlag } from "@/engine/safety-flags";
 import type { LearnerId } from "@/lib/types";
 
 /**
@@ -22,6 +23,7 @@ export const detectFlagsCron = inngest.createFunction(
     });
 
     let totalFlags = 0;
+    let updatedFlags = 0;
 
     for (const learnerId of activeLearnerIds) {
       const flags = await step.run(`detect-flags-${learnerId}`, async () => {
@@ -31,22 +33,27 @@ export const detectFlagsCron = inngest.createFunction(
       if (flags.length > 0) {
         await step.run(`store-flags-${learnerId}`, async () => {
           for (const flag of flags) {
-            await db.insert(safetyFlags).values({
+            const result = await upsertUnresolvedSafetyFlag(db, {
               learnerId,
               flagType: mapFlagTypeToEnum(flag.type),
               severity: flag.severity,
               description: flag.description,
               evidence: flag.evidence as Record<string, unknown>,
             });
+            if (result.action === "created") {
+              totalFlags += 1;
+              continue;
+            }
+            updatedFlags += 1;
           }
         });
-        totalFlags += flags.length;
       }
     }
 
     return {
       learnersScanned: activeLearnerIds.length,
       flagsCreated: totalFlags,
+      flagsUpdated: updatedFlags,
     };
   },
 );

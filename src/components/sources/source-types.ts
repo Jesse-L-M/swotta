@@ -1,6 +1,11 @@
 import type { TopicId } from "@/lib/types";
 
-export type FileStatus = "pending" | "processing" | "ready" | "failed";
+export type FileStatus =
+  | "pending"
+  | "queueing"
+  | "processing"
+  | "ready"
+  | "failed";
 
 export interface SourceFileInfo {
   id: string;

@@ -13,6 +13,11 @@ const STATUS_CONFIG: Record<
   { label: string; color: string; icon: string }
 > = {
   pending: {
+    label: "Pending upload",
+    color: "bg-[#F0ECE4] text-[#5C5950]",
+    icon: "clock",
+  },
+  queueing: {
     label: "Queued",
     color: "bg-[#F0ECE4] text-[#5C5950]",
     icon: "clock",
@@ -46,7 +51,7 @@ export function ProcessingStatus({
       <span
         className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${config.color}`}
       >
-        {status === "processing" && (
+        {(status === "queueing" || status === "processing") && (
           <svg
             className="size-3 animate-spin"
             viewBox="0 0 24 24"

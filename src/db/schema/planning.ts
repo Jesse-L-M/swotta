@@ -11,6 +11,7 @@ import {
   timestamp,
   inet,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import {
@@ -151,6 +152,11 @@ export const reviewQueue = pgTable(
     index("review_queue_learner_due_idx")
       .on(table.learnerId, table.dueAt)
       .where(sql`${table.fulfilledAt} IS NULL`),
+    uniqueIndex("review_queue_active_scheduled_unique_idx")
+      .on(table.learnerId, table.topicId)
+      .where(
+        sql`${table.reason} = 'scheduled' AND ${table.fulfilledAt} IS NULL`
+      ),
   ]
 );
 
@@ -279,6 +285,9 @@ export const safetyFlags = pgTable(
   (table) => [
     index("safety_flags_learner_idx")
       .on(table.learnerId)
+      .where(sql`${table.resolved} = false`),
+    uniqueIndex("safety_flags_active_unique_idx")
+      .on(table.learnerId, table.flagType)
       .where(sql`${table.resolved} = false`),
   ]
 );

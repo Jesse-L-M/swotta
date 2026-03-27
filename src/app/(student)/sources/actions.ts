@@ -24,6 +24,7 @@ import {
   buildStoragePath,
   createConfiguredStorageClient,
 } from "@/components/sources/storage";
+import { queueSourceFileUploaded } from "@/lib/background-events";
 import type {
   FileStatus,
   SourceFileInfo,
@@ -49,6 +50,10 @@ const uploadFailureReportSchema = z.object({
     .trim()
     .min(1, "Error message is required")
     .max(1000, "Error message too long"),
+});
+const uploadSuccessReportSchema = z.object({
+  fileId: fileIdSchema,
+  qualificationVersionId: z.string().uuid().optional(),
 });
 
 interface LearnerScope {
@@ -366,6 +371,82 @@ async function markFileFailed(
     .where(eq(sourceFiles.id, fileId));
 }
 
+async function markPendingFileFailed(
+  fileId: string,
+  errorMessage: string,
+  database: Database
+): Promise<boolean> {
+  const failed = await database
+    .update(sourceFiles)
+    .set({ status: "failed", errorMessage })
+    .where(and(eq(sourceFiles.id, fileId), eq(sourceFiles.status, "pending")))
+    .returning({ id: sourceFiles.id });
+
+  return failed.length > 0;
+}
+
+async function claimPendingFileForQueueing(
+  fileId: string,
+  database: Database
+): Promise<boolean> {
+  const claimed = await database
+    .update(sourceFiles)
+    .set({ status: "queueing", errorMessage: null, processedAt: null })
+    .where(and(eq(sourceFiles.id, fileId), eq(sourceFiles.status, "pending")))
+    .returning({ id: sourceFiles.id });
+
+  return claimed.length > 0;
+}
+
+async function markQueuedFileProcessing(
+  fileId: string,
+  database: Database
+): Promise<boolean> {
+  const updated = await database
+    .update(sourceFiles)
+    .set({ status: "processing", errorMessage: null, processedAt: null })
+    .where(and(eq(sourceFiles.id, fileId), eq(sourceFiles.status, "queueing")))
+    .returning({ id: sourceFiles.id });
+
+  return updated.length > 0;
+}
+
+async function markQueueingFilePending(
+  fileId: string,
+  database: Database
+): Promise<boolean> {
+  const updated = await database
+    .update(sourceFiles)
+    .set({ status: "pending", errorMessage: null, processedAt: null })
+    .where(and(eq(sourceFiles.id, fileId), eq(sourceFiles.status, "queueing")))
+    .returning({ id: sourceFiles.id });
+
+  return updated.length > 0;
+}
+
+async function waitForUploadQueueingResolution(
+  learnerId: string,
+  fileId: string,
+  database: Database,
+  attempts = 5,
+  delayMs = 25
+): Promise<SourceFileInfo | null> {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const [file] = await listFilesByIds(learnerId, [fileId], database);
+
+    if (!file || file.status !== "queueing") {
+      return file ?? null;
+    }
+
+    if (attempt < attempts - 1) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  const [file] = await listFilesByIds(learnerId, [fileId], database);
+  return file ?? null;
+}
+
 function mapSourceFileInfo(row: {
   id: string;
   collectionId: string;
@@ -443,7 +524,10 @@ export async function getSourcesPageData(
     collections,
     filesByCollectionId,
     pendingFileCount: files.filter(
-      (file) => file.status === "pending" || file.status === "processing"
+      (file) =>
+        file.status === "pending"
+        || file.status === "queueing"
+        || file.status === "processing"
     ).length,
     failedFileCount: files.filter((file) => file.status === "failed").length,
   };
@@ -710,7 +794,24 @@ export async function reportUploadFailure(
     return { success: false, error: "File not found" };
   }
 
-  await markFileFailed(file.id, parsed.data.errorMessage, database);
+  if (file.status === "failed") {
+    return { success: true };
+  }
+
+  if (file.status !== "pending") {
+    return { success: true };
+  }
+
+  const failed = await markPendingFileFailed(
+    file.id,
+    parsed.data.errorMessage,
+    database
+  );
+
+  if (!failed) {
+    return { success: true };
+  }
+
   structuredLog("upload.client_failure", {
     userId: scope.userId,
     fileId: file.id,
@@ -720,6 +821,159 @@ export async function reportUploadFailure(
   revalidateSourcesViews();
 
   return { success: true };
+}
+
+export async function reportUploadSuccess(
+  input: z.infer<typeof uploadSuccessReportSchema>,
+  database: Database = db
+): Promise<{ success: boolean; error?: string }> {
+  const parsed = uploadSuccessReportSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message };
+  }
+
+  const scope = await getLearnerScope(database);
+  const [file] = await listFilesByIds(scope.learnerId, [parsed.data.fileId], database);
+
+  if (!file) {
+    return { success: false, error: "File not found" };
+  }
+
+  if (
+    file.status === "ready"
+    || file.status === "processing"
+  ) {
+    return { success: true };
+  }
+
+  if (file.status === "failed") {
+    return {
+      success: false,
+      error: file.errorMessage ?? "This file can no longer be processed",
+    };
+  }
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const currentFile =
+      attempt === 0
+        ? file
+        : (await listFilesByIds(scope.learnerId, [parsed.data.fileId], database))[0];
+
+    if (!currentFile) {
+      return { success: false, error: "File not found" };
+    }
+
+    if (
+      currentFile.status === "ready"
+      || currentFile.status === "processing"
+    ) {
+      return { success: true };
+    }
+
+    if (currentFile.status === "failed") {
+      return {
+        success: false,
+        error: currentFile.errorMessage ?? "This file can no longer be processed",
+      };
+    }
+
+    if (currentFile.status === "queueing") {
+      const resolvedFile = await waitForUploadQueueingResolution(
+        scope.learnerId,
+        currentFile.id,
+        database
+      );
+
+      if (!resolvedFile) {
+        return { success: false, error: "File not found" };
+      }
+
+      if (
+        resolvedFile.status === "ready"
+        || resolvedFile.status === "processing"
+      ) {
+        return { success: true };
+      }
+
+      if (resolvedFile.status === "failed") {
+        return {
+          success: false,
+          error:
+            resolvedFile.errorMessage ?? "This file can no longer be processed",
+        };
+      }
+
+      continue;
+    }
+
+    const claimed = await claimPendingFileForQueueing(currentFile.id, database);
+    if (!claimed) {
+      continue;
+    }
+
+    try {
+      await queueSourceFileUploaded(
+        currentFile.id,
+        parsed.data.qualificationVersionId
+      );
+    } catch (error) {
+      await markQueueingFilePending(currentFile.id, database);
+
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Upload completed, but processing could not be queued";
+
+      structuredLog("upload.queue_error", {
+        userId: scope.userId,
+        fileId: currentFile.id,
+        filename: currentFile.filename,
+        error: errorMessage,
+      });
+
+      return {
+        success: false,
+        error: "Upload completed, but processing could not be queued",
+      };
+    }
+
+    const markedProcessing = await markQueuedFileProcessing(
+      currentFile.id,
+      database
+    );
+
+    if (!markedProcessing) {
+      const [latestFile] = await listFilesByIds(
+        scope.learnerId,
+        [currentFile.id],
+        database
+      );
+
+      if (
+        latestFile?.status !== "ready"
+        && latestFile?.status !== "processing"
+      ) {
+        return {
+          success: false,
+          error: "Upload completed, but processing state could not be confirmed",
+        };
+      }
+    }
+
+    structuredLog("upload.queued", {
+      userId: scope.userId,
+      fileId: currentFile.id,
+      filename: currentFile.filename,
+    });
+    revalidateSourcesViews();
+
+    return { success: true };
+  }
+
+  return {
+    success: false,
+    error: "Upload completed, but processing state could not be confirmed",
+  };
 }
 
 export async function getTopicMappings(

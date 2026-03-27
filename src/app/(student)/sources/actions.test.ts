@@ -20,10 +20,12 @@ const {
   requireLearnerMock,
   revalidatePathMock,
   createConfiguredStorageClientMock,
+  queueSourceFileUploadedMock,
 } = vi.hoisted(() => ({
   requireLearnerMock: vi.fn(),
   revalidatePathMock: vi.fn(),
   createConfiguredStorageClientMock: vi.fn(),
+  queueSourceFileUploadedMock: vi.fn(),
 }));
 
 vi.mock("@/lib/auth", () => ({
@@ -46,6 +48,10 @@ vi.mock("@/components/sources/storage", async () => {
   };
 });
 
+vi.mock("@/lib/background-events", () => ({
+  queueSourceFileUploaded: queueSourceFileUploadedMock,
+}));
+
 import {
   createCollection,
   getCollections,
@@ -53,6 +59,7 @@ import {
   prepareSourceUploads,
   getTopicMappings,
   reportUploadFailure,
+  reportUploadSuccess,
   registerUpload,
 } from "./actions";
 
@@ -89,6 +96,7 @@ describe("source actions", () => {
       orgId,
     });
     createConfiguredStorageClientMock.mockReturnValue(makeStorageClient("gcs"));
+    queueSourceFileUploadedMock.mockResolvedValue(undefined);
   });
 
   describe("getCollections", () => {
@@ -394,6 +402,297 @@ describe("source actions", () => {
       expect(files).toHaveLength(1);
       expect(files[0].status).toBe("failed");
       expect(files[0].errorMessage).toBe("Upload failed with status 403");
+    });
+
+    it("ignores a late upload failure after processing has already been queued", async () => {
+      const collection = await createCollection({ name: "Uploads" }, db);
+      const upload = await registerUpload(
+        {
+          collectionId: collection.collectionId!,
+          filename: "notes.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 1024,
+        },
+        db
+      );
+
+      const success = await reportUploadSuccess(
+        {
+          fileId: upload.fileId!,
+        },
+        db
+      );
+      const failure = await reportUploadFailure(
+        {
+          fileId: upload.fileId!,
+          errorMessage: "Upload failed after retry",
+        },
+        db
+      );
+
+      expect(success).toEqual({ success: true });
+      expect(failure).toEqual({ success: true });
+
+      const files = await getFiles(collection.collectionId!, db);
+      expect(files).toHaveLength(1);
+      expect(files[0].status).toBe("processing");
+      expect(files[0].errorMessage).toBeNull();
+    });
+
+    it("queues an uploaded file for processing after the browser confirms success", async () => {
+      const collection = await createCollection({ name: "Uploads" }, db);
+      const upload = await registerUpload(
+        {
+          collectionId: collection.collectionId!,
+          filename: "notes.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 1024,
+        },
+        db
+      );
+
+      const result = await reportUploadSuccess(
+        {
+          fileId: upload.fileId!,
+        },
+        db
+      );
+
+      expect(result).toEqual({ success: true });
+      expect(queueSourceFileUploadedMock).toHaveBeenCalledWith(
+        upload.fileId!,
+        undefined
+      );
+
+      const files = await getFiles(collection.collectionId!, db);
+      expect(files).toHaveLength(1);
+      expect(files[0].status).toBe("processing");
+      expect(files[0].errorMessage).toBeNull();
+    });
+
+    it("treats repeated upload success notifications as idempotent", async () => {
+      const collection = await createCollection({ name: "Uploads" }, db);
+      const upload = await registerUpload(
+        {
+          collectionId: collection.collectionId!,
+          filename: "notes.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 1024,
+        },
+        db
+      );
+
+      const first = await reportUploadSuccess(
+        {
+          fileId: upload.fileId!,
+        },
+        db
+      );
+      const second = await reportUploadSuccess(
+        {
+          fileId: upload.fileId!,
+        },
+        db
+      );
+
+      expect(first).toEqual({ success: true });
+      expect(second).toEqual({ success: true });
+      expect(queueSourceFileUploadedMock).toHaveBeenCalledTimes(1);
+
+      const files = await getFiles(collection.collectionId!, db);
+      expect(files).toHaveLength(1);
+      expect(files[0].status).toBe("processing");
+    });
+
+    it("claims a pending upload only once across overlapping success callbacks", async () => {
+      const collection = await createCollection({ name: "Uploads" }, db);
+      const upload = await registerUpload(
+        {
+          collectionId: collection.collectionId!,
+          filename: "notes.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 1024,
+        },
+        db
+      );
+
+      let releaseQueue: (() => void) | undefined;
+      const queueStarted = new Promise<void>((resolve) => {
+        queueSourceFileUploadedMock.mockImplementation(async () => {
+          resolve();
+          await new Promise<void>((release) => {
+            releaseQueue = release;
+          });
+        });
+      });
+
+      const first = reportUploadSuccess(
+        {
+          fileId: upload.fileId!,
+        },
+        db
+      );
+      await queueStarted;
+
+      const second = reportUploadSuccess(
+        {
+          fileId: upload.fileId!,
+        },
+        db
+      );
+
+      releaseQueue?.();
+
+      const [firstResult, secondResult] = await Promise.all([first, second]);
+
+      expect(firstResult).toEqual({ success: true });
+      expect(secondResult).toEqual({ success: true });
+      expect(queueSourceFileUploadedMock).toHaveBeenCalledTimes(1);
+
+      const files = await getFiles(collection.collectionId!, db);
+      expect(files).toHaveLength(1);
+      expect(files[0].status).toBe("processing");
+    });
+
+    it("retries queueing from a duplicate success callback after the first queue attempt fails", async () => {
+      const collection = await createCollection({ name: "Uploads" }, db);
+      const upload = await registerUpload(
+        {
+          collectionId: collection.collectionId!,
+          filename: "notes.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 1024,
+        },
+        db
+      );
+
+      let rejectFirstQueue: ((error: Error) => void) | undefined;
+      const firstQueueStarted = new Promise<void>((resolve) => {
+        queueSourceFileUploadedMock
+          .mockImplementationOnce(
+            async () =>
+              await new Promise<void>((_resolve, reject) => {
+                rejectFirstQueue = (error: Error) => reject(error);
+                resolve();
+              })
+          )
+          .mockResolvedValueOnce(undefined);
+      });
+
+      const first = reportUploadSuccess(
+        {
+          fileId: upload.fileId!,
+        },
+        db
+      );
+      await firstQueueStarted;
+
+      const second = reportUploadSuccess(
+        {
+          fileId: upload.fileId!,
+        },
+        db
+      );
+
+      rejectFirstQueue?.(new Error("Inngest unavailable"));
+
+      const [firstResult, secondResult] = await Promise.all([first, second]);
+
+      expect(firstResult).toEqual({
+        success: false,
+        error: "Upload completed, but processing could not be queued",
+      });
+      expect(secondResult).toEqual({ success: true });
+      expect(queueSourceFileUploadedMock).toHaveBeenCalledTimes(2);
+
+      const files = await getFiles(collection.collectionId!, db);
+      expect(files).toHaveLength(1);
+      expect(files[0].status).toBe("processing");
+      expect(files[0].errorMessage).toBeNull();
+    });
+
+    it("ignores upload failure callbacks while queueing is already in progress", async () => {
+      const collection = await createCollection({ name: "Uploads" }, db);
+      const upload = await registerUpload(
+        {
+          collectionId: collection.collectionId!,
+          filename: "notes.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 1024,
+        },
+        db
+      );
+
+      let releaseQueue: (() => void) | undefined;
+      const queueStarted = new Promise<void>((resolve) => {
+        queueSourceFileUploadedMock.mockImplementationOnce(async () => {
+          resolve();
+          await new Promise<void>((release) => {
+            releaseQueue = release;
+          });
+        });
+      });
+
+      const success = reportUploadSuccess(
+        {
+          fileId: upload.fileId!,
+        },
+        db
+      );
+      await queueStarted;
+
+      const failure = await reportUploadFailure(
+        {
+          fileId: upload.fileId!,
+          errorMessage: "Late transport retry failure",
+        },
+        db
+      );
+
+      releaseQueue?.();
+
+      const successResult = await success;
+
+      expect(failure).toEqual({ success: true });
+      expect(successResult).toEqual({ success: true });
+
+      const files = await getFiles(collection.collectionId!, db);
+      expect(files).toHaveLength(1);
+      expect(files[0].status).toBe("processing");
+      expect(files[0].errorMessage).toBeNull();
+    });
+
+    it("returns an error when processing cannot be queued after upload", async () => {
+      queueSourceFileUploadedMock.mockRejectedValue(
+        new Error("Inngest unavailable")
+      );
+
+      const collection = await createCollection({ name: "Uploads" }, db);
+      const upload = await registerUpload(
+        {
+          collectionId: collection.collectionId!,
+          filename: "notes.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 1024,
+        },
+        db
+      );
+
+      const result = await reportUploadSuccess(
+        {
+          fileId: upload.fileId!,
+        },
+        db
+      );
+
+      expect(result).toEqual({
+        success: false,
+        error: "Upload completed, but processing could not be queued",
+      });
+
+      const files = await getFiles(collection.collectionId!, db);
+      expect(files).toHaveLength(1);
+      expect(files[0].status).toBe("pending");
     });
   });
 

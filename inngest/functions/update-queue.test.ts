@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { updateQueueFunction } from "./update-queue";
 import { asTestable } from "../test-helpers";
-import type { AttemptOutcome, BlockId, TopicId } from "@/lib/types";
+import type { AttemptOutcome, BlockId } from "@/lib/types";
 
-vi.mock("@/engine/mastery", () => ({
-  processAttemptOutcome: vi.fn(),
+vi.mock("@/engine/review-queue", () => ({
+  syncScheduledReviewQueue: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -24,10 +24,10 @@ vi.mock("@/lib/logger", () => ({
   structuredLog: vi.fn(),
 }));
 
-import { processAttemptOutcome } from "@/engine/mastery";
+import { syncScheduledReviewQueue } from "@/engine/review-queue";
 import { db } from "@/lib/db";
 
-const mockProcessAttemptOutcome = vi.mocked(processAttemptOutcome);
+const mockSyncScheduledReviewQueue = vi.mocked(syncScheduledReviewQueue);
 const mockDb = vi.mocked(db);
 const testable = asTestable(updateQueueFunction);
 
@@ -65,39 +65,28 @@ describe("scheduling/update-queue function", () => {
     const nextReviewAt = new Date("2026-04-01T00:00:00Z");
 
     // Mock block lookup
-    (mockDb.select as ReturnType<typeof vi.fn>).mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          limit: vi.fn().mockResolvedValue([{ learnerId: "learner-1" }]),
+    (mockDb.select as ReturnType<typeof vi.fn>)
+      .mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([
+              { learnerId: "learner-1", topicId: "topic-1" },
+            ]),
+          }),
         }),
-      }),
-    });
+      })
+      .mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ nextReviewAt }]),
+          }),
+        }),
+      });
 
-    // Mock processAttemptOutcome — returns Date, but Inngest step serializes to string
-    mockProcessAttemptOutcome.mockResolvedValue({
-      masteryUpdate: {
-        topicId: "topic-1" as TopicId,
-        before: 0.4,
-        after: 0.6,
-      },
-      nextReviewAt,
-      newEaseFactor: 2.6,
-      misconceptionEvents: [],
-      confidenceEvent: null,
-      retentionEvent: null,
-      memoryCandidatesUpdated: 0,
-    });
-
-    // Mock update (fulfill)
-    (mockDb.update as ReturnType<typeof vi.fn>).mockReturnValue({
-      set: vi.fn().mockReturnValue({
-        where: vi.fn().mockResolvedValue(undefined),
-      }),
-    });
-
-    // Mock insert
-    (mockDb.insert as ReturnType<typeof vi.fn>).mockReturnValue({
-      values: vi.fn().mockResolvedValue(undefined),
+    mockSyncScheduledReviewQueue.mockResolvedValue({
+      action: "inserted",
+      dueAt: nextReviewAt,
+      fulfilledCount: 2,
     });
 
     const stepRun = vi.fn().mockImplementation(async (_name: string, fn: () => Promise<unknown>) => {
@@ -119,20 +108,66 @@ describe("scheduling/update-queue function", () => {
     const stepNames = stepRun.mock.calls.map((c: unknown[]) => c[0]);
     expect(stepNames).toEqual([
       "lookup-block",
-      "process-attempt-outcome",
-      "fulfill-review-queue",
-      "insert-review-queue-entry",
+      "lookup-topic-state",
+      "sync-review-queue",
     ]);
 
-    expect(mockProcessAttemptOutcome).toHaveBeenCalledWith(attempt, mockDb);
+    expect(mockSyncScheduledReviewQueue).toHaveBeenCalledWith(
+      {
+        learnerId: "learner-1",
+        topicId: "topic-1",
+        dueAt: nextReviewAt,
+      },
+      mockDb
+    );
 
     expect(result).toMatchObject({
-      masteryUpdate: {
-        topicId: "topic-1",
-        before: 0.4,
-        after: 0.6,
-      },
+      learnerId: "learner-1",
+      topicId: "topic-1",
+      queueAction: "inserted",
+      nextReviewAt: nextReviewAt.toISOString(),
     });
+  });
+
+  it("throws when no next review date has been written yet", async () => {
+    const attempt = makeAttempt();
+
+    (mockDb.select as ReturnType<typeof vi.fn>)
+      .mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([
+              { learnerId: "learner-1", topicId: "topic-1" },
+            ]),
+          }),
+        }),
+      })
+      .mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ nextReviewAt: null }]),
+          }),
+        }),
+      });
+
+    const stepRun = vi.fn().mockImplementation(
+      (_name: string, fn: () => Promise<unknown>) => fn()
+    );
+
+    await expect(
+      testable.fn(
+        {
+          event: {
+            data: attempt,
+            name: "attempt.completed" as const,
+          },
+          step: { run: stepRun },
+        },
+        undefined,
+      ),
+    ).rejects.toThrow(
+      "No next review date found for learner learner-1, topic topic-1"
+    );
   });
 
   it("throws when block is not found", async () => {

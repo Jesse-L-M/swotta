@@ -1032,6 +1032,30 @@ describe("detectPatterns", () => {
       expect(avoidanceFlags).toHaveLength(1);
     });
 
+    it("enforces one unresolved safety flag per learner and type at the database level", async () => {
+      const db = getTestDb() as unknown as Database;
+      const org = await createTestOrg();
+      const learner = await createTestLearner(org.id);
+
+      await db.insert(safetyFlags).values({
+        learnerId: learner.id,
+        flagType: "avoidance",
+        severity: "medium",
+        description: "Avoidance detected.",
+        evidence: {},
+      });
+
+      await expect(
+        db.insert(safetyFlags).values({
+          learnerId: learner.id,
+          flagType: "avoidance",
+          severity: "high",
+          description: "Avoidance still detected.",
+          evidence: {},
+        })
+      ).rejects.toThrow();
+    });
+
     it("escalates avoidance severity when 3+ topics are avoided", async () => {
       const db = getTestDb() as unknown as Database;
       const org = await createTestOrg();

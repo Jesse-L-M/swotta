@@ -5,12 +5,12 @@ import {
   studySessions,
   blockAttempts,
   learnerTopicState,
-  safetyFlags,
   topics,
   topicEdges,
 } from "@/db/schema";
 import type { LearnerId, TopicId, BlockType } from "@/lib/types";
 import { BLOCK_TYPE_LABELS } from "@/lib/labels";
+import { upsertUnresolvedSafetyFlag } from "@/engine/safety-flags";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -637,43 +637,16 @@ async function writeSafetyFlags(
   const results: SafetyFlagResult[] = [];
 
   for (const flag of flags) {
-    // Check for existing unresolved flag of the same type
-    const existing = await db
-      .select({ id: safetyFlags.id })
-      .from(safetyFlags)
-      .where(
-        and(
-          eq(safetyFlags.learnerId, learnerId),
-          eq(safetyFlags.flagType, flag.flagType),
-          eq(safetyFlags.resolved, false),
-        ),
-      )
-      .limit(1);
-
-    if (existing.length > 0) {
-      // Flag already exists, don't duplicate
-      results.push({
-        id: existing[0].id,
-        flagType: flag.flagType,
-        severity: flag.severity,
-        description: flag.description,
-      });
-      continue;
-    }
-
-    const [inserted] = await db
-      .insert(safetyFlags)
-      .values({
-        learnerId,
-        flagType: flag.flagType,
-        severity: flag.severity,
-        description: flag.description,
-        evidence: flag.evidence,
-      })
-      .returning({ id: safetyFlags.id });
+    const result = await upsertUnresolvedSafetyFlag(db, {
+      learnerId,
+      flagType: flag.flagType,
+      severity: flag.severity,
+      description: flag.description,
+      evidence: flag.evidence,
+    });
 
     results.push({
-      id: inserted.id,
+      id: result.id,
       flagType: flag.flagType,
       severity: flag.severity,
       description: flag.description,

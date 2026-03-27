@@ -5,14 +5,16 @@ import {
   createTestLearner,
   createTestQualification,
   resetFixtureCounter,
+  enrollLearnerInQualification,
 } from "@/test/fixtures";
 import {
   studySessions,
   blockAttempts,
   studyBlocks,
   studyPlans,
+  reviewQueue,
 } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type {
   StudyBlock,
   SessionId,
@@ -32,6 +34,7 @@ import {
   SessionConflictError,
   type SessionRunnerDeps,
 } from "./session";
+import { initTopicStates } from "./mastery";
 
 const db = getTestDb();
 
@@ -624,6 +627,8 @@ describe("endSession", () => {
     const org = await createTestOrg();
     const learner = await createTestLearner(org.id);
     const qual = await createTestQualification();
+    await enrollLearnerInQualification(learner.id, qual.qualificationVersionId);
+    await initTopicStates(learner.id as LearnerId, qual.qualificationVersionId, db);
     const topicId = qual.topics[1].id;
     const blockId = await createBlockInDb(learner.id, topicId);
 
@@ -675,6 +680,7 @@ describe("endSession", () => {
     expect(result.outcome.helpRequested).toBe(false);
     expect(result.outcome.retentionOutcome).toBe("remembered");
     expect(result.summary).toContain("performed well");
+    expect(result.masteryUpdated).toBe(true);
 
     // Check DB updates
     const sessions = await db
@@ -686,6 +692,24 @@ describe("endSession", () => {
     expect(sessions[0].endedAt).not.toBeNull();
     expect(sessions[0].summary).toContain("performed well");
     expect(sessions[0].totalDurationMinutes).toBeGreaterThanOrEqual(0);
+
+    const queuedReviews = await db
+      .select({
+        topicId: reviewQueue.topicId,
+        reason: reviewQueue.reason,
+        fulfilledAt: reviewQueue.fulfilledAt,
+      })
+      .from(reviewQueue)
+      .where(
+        and(
+          eq(reviewQueue.learnerId, learner.id),
+          eq(reviewQueue.topicId, topicId),
+          isNull(reviewQueue.fulfilledAt)
+        )
+      );
+
+    expect(queuedReviews).toHaveLength(1);
+    expect(queuedReviews[0].reason).toBe("scheduled");
   });
 
   it("updates block_attempt on session end", async () => {
