@@ -1,18 +1,18 @@
 import { inngest } from "../client";
-import { processAttemptOutcome } from "@/engine/mastery";
+import { syncScheduledReviewQueue } from "@/engine/review-queue";
 import { db } from "@/lib/db";
-import { reviewQueue, studyBlocks } from "@/db/schema";
-import { eq, and, isNull } from "drizzle-orm";
+import { learnerTopicState, studyBlocks } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import { structuredLog } from "@/lib/logger";
-import type { AttemptOutcome, TopicId } from "@/lib/types";
+import type { AttemptOutcome, LearnerId, TopicId } from "@/lib/types";
 
 /**
  * Event: "attempt.completed"
  * After a study block attempt completes:
- * 1. Look up the block to get learnerId
- * 2. Update mastery state (ease factor, interval, mastery level)
- * 3. Fulfill any existing review queue entries for this topic
- * 4. Insert a new review queue entry at the next review date
+ * 1. Look up the completed block to get learnerId/topicId
+ * 2. Read the next review date from learner_topic_state
+ * 3. Fulfill stale unresolved queue entries for this topic
+ * 4. Ensure there is one scheduled queue entry at the current next review date
  *
  * Note: Inngest step.run() serializes return values to JSON, so Date objects
  * become ISO strings in subsequent steps. We reconstruct Dates where needed.
@@ -28,7 +28,10 @@ export const updateQueueFunction = inngest.createFunction(
 
     const block = await step.run("lookup-block", async () => {
       const [row] = await db
-        .select({ learnerId: studyBlocks.learnerId })
+        .select({
+          learnerId: studyBlocks.learnerId,
+          topicId: studyBlocks.topicId,
+        })
         .from(studyBlocks)
         .where(eq(studyBlocks.id, attempt.blockId))
         .limit(1);
@@ -38,49 +41,54 @@ export const updateQueueFunction = inngest.createFunction(
       return row;
     });
 
-    const masteryResult = await step.run("process-attempt-outcome", async () => {
-      const result = await processAttemptOutcome(attempt, db);
-      return result;
-    });
-
-    // Inngest serializes step results to JSON — Dates become ISO strings
-    const topicId = masteryResult.masteryUpdate.topicId as string as TopicId;
-    const nextReviewAt = new Date(masteryResult.nextReviewAt as unknown as string);
-
-    await step.run("fulfill-review-queue", async () => {
-      await db
-        .update(reviewQueue)
-        .set({ fulfilledAt: new Date() })
+    const topicState = await step.run("lookup-topic-state", async () => {
+      const [row] = await db
+        .select({ nextReviewAt: learnerTopicState.nextReviewAt })
+        .from(learnerTopicState)
         .where(
           and(
-            eq(reviewQueue.learnerId, block.learnerId),
-            eq(reviewQueue.topicId, topicId),
-            isNull(reviewQueue.fulfilledAt),
-          ),
+            eq(learnerTopicState.learnerId, block.learnerId),
+            eq(learnerTopicState.topicId, block.topicId)
+          )
+        )
+        .limit(1);
+
+      if (!row?.nextReviewAt) {
+        throw new Error(
+          `No next review date found for learner ${block.learnerId}, topic ${block.topicId}`
         );
+      }
+
+      return row;
     });
 
-    await step.run("insert-review-queue-entry", async () => {
-      await db.insert(reviewQueue).values({
-        learnerId: block.learnerId,
-        topicId,
-        reason: "scheduled" as const,
-        priority: 5,
-        dueAt: nextReviewAt,
-      });
+    const nextReviewAt = new Date(topicState.nextReviewAt as unknown as string);
+
+    const queueResult = await step.run("sync-review-queue", async () => {
+      return syncScheduledReviewQueue(
+        {
+          learnerId: block.learnerId as LearnerId,
+          topicId: block.topicId as TopicId,
+          dueAt: nextReviewAt,
+        },
+        db
+      );
     });
 
     structuredLog("scheduling.update-queue.complete", {
       blockId: attempt.blockId,
-      topicId,
-      masteryBefore: masteryResult.masteryUpdate.before,
-      masteryAfter: masteryResult.masteryUpdate.after,
+      learnerId: block.learnerId,
+      topicId: block.topicId,
       nextReviewAt: nextReviewAt.toISOString(),
+      queueAction: queueResult.action,
+      fulfilledCount: queueResult.fulfilledCount,
     });
 
     return {
-      masteryUpdate: masteryResult.masteryUpdate,
+      learnerId: block.learnerId,
+      topicId: block.topicId,
       nextReviewAt: nextReviewAt.toISOString(),
+      queueAction: queueResult.action,
     };
   },
 );

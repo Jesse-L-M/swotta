@@ -10,6 +10,8 @@ import {
   SessionConflictError,
 } from "@/engine/session";
 import { ensureSessionRunnerConfigured } from "@/app/api/sessions/_lib/session-runner";
+import { queueAttemptCompleted } from "@/lib/background-events";
+import { structuredLog } from "@/lib/logger";
 import type { SessionId } from "@/lib/types";
 
 const paramsSchema = z.object({
@@ -142,5 +144,22 @@ export async function POST(
     throw error;
   }
 
-  return NextResponse.json({ data: result });
+  if (result.masteryUpdated) {
+    try {
+      await queueAttemptCompleted(result.outcome);
+    } catch (error) {
+      structuredLog("session.queue_attempt_error", {
+        sessionId: session.id,
+        blockId: result.outcome.blockId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  return NextResponse.json({
+    data: {
+      outcome: result.outcome,
+      summary: result.summary,
+    },
+  });
 }

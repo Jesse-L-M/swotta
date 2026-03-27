@@ -12,6 +12,8 @@ const {
   endSessionMock,
   getStoredSessionTranscriptMock,
   ensureSessionRunnerConfiguredMock,
+  queueAttemptCompletedMock,
+  structuredLogMock,
   MockAuthError,
   MockSessionConflictError,
 } = vi.hoisted(() => {
@@ -47,6 +49,8 @@ const {
     endSessionMock: vi.fn(),
     getStoredSessionTranscriptMock: vi.fn(),
     ensureSessionRunnerConfiguredMock: vi.fn(),
+    queueAttemptCompletedMock: vi.fn(),
+    structuredLogMock: vi.fn(),
     MockAuthError: HoistedAuthError,
     MockSessionConflictError: HoistedSessionConflictError,
   };
@@ -72,6 +76,14 @@ vi.mock("@/app/api/sessions/_lib/session-runner", () => ({
   ensureSessionRunnerConfigured: ensureSessionRunnerConfiguredMock,
 }));
 
+vi.mock("@/lib/background-events", () => ({
+  queueAttemptCompleted: queueAttemptCompletedMock,
+}));
+
+vi.mock("@/lib/logger", () => ({
+  structuredLog: structuredLogMock,
+}));
+
 import { POST } from "./route";
 
 const db = getTestDb();
@@ -82,6 +94,8 @@ beforeEach(async () => {
   endSessionMock.mockReset();
   getStoredSessionTranscriptMock.mockReset();
   ensureSessionRunnerConfiguredMock.mockReset();
+  queueAttemptCompletedMock.mockReset();
+  structuredLogMock.mockReset();
 });
 
 describe("POST /api/sessions/[id]/end", () => {
@@ -122,6 +136,7 @@ describe("POST /api/sessions/[id]/end", () => {
         rawInteraction: null,
       },
       summary: "Wrapped up",
+      masteryUpdated: true,
     });
 
     const response = await POST(
@@ -151,7 +166,141 @@ describe("POST /api/sessions/[id]/end", () => {
       "completed",
       { before: 0.4, after: 0.8 }
     );
+    expect(queueAttemptCompletedMock).toHaveBeenCalledWith({
+      blockId: "block-1",
+      score: 80,
+      confidenceBefore: 0.4,
+      confidenceAfter: 0.8,
+      helpRequested: false,
+      helpTiming: null,
+      misconceptions: [],
+      retentionOutcome: "remembered",
+      durationMinutes: 10,
+      rawInteraction: null,
+    });
     expect(body.data.summary).toBe("Wrapped up");
+  });
+
+  it("logs and returns success when background queueing fails", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const [session] = await db
+      .insert(studySessions)
+      .values({
+        learnerId: learner.id,
+        status: "active",
+        topicsCovered: [],
+      })
+      .returning();
+
+    requireLearnerMock.mockResolvedValue({
+      learnerId: learner.id,
+      orgId: org.id,
+    });
+    getStoredSessionTranscriptMock.mockResolvedValue({
+      systemPrompt: "stored prompt",
+      messages: [
+        { role: "assistant", content: "Stored question" },
+        { role: "user", content: "Stored answer" },
+      ],
+    });
+    endSessionMock.mockResolvedValue({
+      outcome: {
+        blockId: "block-1",
+        score: 80,
+        confidenceBefore: 0.4,
+        confidenceAfter: 0.8,
+        helpRequested: false,
+        helpTiming: null,
+        misconceptions: [],
+        retentionOutcome: "remembered",
+        durationMinutes: 10,
+        rawInteraction: null,
+      },
+      summary: "Wrapped up",
+      masteryUpdated: true,
+    });
+    queueAttemptCompletedMock.mockRejectedValue(new Error("Inngest unavailable"));
+
+    const response = await POST(
+      new Request(`http://localhost/api/sessions/${session.id}/end`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reason: "completed",
+        }),
+      }),
+      { params: Promise.resolve({ id: session.id }) }
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.summary).toBe("Wrapped up");
+    expect(structuredLogMock).toHaveBeenCalledWith(
+      "session.queue_attempt_error",
+      expect.objectContaining({
+        sessionId: session.id,
+        blockId: "block-1",
+        error: "Inngest unavailable",
+      })
+    );
+  });
+
+  it("does not queue background review work when mastery did not update", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const [session] = await db
+      .insert(studySessions)
+      .values({
+        learnerId: learner.id,
+        status: "active",
+        topicsCovered: [],
+      })
+      .returning();
+
+    requireLearnerMock.mockResolvedValue({
+      learnerId: learner.id,
+      orgId: org.id,
+    });
+    getStoredSessionTranscriptMock.mockResolvedValue({
+      systemPrompt: "stored prompt",
+      messages: [
+        { role: "assistant", content: "Stored question" },
+        { role: "user", content: "Stored answer" },
+      ],
+    });
+    endSessionMock.mockResolvedValue({
+      outcome: {
+        blockId: "block-1",
+        score: 80,
+        confidenceBefore: 0.4,
+        confidenceAfter: 0.8,
+        helpRequested: false,
+        helpTiming: null,
+        misconceptions: [],
+        retentionOutcome: "remembered",
+        durationMinutes: 10,
+        rawInteraction: null,
+      },
+      summary: "Wrapped up",
+      masteryUpdated: false,
+    });
+
+    const response = await POST(
+      new Request(`http://localhost/api/sessions/${session.id}/end`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reason: "completed",
+        }),
+      }),
+      { params: Promise.resolve({ id: session.id }) }
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.summary).toBe("Wrapped up");
+    expect(queueAttemptCompletedMock).not.toHaveBeenCalled();
   });
 
   it("returns 409 when the stored transcript is unavailable", async () => {

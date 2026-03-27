@@ -9,6 +9,7 @@ import {
   type LearnerContext,
 } from "@/ai/study-modes";
 import { processAttemptOutcome } from "@/engine/mastery";
+import { syncScheduledReviewQueue } from "@/engine/review-queue";
 import type {
   StudyBlock,
   SessionId,
@@ -73,6 +74,7 @@ export interface ContinueSessionResult {
 export interface EndSessionResult {
   outcome: AttemptOutcome;
   summary: string;
+  masteryUpdated: boolean;
 }
 
 export type SessionMessage = { role: "user" | "assistant"; content: string };
@@ -517,6 +519,7 @@ export async function endSession(
   const sessionRows = await db
     .select({
       id: studySessions.id,
+      learnerId: studySessions.learnerId,
       blockId: studySessions.blockId,
       status: studySessions.status,
       startedAt: studySessions.startedAt,
@@ -702,10 +705,22 @@ export async function endSession(
   };
 
   // Wire mastery update: update spaced repetition state after session ends.
-  // Best-effort — the Inngest update-queue function also processes this as a background job.
+  // The synchronous path keeps scheduling correct even if background delivery
+  // is temporarily unavailable. The Inngest worker remains an idempotent
+  // backfill path.
+  let masteryUpdated = false;
   if (outcome.blockId && outcome.score !== null) {
     try {
-      await processAttemptOutcome(outcome, db);
+      const masteryResult = await processAttemptOutcome(outcome, db);
+      await syncScheduledReviewQueue(
+        {
+          learnerId: session.learnerId as LearnerId,
+          topicId: masteryResult.masteryUpdate.topicId,
+          dueAt: masteryResult.nextReviewAt,
+        },
+        db
+      );
+      masteryUpdated = true;
     } catch (masteryError: unknown) {
       const msg = masteryError instanceof Error ? masteryError.message : String(masteryError);
       process.stderr.write(
@@ -723,5 +738,6 @@ export async function endSession(
   return {
     outcome,
     summary: extracted.summary,
+    masteryUpdated,
   };
 }
