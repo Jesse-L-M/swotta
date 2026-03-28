@@ -97,6 +97,7 @@ This is the largest remaining product gap.
 
 - Support the majority of popular GCSEs and A-Levels across the major exam boards, not just a single seeded qualification.
 - Define the canonical "supported qualification" package: qualification metadata, assessment components, topic tree, prerequisite/builds-on/related edges, command words, misconception rules, task rules, and source-mapping hints.
+- Treat existing seeded qualifications as legacy bootstrap inputs and regression artifacts, not as the quality bar for future support.
 - Build a curriculum factory that turns specifications, teacher guides, past papers, and mark schemes into validated seed data.
 - Add normalization, validation, and idempotent seeding so new subjects can be added repeatably.
 - Add human review and QA workflows so curriculum data is AI-assisted but not AI-trusted by default.
@@ -168,7 +169,7 @@ This is the largest remaining product gap.
 
 ### Practical sequence
 
-The next highest-leverage move is to prioritize **curriculum breadth and content ops**, specifically the machine that can repeatedly turn one qualification specification into production-ready, validated seed data. Until that exists, broad GCSE/A-Level coverage remains a manual bottleneck.
+The next highest-leverage move is to prioritize **curriculum breadth and content ops**, specifically the machine that can repeatedly turn one qualification specification into production-ready, validated seed data. The first goal is not to bless an existing seed as the standard; it is to rebuild one qualification through the new factory until it is good enough to become the first true reference package. Until that exists, broad GCSE/A-Level coverage remains a manual bottleneck.
 
 ---
 
