@@ -175,4 +175,31 @@ describe("curriculum seed bridge", () => {
       }),
     ]);
   });
+
+  it("skips global task rules while keeping topic-scoped rules seedable", async () => {
+    const db = getTestDb();
+    const input = buildApprovedCurriculumPackage();
+    input.taskRules.push({
+      id: "task-rule-global-compare-structure",
+      taskType: "mixed_practice",
+      title: "Compare with paired statements",
+      guidance:
+        "Force paired statements that mention both items explicitly before free response.",
+      conditions: ["command word compare"],
+      priority: "medium",
+    });
+
+    const result = await seedCurriculumInput(input, { db });
+    const seededTaskRules = await db
+      .select()
+      .from(taskRules)
+      .innerJoin(topics, eq(taskRules.topicId, topics.id))
+      .where(eq(topics.qualificationVersionId, result.qualificationVersionId));
+
+    expect(result.adapterNotes.map((note) => note.code)).toEqual([
+      "annotations_not_seeded",
+      "global_task_rules_not_seeded",
+    ]);
+    expect(seededTaskRules).toHaveLength(1);
+  });
 });

@@ -269,6 +269,11 @@ function createAdapterNotes(
   curriculumPackage: CurriculumPackage
 ): CurriculumSeedNote[] {
   const notes: CurriculumSeedNote[] = [];
+  const seedableTaskRules = curriculumPackage.taskRules.filter((rule) =>
+    Boolean(rule.topicId)
+  );
+  const globalTaskRuleCount =
+    curriculumPackage.taskRules.length - seedableTaskRules.length;
 
   const annotationCount =
     (curriculumPackage.annotations?.markSchemePatterns.length ?? 0) +
@@ -280,7 +285,14 @@ function createAdapterNotes(
     });
   }
 
-  const mixedPracticeCount = curriculumPackage.taskRules.filter(
+  if (globalTaskRuleCount > 0) {
+    notes.push({
+      code: "global_task_rules_not_seeded",
+      message: `${globalTaskRuleCount} global task rule(s) were not persisted because the current scheduler table only supports topic-scoped task rules.`,
+    });
+  }
+
+  const mixedPracticeCount = seedableTaskRules.filter(
     (rule) => rule.taskType === "mixed_practice"
   ).length;
   if (mixedPracticeCount > 0) {
@@ -875,11 +887,8 @@ function buildExpectedTaskRuleRecords(
 
   for (const rule of curriculumPackage.taskRules) {
     if (!rule.topicId) {
-      throw new Error(
-        `Cannot seed task rule ${rule.id} because global task rules are not supported by the current scheduler table`
-      );
+      continue;
     }
-
     const rules = rulesByTopicId.get(rule.topicId) ?? [];
     rules.push(rule);
     rulesByTopicId.set(rule.topicId, rules);
