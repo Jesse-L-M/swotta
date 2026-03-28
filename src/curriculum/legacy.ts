@@ -3,10 +3,12 @@ import type { LegacyCurriculumPackage } from "./schema";
 import { legacyCurriculumPackageSchema } from "./schema";
 
 const nonEmptyStringSchema = z.string().trim().min(1);
+const strictObject = <Shape extends z.ZodRawShape>(shape: Shape) =>
+  z.object(shape).strict();
 
 export const legacyTopicSeedNodeSchema: z.ZodType<LegacyQualificationTopicSeed> =
   z.lazy(() =>
-    z.object({
+    strictObject({
       name: nonEmptyStringSchema,
       code: nonEmptyStringSchema.optional(),
       estimatedHours: z.number().positive().optional(),
@@ -14,7 +16,7 @@ export const legacyTopicSeedNodeSchema: z.ZodType<LegacyQualificationTopicSeed> 
       children: z.array(legacyTopicSeedNodeSchema).optional(),
       edges: z
         .array(
-          z.object({
+          strictObject({
             toCode: nonEmptyStringSchema,
             type: z.enum(["prerequisite", "builds_on", "related"]),
           })
@@ -23,15 +25,15 @@ export const legacyTopicSeedNodeSchema: z.ZodType<LegacyQualificationTopicSeed> 
     })
   );
 
-export const legacyQualificationSeedSchema = z.object({
-  subject: z.object({
+export const legacyQualificationSeedSchema = strictObject({
+  subject: strictObject({
     name: nonEmptyStringSchema,
     slug: z
       .string()
       .trim()
       .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   }),
-  examBoard: z.object({
+  examBoard: strictObject({
     name: nonEmptyStringSchema,
     code: nonEmptyStringSchema,
   }),
@@ -41,10 +43,10 @@ export const legacyQualificationSeedSchema = z.object({
   specUrl: z.string().url().optional(),
   components: z
     .array(
-      z.object({
+      strictObject({
         name: nonEmptyStringSchema,
         code: nonEmptyStringSchema,
-        weightPercent: z.number().min(0).max(100),
+        weightPercent: z.number().int().min(0).max(100),
         durationMinutes: z.number().int().positive().optional(),
         totalMarks: z.number().int().positive().optional(),
         isExam: z.boolean(),
@@ -54,26 +56,26 @@ export const legacyQualificationSeedSchema = z.object({
   topics: z.array(legacyTopicSeedNodeSchema).min(1),
   commandWords: z
     .array(
-      z.object({
+      strictObject({
         word: nonEmptyStringSchema,
         definition: nonEmptyStringSchema,
         expectedDepth: z.number().int().min(1).max(4),
       })
     )
-    .default([]),
+    .min(1),
   questionTypes: z
     .array(
-      z.object({
+      strictObject({
         name: nonEmptyStringSchema,
         description: nonEmptyStringSchema.optional(),
         typicalMarks: z.number().int().positive().optional(),
         markSchemePattern: nonEmptyStringSchema.optional(),
       })
     )
-    .default([]),
+    .min(1),
   misconceptionRules: z
     .array(
-      z.object({
+      strictObject({
         topicCode: nonEmptyStringSchema,
         description: nonEmptyStringSchema,
         triggerPatterns: z.array(nonEmptyStringSchema).min(1),

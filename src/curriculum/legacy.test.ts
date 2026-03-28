@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import seedJson from "@/data/seeds/gcse-biology-aqa.json";
+import { qualificationSeedSchema } from "@/engine/curriculum";
 import {
   buildLegacyCurriculumPackage,
   isLegacyQualificationSeed,
@@ -61,5 +62,31 @@ describe("legacy curriculum adapter", () => {
         }),
       ])
     );
+  });
+
+  it("rejects legacy seeds that would fail the current seed loader", () => {
+    const invalidSeed = {
+      ...buildLegacyQualificationSeed(),
+    };
+
+    delete (invalidSeed as Partial<typeof invalidSeed>).commandWords;
+    delete (invalidSeed as Partial<typeof invalidSeed>).questionTypes;
+
+    const validationReport = validateCurriculumPackage(invalidSeed);
+    const seedSchemaResult = qualificationSeedSchema.safeParse(invalidSeed);
+
+    expect(validationReport.ok).toBe(false);
+    expect(validationReport.normalizedFrom).toBe("legacy_seed");
+    expect(validationReport.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: "commandWords",
+        }),
+        expect.objectContaining({
+          path: "questionTypes",
+        }),
+      ])
+    );
+    expect(seedSchemaResult.success).toBe(false);
   });
 });

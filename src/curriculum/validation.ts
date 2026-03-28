@@ -631,15 +631,19 @@ export function normalizeCurriculumInput(input: unknown): {
     };
   }
 
+  const isRecord = typeof input === "object" && input !== null;
   const likelyLegacyInput =
-    typeof input === "object" &&
-    input !== null &&
-    "subject" in input &&
-    "examBoard" in input;
+    isRecord && "subject" in input && "examBoard" in input;
+  const likelyPackageInput =
+    isRecord && "schemaVersion" in input && "lifecycle" in input;
 
   return {
     package: null,
-    normalizedFrom: null,
+    normalizedFrom: likelyLegacyInput
+      ? "legacy_seed"
+      : likelyPackageInput
+        ? "package"
+        : null,
     issues: likelyLegacyInput
       ? formatZodIssues(legacyResult.error.issues, "legacy_seed")
       : formatZodIssues(packageResult.error.issues, "package"),
@@ -700,7 +704,11 @@ export function formatValidationReport(
   const lines: string[] = [];
 
   if (!report.package) {
-    lines.push("Validation failed");
+    lines.push(
+      report.normalizedFrom
+        ? `Validation failed | Input: ${report.normalizedFrom}`
+        : "Validation failed"
+    );
   } else {
     lines.push(
       [

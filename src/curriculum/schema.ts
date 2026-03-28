@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 const nonEmptyStringSchema = z.string().trim().min(1);
+const strictObject = <Shape extends z.ZodRawShape>(shape: Shape) =>
+  z.object(shape).strict();
 const slugSchema = z
   .string()
   .trim()
@@ -66,7 +68,7 @@ export const curriculumTaskTypeSchema = z.enum([
 
 export const curriculumConfidenceSchema = z.enum(["low", "medium", "high"]);
 
-export const curriculumPackageMetadataSchema = z.object({
+export const curriculumPackageMetadataSchema = strictObject({
   packageId: slugSchema,
   packageVersion: nonEmptyStringSchema,
   title: nonEmptyStringSchema,
@@ -75,7 +77,7 @@ export const curriculumPackageMetadataSchema = z.object({
   updatedAt: isoDatetimeSchema.optional(),
 });
 
-export const curriculumQualificationSchema = z.object({
+export const curriculumQualificationSchema = strictObject({
   name: nonEmptyStringSchema,
   slug: slugSchema,
   level: nonEmptyStringSchema,
@@ -83,17 +85,17 @@ export const curriculumQualificationSchema = z.object({
   firstAssessmentYear: z.number().int().positive().nullable().optional(),
   firstExamYear: z.number().int().positive().nullable().optional(),
   specUrl: z.string().url().optional(),
-  subject: z.object({
+  subject: strictObject({
     name: nonEmptyStringSchema,
     slug: slugSchema,
   }),
-  examBoard: z.object({
+  examBoard: strictObject({
     name: nonEmptyStringSchema,
     code: nonEmptyStringSchema,
   }),
 });
 
-export const curriculumSourceSchema = z.object({
+export const curriculumSourceSchema = strictObject({
   id: identifierSchema,
   kind: curriculumSourceKindSchema,
   authority: curriculumSourceAuthoritySchema,
@@ -104,7 +106,7 @@ export const curriculumSourceSchema = z.object({
   checksum: nonEmptyStringSchema.optional(),
 });
 
-export const curriculumLineageSchema = z.object({
+export const curriculumLineageSchema = strictObject({
   packageId: slugSchema,
   relationship: z.enum([
     "legacy_seed",
@@ -115,19 +117,19 @@ export const curriculumLineageSchema = z.object({
   note: nonEmptyStringSchema.optional(),
 });
 
-export const curriculumGeneratorSchema = z.object({
+export const curriculumGeneratorSchema = strictObject({
   tool: nonEmptyStringSchema,
   version: nonEmptyStringSchema.optional(),
   runId: nonEmptyStringSchema.optional(),
 });
 
-export const curriculumProvenanceSchema = z.object({
+export const curriculumProvenanceSchema = strictObject({
   sources: z.array(curriculumSourceSchema).default([]),
   derivedFrom: z.array(curriculumLineageSchema).default([]),
   generatedBy: curriculumGeneratorSchema.optional(),
 });
 
-export const curriculumReviewEntrySchema = z.object({
+export const curriculumReviewEntrySchema = strictObject({
   name: nonEmptyStringSchema,
   role: curriculumReviewerRoleSchema,
   outcome: z.enum(["approved", "changes_requested", "commented"]),
@@ -135,14 +137,14 @@ export const curriculumReviewEntrySchema = z.object({
   notes: nonEmptyStringSchema.optional(),
 });
 
-export const curriculumReviewSchema = z.object({
+export const curriculumReviewSchema = strictObject({
   status: curriculumReviewStatusSchema.default("unreviewed"),
   reviewers: z.array(curriculumReviewEntrySchema).default([]),
   approvedAt: isoDatetimeSchema.optional(),
   referenceNotes: nonEmptyStringSchema.optional(),
 });
 
-export const curriculumAssessmentComponentSchema = z.object({
+export const curriculumAssessmentComponentSchema = strictObject({
   id: identifierSchema,
   name: nonEmptyStringSchema,
   code: nonEmptyStringSchema,
@@ -152,7 +154,7 @@ export const curriculumAssessmentComponentSchema = z.object({
   isExam: z.boolean(),
 });
 
-export const curriculumTopicSchema = z.object({
+export const curriculumTopicSchema = strictObject({
   id: identifierSchema,
   name: nonEmptyStringSchema,
   code: nonEmptyStringSchema.optional(),
@@ -163,14 +165,14 @@ export const curriculumTopicSchema = z.object({
   estimatedHours: z.number().positive().optional(),
 });
 
-export const curriculumTopicEdgeSchema = z.object({
+export const curriculumTopicEdgeSchema = strictObject({
   fromTopicId: identifierSchema,
   toTopicId: identifierSchema,
   type: curriculumEdgeTypeSchema,
   rationale: nonEmptyStringSchema.optional(),
 });
 
-export const curriculumCommandWordSchema = z.object({
+export const curriculumCommandWordSchema = strictObject({
   id: identifierSchema,
   word: nonEmptyStringSchema,
   definition: nonEmptyStringSchema,
@@ -178,7 +180,7 @@ export const curriculumCommandWordSchema = z.object({
   guidance: nonEmptyStringSchema.optional(),
 });
 
-export const curriculumQuestionTypeSchema = z.object({
+export const curriculumQuestionTypeSchema = strictObject({
   id: identifierSchema,
   name: nonEmptyStringSchema,
   description: nonEmptyStringSchema.optional(),
@@ -186,7 +188,7 @@ export const curriculumQuestionTypeSchema = z.object({
   markSchemePattern: nonEmptyStringSchema.optional(),
 });
 
-export const curriculumMisconceptionRuleSchema = z.object({
+export const curriculumMisconceptionRuleSchema = strictObject({
   id: identifierSchema,
   topicId: identifierSchema,
   description: nonEmptyStringSchema,
@@ -195,7 +197,7 @@ export const curriculumMisconceptionRuleSchema = z.object({
   severity: z.number().int().min(1).max(3).default(2),
 });
 
-export const curriculumTaskRuleSchema = z.object({
+export const curriculumTaskRuleSchema = strictObject({
   id: identifierSchema,
   taskType: curriculumTaskTypeSchema,
   topicId: identifierSchema.optional(),
@@ -205,7 +207,7 @@ export const curriculumTaskRuleSchema = z.object({
   priority: z.enum(["low", "medium", "high"]).default("medium"),
 });
 
-export const curriculumSourceMappingHintSchema = z.object({
+export const curriculumSourceMappingHintSchema = strictObject({
   id: identifierSchema,
   sourceId: identifierSchema,
   topicId: identifierSchema,
@@ -214,7 +216,7 @@ export const curriculumSourceMappingHintSchema = z.object({
   confidence: curriculumConfidenceSchema.default("medium"),
 });
 
-export const curriculumMarkSchemePatternSchema = z.object({
+export const curriculumMarkSchemePatternSchema = strictObject({
   id: identifierSchema,
   label: nonEmptyStringSchema,
   description: nonEmptyStringSchema,
@@ -222,21 +224,21 @@ export const curriculumMarkSchemePatternSchema = z.object({
   componentId: identifierSchema.optional(),
 });
 
-export const curriculumExamTechniquePatternSchema = z.object({
+export const curriculumExamTechniquePatternSchema = strictObject({
   id: identifierSchema,
   label: nonEmptyStringSchema,
   description: nonEmptyStringSchema,
   commandWordId: identifierSchema.optional(),
 });
 
-export const curriculumAnnotationsSchema = z.object({
+export const curriculumAnnotationsSchema = strictObject({
   markSchemePatterns: z.array(curriculumMarkSchemePatternSchema).default([]),
   examTechniquePatterns: z
     .array(curriculumExamTechniquePatternSchema)
     .default([]),
 });
 
-const curriculumPackageBaseSchema = z.object({
+const curriculumPackageBaseSchema = strictObject({
   schemaVersion: z.literal("1.0"),
   lifecycle: curriculumPackageLifecycleSchema,
   metadata: curriculumPackageMetadataSchema,

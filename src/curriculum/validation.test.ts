@@ -110,4 +110,32 @@ describe("curriculum package validation", () => {
       ])
     );
   });
+
+  it("rejects unknown fields instead of silently stripping them", () => {
+    const curriculumPackage = buildApprovedCurriculumPackage() as Record<
+      string,
+      unknown
+    >;
+    curriculumPackage.extraTopLevel = true;
+    (
+      curriculumPackage.metadata as Record<string, unknown>
+    ).typoField = "unexpected";
+
+    const report = validateCurriculumPackage(curriculumPackage);
+
+    expect(report.ok).toBe(false);
+    expect(report.package).toBeNull();
+    expect(report.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "package.unrecognized_keys",
+          path: "",
+        }),
+        expect.objectContaining({
+          code: "package.unrecognized_keys",
+          path: "metadata",
+        }),
+      ])
+    );
+  });
 });
