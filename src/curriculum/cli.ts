@@ -1,19 +1,20 @@
 #!/usr/bin/env node
 
+import { writeSync } from "node:fs";
 import { runCurriculumCommand } from "./commands";
 
 async function main(): Promise<void> {
   const result = await runCurriculumCommand(process.argv.slice(2));
 
   if (result.stdout) {
-    process.stdout.write(result.stdout);
+    writeSync(1, result.stdout);
   }
 
   if (result.stderr) {
-    process.stderr.write(`${result.stderr}\n`);
+    writeSync(2, `${result.stderr}\n`);
   }
 
-  process.exitCode = result.exitCode;
+  process.exit(result.exitCode);
 }
 
 void main();

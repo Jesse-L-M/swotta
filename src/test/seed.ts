@@ -1,10 +1,9 @@
-import { readFileSync } from "fs";
 import path from "path";
 import { getTestDb } from "./setup";
-import { loadQualification } from "@/engine/curriculum";
+import { seedCurriculumFile } from "@/curriculum/seed";
 import { topics } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import type { QualificationVersionId, TopicId, QualificationSeed } from "@/lib/types";
+import type { QualificationVersionId, TopicId } from "@/lib/types";
 import type { Database } from "@/lib/db";
 
 export async function seedGCSEBiology() {
@@ -14,14 +13,9 @@ export async function seedGCSEBiology() {
     process.cwd(),
     "src/data/seeds/gcse-biology-aqa.json"
   );
-  const seedData: QualificationSeed = JSON.parse(
-    readFileSync(seedPath, "utf-8")
-  );
-
-  const result = await loadQualification(
-    db as unknown as Database,
-    seedData
-  );
+  const result = await seedCurriculumFile(seedPath, {
+    db: db as unknown as Database,
+  });
 
   const qvId = result.qualificationVersionId as QualificationVersionId;
 
