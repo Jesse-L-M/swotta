@@ -2,18 +2,29 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { count, eq } from "drizzle-orm";
 import { getDiagnosticTopics, getQualificationName } from "@/engine/diagnostic";
+import { getCoverageReport } from "@/engine/ingestion";
 import { getTopicTree } from "@/engine/curriculum";
+import { selectBlockType } from "@/engine/scheduler";
 import {
   assessmentComponents,
   commandWords,
+  learners,
   misconceptionRules,
+  organizations,
   questionTypes,
+  taskRules,
   topicEdges,
   topics,
+  users,
 } from "@/db/schema";
 import { loadQualificationOptions } from "@/components/onboarding/data";
 import type { Database } from "@/lib/db";
-import type { QualificationVersionId, TopicTreeNode } from "@/lib/types";
+import type {
+  LearnerId,
+  QualificationVersionId,
+  TopicId,
+  TopicTreeNode,
+} from "@/lib/types";
 import {
   getLegacySeedStats,
   prepareCurriculumSeedInput,
@@ -47,6 +58,8 @@ interface SeededCounts {
   questionTypes: number;
   misconceptionRules: number;
 }
+
+const VERIFY_ROLLBACK = Symbol("verify-rollback");
 
 function asErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -111,6 +124,133 @@ async function loadSeededCounts(
     questionTypes: Number(questionTypeRows[0]?.count ?? 0),
     misconceptionRules: Number(misconceptionRuleRows[0]?.count ?? 0),
   };
+}
+
+async function withTemporaryLearner<T>(
+  db: Database,
+  run: (tx: Database, learnerId: LearnerId) => Promise<T>
+): Promise<T> {
+  let result: T | undefined;
+  const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+  try {
+    await db.transaction(async (tx) => {
+      const [org] = await tx
+        .insert(organizations)
+        .values({
+          name: `Curriculum Verify ${suffix}`,
+          type: "household",
+          slug: `curriculum-verify-${suffix}`,
+        })
+        .returning({ id: organizations.id });
+
+      const [user] = await tx
+        .insert(users)
+        .values({
+          firebaseUid: `curriculum-verify-${suffix}`,
+          email: `curriculum-verify-${suffix}@example.com`,
+          name: "Curriculum Verify User",
+        })
+        .returning({ id: users.id });
+
+      const [learner] = await tx
+        .insert(learners)
+        .values({
+          userId: user.id,
+          orgId: org.id,
+          displayName: "Curriculum Verify Learner",
+          yearGroup: 10,
+        })
+        .returning({ id: learners.id });
+
+      result = await run(tx as unknown as Database, learner.id as LearnerId);
+      throw VERIFY_ROLLBACK;
+    });
+  } catch (error) {
+    if (error !== VERIFY_ROLLBACK) {
+      throw error;
+    }
+  }
+
+  if (result === undefined) {
+    throw new Error("Failed to produce a temporary verification learner");
+  }
+
+  return result;
+}
+
+async function verifySchedulerAssumptions(
+  db: Database,
+  qualificationVersionId: QualificationVersionId
+): Promise<string> {
+  const rows = await db
+    .select({
+      topicId: taskRules.topicId,
+      blockType: taskRules.blockType,
+      difficultyMin: taskRules.difficultyMin,
+      difficultyMax: taskRules.difficultyMax,
+    })
+    .from(taskRules)
+    .innerJoin(topics, eq(taskRules.topicId, topics.id))
+    .where(eq(topics.qualificationVersionId, qualificationVersionId));
+
+  if (rows.length === 0) {
+    return "no task rules to exercise";
+  }
+
+  for (const row of rows) {
+    const targetDifficulty = Math.max(
+      row.difficultyMin,
+      Math.min(row.difficultyMax, row.difficultyMin)
+    );
+    const masteryLevel = targetDifficulty / 5;
+    const selected = await selectBlockType(
+      row.topicId as TopicId,
+      masteryLevel,
+      0,
+      0,
+      db
+    );
+
+    if (selected !== row.blockType) {
+      throw new Error(
+        `Expected scheduler to select ${row.blockType} for topic ${row.topicId} at difficulty ${targetDifficulty}, got ${selected}`
+      );
+    }
+  }
+
+  return `rules=${rows.length}`;
+}
+
+async function verifySourceCoverageAssumptions(
+  db: Database,
+  qualificationVersionId: QualificationVersionId,
+  expectedCoveredTopicCount: number
+): Promise<string> {
+  if (expectedCoveredTopicCount === 0) {
+    return "no source mappings to exercise";
+  }
+
+  const coveredTopicCount = await withTemporaryLearner(
+    db,
+    async (tx, learnerId) => {
+      const coverage = await getCoverageReport(
+        learnerId,
+        qualificationVersionId,
+        { db: tx }
+      );
+
+      return coverage.filter((row) => row.hasSources).length;
+    }
+  );
+
+  if (coveredTopicCount < expectedCoveredTopicCount) {
+    throw new Error(
+      `Expected at least ${expectedCoveredTopicCount} covered topic(s), got ${coveredTopicCount}`
+    );
+  }
+
+  return `coveredTopics=${coveredTopicCount}`;
 }
 
 export async function verifyCurriculumInput(
@@ -311,6 +451,57 @@ export async function verifyCurriculumInput(
       detail: asErrorMessage(error),
     });
     return result;
+  }
+
+  if (
+    prepared.normalizedFrom === "package" &&
+    prepared.curriculumPackage.taskRules.length > 0
+  ) {
+    try {
+      const detail = await verifySchedulerAssumptions(
+        targetDb,
+        qualificationVersionId
+      );
+      checks.push({
+        name: "scheduler assumptions cohere",
+        ok: true,
+        detail,
+      });
+    } catch (error) {
+      checks.push({
+        name: "scheduler assumptions cohere",
+        ok: false,
+        detail: asErrorMessage(error),
+      });
+      return result;
+    }
+  }
+
+  if (
+    prepared.normalizedFrom === "package" &&
+    prepared.curriculumPackage.sourceMappings.length > 0
+  ) {
+    try {
+      const detail = await verifySourceCoverageAssumptions(
+        targetDb,
+        qualificationVersionId,
+        new Set(
+          prepared.curriculumPackage.sourceMappings.map((mapping) => mapping.topicId)
+        ).size
+      );
+      checks.push({
+        name: "source coverage assumptions cohere",
+        ok: true,
+        detail,
+      });
+    } catch (error) {
+      checks.push({
+        name: "source coverage assumptions cohere",
+        ok: false,
+        detail: asErrorMessage(error),
+      });
+      return result;
+    }
   }
 
   result.ok = true;

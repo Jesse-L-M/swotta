@@ -5,6 +5,11 @@ import {
   commandWords,
   misconceptionRules,
   questionTypes,
+  sourceChunks,
+  sourceCollections,
+  sourceFiles,
+  sourceMappings,
+  taskRules,
   topics,
 } from "@/db/schema";
 import { getTopicTree } from "@/engine/curriculum";
@@ -28,8 +33,6 @@ describe("curriculum seed bridge", () => {
     expect(result.topicsCreated).toBe(3);
     expect(result.edgesCreated).toBe(1);
     expect(result.adapterNotes.map((note) => note.code)).toEqual([
-      "task_rules_not_seeded",
-      "source_mappings_not_seeded",
       "annotations_not_seeded",
     ]);
 
@@ -53,6 +56,15 @@ describe("curriculum seed bridge", () => {
       .where(
         eq(questionTypes.qualificationVersionId, result.qualificationVersionId)
       );
+    const seededTaskRules = await db
+      .select()
+      .from(taskRules)
+      .innerJoin(topics, eq(taskRules.topicId, topics.id))
+      .where(eq(topics.qualificationVersionId, result.qualificationVersionId));
+    const seededCollections = await db.select().from(sourceCollections);
+    const seededFiles = await db.select().from(sourceFiles);
+    const seededChunks = await db.select().from(sourceChunks);
+    const seededSourceMappings = await db.select().from(sourceMappings);
     const seededMisconceptions = await db
       .select()
       .from(misconceptionRules);
@@ -60,6 +72,11 @@ describe("curriculum seed bridge", () => {
     expect(seededTopics).toHaveLength(3);
     expect(seededCommandWords).toHaveLength(1);
     expect(seededQuestionTypes).toHaveLength(1);
+    expect(seededTaskRules).toHaveLength(1);
+    expect(seededCollections).toHaveLength(1);
+    expect(seededFiles).toHaveLength(1);
+    expect(seededChunks).toHaveLength(1);
+    expect(seededSourceMappings).toHaveLength(1);
     expect(seededMisconceptions).toHaveLength(1);
   });
 
@@ -89,5 +106,18 @@ describe("curriculum seed bridge", () => {
     expect(second.componentsCreated).toBe(0);
     expect(second.topicsCreated).toBe(0);
     expect(second.edgesCreated).toBe(0);
+  });
+
+  it("rejects a package when existing seeded content for the version differs", async () => {
+    const db = getTestDb();
+    const original = buildApprovedCurriculumPackage();
+    const changed = buildApprovedCurriculumPackage();
+    changed.questionTypes[0].description = "Changed after the first seed";
+
+    await seedCurriculumInput(original, { db });
+
+    await expect(seedCurriculumInput(changed, { db })).rejects.toThrow(
+      "question types"
+    );
   });
 });
