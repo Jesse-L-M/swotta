@@ -765,7 +765,7 @@ async function loadActualCoreSnapshot(
         isExam: component.isExam,
       }))
       .sort((left, right) => left.code.localeCompare(right.code)),
-    topics: topicRecords.records,
+    topics: topicRecords.records.map(({ id: _id, ...topic }) => topic),
     edges: edges
       .map((edge) => ({
         fromKey: topicRecords.idToKey.get(edge.fromTopicId) ?? edge.fromTopicId,
