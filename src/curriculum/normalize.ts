@@ -44,6 +44,11 @@ const SOURCE_AUTHORITY_PRIORITY: Record<CurriculumSource["authority"], number> =
 type MetadataDraft = CurriculumExtractedDraft["metadataBlocks"][number]["values"];
 type QualificationDraft =
   CurriculumExtractedDraft["qualificationBlocks"][number]["values"];
+type ComponentDraft = CurriculumExtractedDraft["components"][number]["values"];
+type TopicDraft = CurriculumExtractedDraft["topics"][number]["values"];
+type MisconceptionDraft =
+  CurriculumExtractedDraft["misconceptionRules"][number]["values"];
+type TaskRuleDraft = CurriculumExtractedDraft["taskRules"][number]["values"];
 
 type PartialQualification = Partial<
   Omit<CurriculumQualification, "subject" | "examBoard">
@@ -78,6 +83,22 @@ interface ProvisionalTopic {
   estimatedHours?: number;
   provenance: CurriculumDraftCitation[];
   inputIndex: number;
+}
+
+interface IndexedBlock<TValue> {
+  values: TValue;
+  provenance: CurriculumDraftCitation[];
+  inputIndex: number;
+}
+
+interface RepeatedBlockFieldSpec<TValue> {
+  key: keyof TValue & string;
+  getValue: (values: TValue) => unknown;
+}
+
+interface NormalizedTopicRecord {
+  topic: CurriculumTopic;
+  provenance: CurriculumDraftCitation[];
 }
 
 interface MergeFieldSpec<TValue> {
@@ -191,6 +212,90 @@ function dedupeProvenance(
     seen.add(key);
     return true;
   });
+}
+
+function normalizeIdentityText(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function normalizeOptionalIdentityText(value: string | undefined): string | null {
+  return value ? normalizeIdentityText(value) : null;
+}
+
+function normalizeStringSet(values: string[]): string[] {
+  return [...new Set(values.map((value) => normalizeIdentityText(value)))].sort();
+}
+
+function findGroupRoot(parent: number[], index: number): number {
+  if (parent[index] === index) {
+    return index;
+  }
+
+  parent[index] = findGroupRoot(parent, parent[index] as number);
+  return parent[index] as number;
+}
+
+function unionGroups(parent: number[], left: number, right: number): void {
+  const leftRoot = findGroupRoot(parent, left);
+  const rightRoot = findGroupRoot(parent, right);
+
+  if (leftRoot === rightRoot) {
+    return;
+  }
+
+  if (leftRoot < rightRoot) {
+    parent[rightRoot] = leftRoot;
+    return;
+  }
+
+  parent[leftRoot] = rightRoot;
+}
+
+function reconcileRepeatedBlocks<TValue extends Record<string, unknown>>(
+  entityType: "component" | "topic",
+  identityLabel: string,
+  blocks: IndexedBlock<TValue>[],
+  fieldSpecs: RepeatedBlockFieldSpec<TValue>[],
+  errors: CurriculumNormalizationIssue[]
+): IndexedBlock<TValue> | null {
+  const merged: Record<string, unknown> = {};
+  const conflictingFields: string[] = [];
+
+  fieldSpecs.forEach((fieldSpec) => {
+    const definedValues = blocks
+      .map((block) => fieldSpec.getValue(block.values))
+      .filter((value) => value !== undefined);
+
+    if (definedValues.length === 0) {
+      return;
+    }
+
+    const [firstValue, ...restValues] = definedValues;
+    if (restValues.some((value) => !valuesEqual(value, firstValue))) {
+      conflictingFields.push(fieldSpec.key);
+      return;
+    }
+
+    merged[fieldSpec.key] = firstValue;
+  });
+
+  if (conflictingFields.length > 0) {
+    errors.push(
+      createIssue(
+        "error",
+        `normalize.${entityType}_conflict`,
+        identityLabel,
+        `Repeated extracted ${entityType} blocks disagree on fields: ${conflictingFields.join(", ")}`
+      )
+    );
+    return null;
+  }
+
+  return {
+    values: merged as TValue,
+    provenance: dedupeProvenance(blocks.flatMap((block) => block.provenance)),
+    inputIndex: Math.min(...blocks.map((block) => block.inputIndex)),
+  };
 }
 
 function buildSourceContext(
@@ -552,65 +657,176 @@ function pushMissingRequiredFields(
 
 function buildComponents(
   draft: CurriculumExtractedDraft,
+  errors: CurriculumNormalizationIssue[],
   traces: CurriculumNormalizationTrace[]
 ): CurriculumAssessmentComponent[] {
-  return draft.components.map((block) => {
-    const componentId = `component-${slugify(block.values.code)}`;
-    traces.push({
-      entityType: "component",
-      entityKey: componentId,
-      origin: "source",
-      provenance: dedupeProvenance(block.provenance),
-    });
+  const groupedComponents = new Map<string, IndexedBlock<ComponentDraft>[]>();
 
-    return {
-      id: componentId,
-      name: block.values.name,
-      code: block.values.code,
-      weightPercent: block.values.weightPercent,
-      durationMinutes: block.values.durationMinutes,
-      totalMarks: block.values.totalMarks,
-      isExam: block.values.isExam,
-    };
+  draft.components.forEach((block, index) => {
+    const componentKey = normalizeIdentityText(block.values.code);
+    groupedComponents.set(componentKey, [
+      ...(groupedComponents.get(componentKey) ?? []),
+      {
+        values: block.values,
+        provenance: block.provenance,
+        inputIndex: index,
+      },
+    ]);
   });
+
+  return [...groupedComponents.entries()]
+    .map(([componentKey, blocks]) =>
+      reconcileRepeatedBlocks(
+        "component",
+        `components.code:${componentKey}`,
+        blocks,
+        [
+          { key: "name", getValue: (values) => values.name },
+          { key: "code", getValue: (values) => values.code },
+          {
+            key: "weightPercent",
+            getValue: (values) => values.weightPercent,
+          },
+          {
+            key: "durationMinutes",
+            getValue: (values) => values.durationMinutes,
+          },
+          { key: "totalMarks", getValue: (values) => values.totalMarks },
+          { key: "isExam", getValue: (values) => values.isExam },
+        ],
+        errors
+      )
+    )
+    .filter((component): component is IndexedBlock<ComponentDraft> => component !== null)
+    .sort((left, right) => left.inputIndex - right.inputIndex)
+    .map((component) => {
+      const componentId = `component-${slugify(component.values.code)}`;
+      traces.push({
+        entityType: "component",
+        entityKey: componentId,
+        origin: "source",
+        provenance: component.provenance,
+      });
+
+      return {
+        id: componentId,
+        name: component.values.name,
+        code: component.values.code,
+        weightPercent: component.values.weightPercent,
+        durationMinutes: component.values.durationMinutes,
+        totalMarks: component.values.totalMarks,
+        isExam: component.values.isExam,
+      };
+    });
+}
+
+function getTopicIdentityKeys(values: TopicDraft): string[] {
+  const keys = [
+    `name:${normalizeOptionalIdentityText(values.parentRef) ?? "root"}|${normalizeIdentityText(
+      values.name
+    )}`,
+  ];
+
+  if (values.code) {
+    keys.unshift(`code:${normalizeIdentityText(values.code)}`);
+  }
+
+  return keys;
 }
 
 function buildProvisionalTopics(
   draft: CurriculumExtractedDraft,
+  errors: CurriculumNormalizationIssue[],
   traces: CurriculumNormalizationTrace[]
 ): ProvisionalTopic[] {
-  return draft.topics.map((block, index) => {
-    const key = block.values.code
-      ? `code:${block.values.code}`
-      : `topic:${slugify(block.values.parentRef ?? "root")}:${slugify(
-          block.values.name
-        )}:${index + 1}`;
+  const parent = draft.topics.map((_, index) => index);
+  const seenIdentity = new Map<string, number>();
 
-    const topicId = block.values.code
-      ? `topic-${slugify(block.values.code)}`
-      : `topic-${slugify(
-          `${block.values.parentRef ?? "root"}-${block.values.name}-${index + 1}`
-        )}`;
+  draft.topics.forEach((block, index) => {
+    getTopicIdentityKeys(block.values).forEach((identityKey) => {
+      const existingIndex = seenIdentity.get(identityKey);
+      if (existingIndex === undefined) {
+        seenIdentity.set(identityKey, index);
+        return;
+      }
 
-    traces.push({
-      entityType: "topic",
-      entityKey: topicId,
-      origin: "source",
-      provenance: dedupeProvenance(block.provenance),
+      unionGroups(parent, existingIndex, index);
     });
-
-    return {
-      key,
-      name: block.values.name,
-      code: block.values.code,
-      parentRef: block.values.parentRef,
-      sortOrder: block.values.sortOrder,
-      description: block.values.description,
-      estimatedHours: block.values.estimatedHours,
-      provenance: block.provenance,
-      inputIndex: index,
-    };
   });
+
+  const groupedTopics = new Map<number, IndexedBlock<TopicDraft>[]>();
+
+  draft.topics.forEach((block, index) => {
+    const rootIndex = findGroupRoot(parent, index);
+    groupedTopics.set(rootIndex, [
+      ...(groupedTopics.get(rootIndex) ?? []),
+      {
+        values: block.values,
+        provenance: block.provenance,
+        inputIndex: index,
+      },
+    ]);
+  });
+
+  return [...groupedTopics.values()]
+    .map((blocks) =>
+      reconcileRepeatedBlocks(
+        "topic",
+        blocks[0]?.values.code
+          ? `topics.code:${normalizeIdentityText(
+              blocks[0].values.code as string
+            )}`
+          : `topics.name:${
+              normalizeOptionalIdentityText(blocks[0]?.values.parentRef) ?? "root"
+            }/${slugify(blocks[0]?.values.name as string)}`,
+        blocks,
+        [
+          { key: "name", getValue: (values) => values.name },
+          { key: "code", getValue: (values) => values.code },
+          { key: "parentRef", getValue: (values) => values.parentRef },
+          { key: "sortOrder", getValue: (values) => values.sortOrder },
+          { key: "description", getValue: (values) => values.description },
+          {
+            key: "estimatedHours",
+            getValue: (values) => values.estimatedHours,
+          },
+        ],
+        errors
+      )
+    )
+    .filter((topic): topic is IndexedBlock<TopicDraft> => topic !== null)
+    .sort((left, right) => left.inputIndex - right.inputIndex)
+    .map((topic) => {
+      const key = topic.values.code
+        ? `code:${normalizeIdentityText(topic.values.code)}`
+        : `topic:${
+            normalizeOptionalIdentityText(topic.values.parentRef) ?? "root"
+          }:${slugify(topic.values.name)}`;
+      const topicId = topic.values.code
+        ? `topic-${slugify(topic.values.code)}`
+        : `topic-${slugify(
+            `${topic.values.parentRef ?? "root"}-${topic.values.name}`
+          )}`;
+
+      traces.push({
+        entityType: "topic",
+        entityKey: topicId,
+        origin: "source",
+        provenance: topic.provenance,
+      });
+
+      return {
+        key,
+        name: topic.values.name,
+        code: topic.values.code,
+        parentRef: topic.values.parentRef,
+        sortOrder: topic.values.sortOrder,
+        description: topic.values.description,
+        estimatedHours: topic.values.estimatedHours,
+        provenance: topic.provenance,
+        inputIndex: topic.inputIndex,
+      };
+    });
 }
 
 function buildTopicReferenceLookup(topics: ProvisionalTopic[]): {
@@ -622,10 +838,11 @@ function buildTopicReferenceLookup(topics: ProvisionalTopic[]): {
 
   topics.forEach((topic) => {
     if (topic.code) {
-      byCode.set(topic.code, [...(byCode.get(topic.code) ?? []), topic]);
+      const codeKey = normalizeIdentityText(topic.code);
+      byCode.set(codeKey, [...(byCode.get(codeKey) ?? []), topic]);
     }
 
-    const normalizedName = topic.name.trim().toLowerCase();
+    const normalizedName = normalizeIdentityText(topic.name);
     byName.set(normalizedName, [...(byName.get(normalizedName) ?? []), topic]);
   });
 
@@ -636,7 +853,8 @@ function resolveTopicReference(
   topicRef: string,
   lookup: ReturnType<typeof buildTopicReferenceLookup>
 ): TopicResolution {
-  const byCode = lookup.byCode.get(topicRef.trim());
+  const normalizedRef = normalizeIdentityText(topicRef);
+  const byCode = lookup.byCode.get(normalizedRef);
   if (byCode?.length === 1) {
     return { topic: byCode[0], reason: null };
   }
@@ -644,7 +862,7 @@ function resolveTopicReference(
     return { topic: null, reason: "ambiguous" };
   }
 
-  const byName = lookup.byName.get(topicRef.trim().toLowerCase()) ?? [];
+  const byName = lookup.byName.get(normalizedRef) ?? [];
   if (byName.length === 1) {
     return { topic: byName[0], reason: null };
   }
@@ -701,22 +919,21 @@ function normalizeTopics(
   traces: CurriculumNormalizationTrace[]
 ): {
   topics: CurriculumTopic[];
+  topicRecords: NormalizedTopicRecord[];
   topicIdByKey: Map<string, string>;
   resolver: (topicRef: string) => TopicResolution;
   topicFatal: boolean;
 } {
-  const provisionalTopics = buildProvisionalTopics(draft, traces);
+  const provisionalTopics = buildProvisionalTopics(draft, errors, traces);
   const lookup = buildTopicReferenceLookup(provisionalTopics);
   const parentByKey = new Map<string, string | null>();
   const topicIdByKey = new Map<string, string>();
   let topicFatal = false;
 
-  provisionalTopics.forEach((topic, index) => {
+  provisionalTopics.forEach((topic) => {
     const topicId = topic.code
       ? `topic-${slugify(topic.code)}`
-      : `topic-${slugify(
-          `${topic.parentRef ?? "root"}-${topic.name}-${index + 1}`
-        )}`;
+      : `topic-${slugify(`${topic.parentRef ?? "root"}-${topic.name}`)}`;
     topicIdByKey.set(topic.key, topicId);
   });
 
@@ -742,6 +959,33 @@ function normalizeTopics(
       )
     );
     parentByKey.set(topic.key, null);
+  });
+
+  const canonicalTopicGroups = new Map<string, ProvisionalTopic[]>();
+  provisionalTopics.forEach((topic) => {
+    const identityKey = `parent:${parentByKey.get(topic.key) ?? "root"}|name:${normalizeIdentityText(
+      topic.name
+    )}`;
+    canonicalTopicGroups.set(identityKey, [
+      ...(canonicalTopicGroups.get(identityKey) ?? []),
+      topic,
+    ]);
+  });
+
+  canonicalTopicGroups.forEach((group, identityKey) => {
+    if (group.length < 2) {
+      return;
+    }
+
+    topicFatal = true;
+    errors.push(
+      createIssue(
+        "error",
+        "normalize.topic_duplicate_unresolved",
+        `topics.${identityKey}`,
+        "Repeated extracted topics collapse to the same canonical topic identity"
+      )
+    );
   });
 
   const depthByKey = new Map<string, number>();
@@ -779,9 +1023,8 @@ function normalizeTopics(
   });
 
   const sortOrderByKey = assignTopicSortOrders(provisionalTopics, parentByKey);
-
-  return {
-    topics: provisionalTopics.map((topic) => ({
+  const topicRecords = provisionalTopics.map((topic) => ({
+    topic: {
       id: topicIdByKey.get(topic.key) as string,
       name: topic.name,
       code: topic.code,
@@ -792,7 +1035,13 @@ function normalizeTopics(
       sortOrder: sortOrderByKey.get(topic.key) ?? 1,
       description: topic.description,
       estimatedHours: topic.estimatedHours,
-    })),
+    },
+    provenance: topic.provenance,
+  }));
+
+  return {
+    topics: topicRecords.map((record) => record.topic),
+    topicRecords,
     topicIdByKey,
     resolver: (topicRef: string) => resolveTopicReference(topicRef, lookup),
     topicFatal,
@@ -874,18 +1123,17 @@ function confidenceForSource(
 }
 
 function buildSourceMappings(
-  topics: CurriculumTopic[],
-  draft: CurriculumExtractedDraft,
+  topicRecords: NormalizedTopicRecord[],
   sources: Map<string, SourceContext>
 ): CurriculumSourceMappingHint[] {
-  return topics.flatMap((topic, index) =>
-    dedupeProvenance(draft.topics[index]?.provenance ?? []).map(
+  return topicRecords.flatMap((record) =>
+    dedupeProvenance(record.provenance).map(
       (citation, citationIndex) => ({
         id: `source-mapping-${slugify(
-          `${citation.sourceId}-${topic.id}-${citationIndex + 1}`
+          `${citation.sourceId}-${record.topic.id}-${citationIndex + 1}`
         )}`,
         sourceId: citation.sourceId,
-        topicId: topic.id,
+        topicId: record.topic.id,
         locator: citation.locator,
         excerptHint: excerptHintFromCitation(citation),
         confidence: confidenceForSource(sources.get(citation.sourceId)?.source),
@@ -939,6 +1187,33 @@ function normalizeEdges(
   return edges;
 }
 
+function buildMisconceptionIdentity(
+  topicId: string,
+  values: MisconceptionDraft
+): string {
+  return JSON.stringify({
+    topicId,
+    description: normalizeIdentityText(values.description),
+    triggerPatterns: normalizeStringSet(values.triggerPatterns),
+    correctionGuidance: normalizeIdentityText(values.correctionGuidance),
+    severity: values.severity ?? 2,
+  });
+}
+
+function buildTaskRuleIdentity(
+  topicId: string | undefined,
+  values: TaskRuleDraft
+): string {
+  return JSON.stringify({
+    taskType: values.taskType,
+    topicId: topicId ?? null,
+    title: normalizeIdentityText(values.title),
+    guidance: normalizeIdentityText(values.guidance),
+    conditions: normalizeStringSet(values.conditions),
+    priority: values.priority,
+  });
+}
+
 function normalizeMisconceptions(
   draft: CurriculumExtractedDraft,
   resolveTopic: (topicRef: string) => TopicResolution,
@@ -946,7 +1221,13 @@ function normalizeMisconceptions(
   errors: CurriculumNormalizationIssue[],
   traces: CurriculumNormalizationTrace[]
 ): CurriculumMisconceptionRule[] {
-  const misconceptionRules: CurriculumMisconceptionRule[] = [];
+  const misconceptionRules = new Map<
+    string,
+    {
+      rule: CurriculumMisconceptionRule;
+      provenance: CurriculumDraftCitation[];
+    }
+  >();
 
   draft.misconceptionRules.forEach((block, index) => {
     const resolved = resolveTopic(block.values.topicRef);
@@ -962,27 +1243,47 @@ function normalizeMisconceptions(
       return;
     }
 
-    const ruleId = `misconception-${slugify(
-      `${block.values.topicRef}-${index + 1}`
-    )}`;
-    traces.push({
-      entityType: "misconception_rule",
-      entityKey: ruleId,
-      origin: "source",
-      provenance: dedupeProvenance(block.provenance),
-    });
+    const topicId = topicIdByKey.get(resolved.topic.key) as string;
+    const identity = buildMisconceptionIdentity(topicId, block.values);
+    const existing = misconceptionRules.get(identity);
 
-    misconceptionRules.push({
-      id: ruleId,
-      topicId: topicIdByKey.get(resolved.topic.key) as string,
-      description: block.values.description,
-      triggerPatterns: block.values.triggerPatterns,
-      correctionGuidance: block.values.correctionGuidance,
-      severity: block.values.severity ?? 2,
+    if (existing) {
+      existing.provenance = dedupeProvenance([
+        ...existing.provenance,
+        ...block.provenance,
+      ]);
+      return;
+    }
+
+    const ruleId = `misconception-${slugify(
+      `${topicId}-${block.values.description}-${normalizeStringSet(
+        block.values.triggerPatterns
+      ).join("-")}`
+    )}`;
+
+    misconceptionRules.set(identity, {
+      rule: {
+        id: ruleId,
+        topicId,
+        description: block.values.description,
+        triggerPatterns: block.values.triggerPatterns,
+        correctionGuidance: block.values.correctionGuidance,
+        severity: block.values.severity ?? 2,
+      },
+      provenance: dedupeProvenance(block.provenance),
     });
   });
 
-  return misconceptionRules;
+  return [...misconceptionRules.values()].map(({ rule, provenance }) => {
+    traces.push({
+      entityType: "misconception_rule",
+      entityKey: rule.id,
+      origin: "source",
+      provenance,
+    });
+
+    return rule;
+  });
 }
 
 function normalizeTaskRules(
@@ -992,7 +1293,13 @@ function normalizeTaskRules(
   errors: CurriculumNormalizationIssue[],
   traces: CurriculumNormalizationTrace[]
 ): CurriculumTaskRule[] {
-  const taskRules: CurriculumTaskRule[] = [];
+  const taskRules = new Map<
+    string,
+    {
+      rule: CurriculumTaskRule;
+      provenance: CurriculumDraftCitation[];
+    }
+  >();
 
   draft.taskRules.forEach((block, index) => {
     let topicId: string | undefined;
@@ -1013,28 +1320,45 @@ function normalizeTaskRules(
       topicId = topicIdByKey.get(resolved.topic.key) as string;
     }
 
-    const ruleId = `task-rule-${slugify(
-      `${block.values.taskType}-${block.values.title}-${index + 1}`
-    )}`;
-    traces.push({
-      entityType: "task_rule",
-      entityKey: ruleId,
-      origin: "source",
-      provenance: dedupeProvenance(block.provenance),
-    });
+    const identity = buildTaskRuleIdentity(topicId, block.values);
+    const existing = taskRules.get(identity);
 
-    taskRules.push({
-      id: ruleId,
-      taskType: block.values.taskType,
-      topicId,
-      title: block.values.title,
-      guidance: block.values.guidance,
-      conditions: block.values.conditions,
-      priority: block.values.priority,
+    if (existing) {
+      existing.provenance = dedupeProvenance([
+        ...existing.provenance,
+        ...block.provenance,
+      ]);
+      return;
+    }
+
+    const ruleId = `task-rule-${slugify(
+      `${block.values.taskType}-${topicId ?? "global"}-${block.values.title}`
+    )}`;
+
+    taskRules.set(identity, {
+      rule: {
+        id: ruleId,
+        taskType: block.values.taskType,
+        topicId,
+        title: block.values.title,
+        guidance: block.values.guidance,
+        conditions: block.values.conditions,
+        priority: block.values.priority,
+      },
+      provenance: dedupeProvenance(block.provenance),
     });
   });
 
-  return taskRules;
+  return [...taskRules.values()].map(({ rule, provenance }) => {
+    traces.push({
+      entityType: "task_rule",
+      entityKey: rule.id,
+      origin: "source",
+      provenance,
+    });
+
+    return rule;
+  });
 }
 
 function parseDraftInput(input: unknown): {
@@ -1100,7 +1424,7 @@ export function normalizeCurriculumDraft(
   const qualification = buildQualification(draft, sources, warnings, traces);
   deriveMetadataAndQualification(metadata, qualification, warnings, traces);
 
-  const components = buildComponents(draft, traces);
+  const components = buildComponents(draft, errors, traces);
   const normalizedTopics = normalizeTopics(draft, errors, traces);
   pushMissingRequiredFields(
     metadata,
@@ -1145,8 +1469,7 @@ export function normalizeCurriculumDraft(
     traces
   );
   const sourceMappings = buildSourceMappings(
-    normalizedTopics.topics,
-    draft,
+    normalizedTopics.topicRecords,
     sources
   );
 

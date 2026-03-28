@@ -185,10 +185,12 @@ describe("curriculum CLI", () => {
   it("verifies a legacy seed file through the real CLI path", () => {
     const tempDir = mkdtempSync(path.join(tmpdir(), "curriculum-cli-verify-"));
     const seedPath = path.join(tempDir, "legacy-seed.json");
+    const legacySeed = buildLegacyQualificationSeed();
+    legacySeed.versionCode = "8461-verify";
 
     writeFileSync(
       seedPath,
-      JSON.stringify(buildLegacyQualificationSeed(), null, 2),
+      JSON.stringify(legacySeed, null, 2),
       "utf8"
     );
 

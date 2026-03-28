@@ -24,6 +24,26 @@ async function loadExtractedDraft() {
   return extractionResult.draft!;
 }
 
+function addSupportSource() {
+  return {
+    id: "aqa-biology-support",
+    kind: "support_material" as const,
+    authority: "secondary" as const,
+    title: "AQA Biology support note",
+    uri: "https://example.com/support-note",
+  };
+}
+
+function addSupportCitation(locator: string, excerpt: string) {
+  return {
+    sourceId: "aqa-biology-support",
+    locator,
+    startLine: 1,
+    endLine: 4,
+    excerpt,
+  };
+}
+
 describe("curriculum normalization", () => {
   it("normalizes an extracted draft into a valid candidate package", async () => {
     const draft = await loadExtractedDraft();
@@ -117,5 +137,202 @@ describe("curriculum normalization", () => {
         }),
       ])
     );
+  });
+
+  it("reconciles repeated multi-source components and topics without duplicating them", async () => {
+    const draft = await loadExtractedDraft();
+    draft.provenance.sources.push(addSupportSource());
+    draft.components.push({
+      values: {
+        ...draft.components[0]!.values,
+        durationMinutes: undefined,
+      },
+      provenance: [
+        addSupportCitation(
+          "Support overview",
+          "[component]\nname: Paper 1\ncode: 8461-1h"
+        ),
+      ],
+    });
+    draft.topics.push({
+      values: {
+        name: "Cell Division",
+        parentRef: "4.1",
+        sortOrder: 2,
+        description: "Covers mitosis and the cell cycle.",
+      },
+      provenance: [
+        addSupportCitation(
+          "Support topic note",
+          "[topic]\nname: Cell Division\nparentRef: 4.1"
+        ),
+      ],
+    });
+
+    const result = normalizeCurriculumDraft(draft);
+
+    expect(result.ok).toBe(true);
+    expect(result.package?.components).toHaveLength(2);
+    expect(result.package?.components[0]?.durationMinutes).toBe(105);
+    expect(result.package?.topics).toHaveLength(3);
+    expect(
+      result.package?.topics.find((topic) => topic.id === "topic-4-1-2")
+        ?.description
+    ).toBe("Covers mitosis and the cell cycle.");
+    expect(
+      result.package?.sourceMappings.filter(
+        (mapping) => mapping.topicId === "topic-4-1-2"
+      )
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ sourceId: "aqa-biology-spec" }),
+        expect.objectContaining({ sourceId: "aqa-biology-support" }),
+      ])
+    );
+  });
+
+  it("fails explicitly when repeated component blocks conflict", async () => {
+    const draft = await loadExtractedDraft();
+    draft.provenance.sources.push(addSupportSource());
+    draft.components.push({
+      values: {
+        ...draft.components[0]!.values,
+        totalMarks: 90,
+      },
+      provenance: [
+        addSupportCitation(
+          "Support overview",
+          "[component]\nname: Paper 1\ncode: 8461-1h\ntotalMarks: 90"
+        ),
+      ],
+    });
+
+    const result = normalizeCurriculumDraft(draft);
+
+    expect(result.ok).toBe(false);
+    expect(result.package).toBeNull();
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "normalize.component_conflict",
+          path: "components.code:8461-1h",
+        }),
+      ])
+    );
+  });
+
+  it("fails explicitly when repeated topic blocks conflict", async () => {
+    const draft = await loadExtractedDraft();
+    draft.provenance.sources.push(addSupportSource());
+    draft.topics.push({
+      values: {
+        ...draft.topics[2]!.values,
+        name: "Mitosis",
+      },
+      provenance: [
+        addSupportCitation(
+          "Support topic note",
+          "[topic]\nname: Mitosis\ncode: 4.1.2"
+        ),
+      ],
+    });
+
+    const result = normalizeCurriculumDraft(draft);
+
+    expect(result.ok).toBe(false);
+    expect(result.package).toBeNull();
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "normalize.topic_conflict",
+          path: "topics.code:4.1.2",
+        }),
+      ])
+    );
+  });
+
+  it("fails explicitly when a coded and uncoded topic collapse to the same parent and name", async () => {
+    const draft = await loadExtractedDraft();
+    draft.provenance.sources.push(addSupportSource());
+    draft.topics.push({
+      values: {
+        name: "Cell Division",
+        parentRef: "Cell Biology",
+        sortOrder: 2,
+      },
+      provenance: [
+        addSupportCitation(
+          "Support topic note",
+          "[topic]\nname: Cell Division\nparentRef: Cell Biology"
+        ),
+      ],
+    });
+
+    const result = normalizeCurriculumDraft(draft);
+
+    expect(result.ok).toBe(false);
+    expect(result.package).toBeNull();
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "normalize.topic_duplicate_unresolved",
+          path: "topics.parent:code:4.1|name:cell division",
+        }),
+      ])
+    );
+  });
+
+  it("deduplicates semantically identical task rules and misconceptions", async () => {
+    const draft = await loadExtractedDraft();
+    draft.provenance.sources.push(addSupportSource());
+    draft.misconceptionRules.push({
+      values: {
+        ...draft.misconceptionRules[0]!.values,
+        triggerPatterns: [...draft.misconceptionRules[0]!.values.triggerPatterns]
+          .reverse(),
+      },
+      provenance: [
+        addSupportCitation(
+          "Support misconception note",
+          "[misconception]\ntopicRef: 4.1.2\ndescription: Confuses mitosis with meiosis."
+        ),
+      ],
+    });
+    draft.taskRules.push({
+      values: {
+        ...draft.taskRules[0]!.values,
+        conditions: [...draft.taskRules[0]!.values.conditions].reverse(),
+      },
+      provenance: [
+        addSupportCitation(
+          "Support task note",
+          "[task-rule]\ntaskType: worked_example\ntopicRef: 4.1.2"
+        ),
+      ],
+    });
+
+    const result = normalizeCurriculumDraft(draft);
+
+    expect(result.ok).toBe(true);
+    expect(result.package?.misconceptionRules).toHaveLength(1);
+    expect(result.package?.taskRules).toHaveLength(1);
+    expect(
+      result.traces.filter((trace) => trace.entityType === "misconception_rule")
+    ).toEqual([
+      expect.objectContaining({
+        provenance: expect.arrayContaining([
+          expect.objectContaining({ sourceId: "aqa-biology-spec" }),
+          expect.objectContaining({ sourceId: "aqa-biology-support" }),
+        ]),
+      }),
+    ]);
+    expect(result.traces.filter((trace) => trace.entityType === "task_rule")).toEqual([
+      expect.objectContaining({
+        provenance: expect.arrayContaining([
+          expect.objectContaining({ sourceId: "aqa-biology-spec" }),
+          expect.objectContaining({ sourceId: "aqa-biology-support" }),
+        ]),
+      }),
+    ]);
   });
 });
