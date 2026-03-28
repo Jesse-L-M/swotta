@@ -517,12 +517,20 @@ function validateCrossReferences(
   }
 
   curriculumPackage.sourceMappings.forEach((mapping) => {
-    if (!topicIds.has(mapping.topicId)) {
+    if (mapping.topicId && !topicIds.has(mapping.topicId)) {
       addIssue(
         "error",
         "source_mappings.topic_missing",
         `sourceMappings.${mapping.id}.topicId`,
         `Source mapping ${mapping.id} references unknown topic ${mapping.topicId}`
+      );
+    }
+    if (mapping.componentId && !componentIds.has(mapping.componentId)) {
+      addIssue(
+        "error",
+        "source_mappings.component_missing",
+        `sourceMappings.${mapping.id}.componentId`,
+        `Source mapping ${mapping.id} references unknown component ${mapping.componentId}`
       );
     }
     if (!sourceIds.has(mapping.sourceId)) {
@@ -567,6 +575,35 @@ function validateCrossReferences(
       );
     }
   });
+}
+
+function validateSeedCompatibilityWarnings(
+  curriculumPackage: CurriculumPackage,
+  addIssue: ReturnType<typeof createIssueCollector>["add"]
+): void {
+  const globalTaskRuleCount = curriculumPackage.taskRules.filter(
+    (rule) => !rule.topicId
+  ).length;
+  if (globalTaskRuleCount > 0) {
+    addIssue(
+      "warning",
+      "task_rules.global_not_seeded",
+      "taskRules",
+      `${globalTaskRuleCount} global task rule(s) are review-only in the current curriculum runtime and will not be persisted by seed`
+    );
+  }
+
+  const annotationCount =
+    (curriculumPackage.annotations?.markSchemePatterns.length ?? 0) +
+    (curriculumPackage.annotations?.examTechniquePatterns.length ?? 0);
+  if (annotationCount > 0) {
+    addIssue(
+      "warning",
+      "annotations.review_only",
+      "annotations",
+      `${annotationCount} annotation record(s) are review-only in the current curriculum runtime and will not be persisted by seed`
+    );
+  }
 }
 
 function validateCompleteness(
@@ -719,6 +756,7 @@ export function validateCurriculumPackage(
   validateCollectionUniqueness(curriculumPackage, issueCollector.add);
   validateTopicGraph(curriculumPackage, issueCollector.add);
   validateCrossReferences(curriculumPackage, issueCollector.add);
+  validateSeedCompatibilityWarnings(curriculumPackage, issueCollector.add);
   validateCompleteness(curriculumPackage, issueCollector.add);
 
   return {

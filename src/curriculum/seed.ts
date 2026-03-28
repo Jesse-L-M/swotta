@@ -93,6 +93,22 @@ interface TopicRecordSet {
   idToKey: Map<string, string>;
 }
 
+interface NormalizedComponentRecord {
+  id?: string;
+  code: string;
+  name: string;
+  weightPercent: number;
+  durationMinutes: number | null;
+  totalMarks: number | null;
+  isExam: boolean;
+}
+
+interface ComponentRecordSet {
+  records: NormalizedComponentRecord[];
+  codeToId: Map<string, string>;
+  idToCode: Map<string, string>;
+}
+
 interface NormalizedTaskRuleRecord {
   topicId: string;
   topicKey: string;
@@ -104,8 +120,10 @@ interface NormalizedTaskRuleRecord {
 }
 
 interface NormalizedSyntheticSourceMappingRecord {
-  topicId: string;
-  topicKey: string;
+  topicId: string | null;
+  topicKey: string | null;
+  componentId: string | null;
+  componentCode: string | null;
   filename: string;
   storagePath: string;
   chunkIndex: number;
@@ -683,6 +701,46 @@ async function loadActualTopicRecords(
   return { records, keyToId, idToKey };
 }
 
+async function loadActualComponentRecords(
+  db: Database,
+  qualificationVersionId: string
+): Promise<ComponentRecordSet> {
+  const rows = await db
+    .select({
+      id: assessmentComponents.id,
+      code: assessmentComponents.code,
+      name: assessmentComponents.name,
+      weightPercent: assessmentComponents.weightPercent,
+      durationMinutes: assessmentComponents.durationMinutes,
+      totalMarks: assessmentComponents.totalMarks,
+      isExam: assessmentComponents.isExam,
+    })
+    .from(assessmentComponents)
+    .where(eq(assessmentComponents.qualificationVersionId, qualificationVersionId));
+
+  const records = rows
+    .map((row) => ({
+      id: row.id,
+      code: row.code,
+      name: row.name,
+      weightPercent: row.weightPercent,
+      durationMinutes: row.durationMinutes ?? null,
+      totalMarks: row.totalMarks ?? null,
+      isExam: row.isExam,
+    }))
+    .sort((left, right) => left.code.localeCompare(right.code));
+
+  return {
+    records,
+    codeToId: new Map(
+      records.flatMap((record) => (record.id ? [[record.code, record.id] as const] : []))
+    ),
+    idToCode: new Map(
+      records.flatMap((record) => (record.id ? [[record.id, record.code] as const] : []))
+    ),
+  };
+}
+
 function buildExpectedCoreSnapshot(seedData: LegacyQualificationSeed) {
   const topics = flattenExpectedSeedTopics(seedData.topics);
   const codeToKey = new Map(
@@ -777,26 +835,10 @@ async function loadActualCoreSnapshot(
   db: Database,
   qualificationVersionId: string
 ) {
-  const topicRecords = await loadActualTopicRecords(db, qualificationVersionId);
-
-  const [components, edges, commandWords, questionTypes, misconceptionRules] =
+  const [topicRecords, componentRecords, edges, commandWords, questionTypes, misconceptionRules] =
     await Promise.all([
-      db
-        .select({
-          code: assessmentComponents.code,
-          name: assessmentComponents.name,
-          weightPercent: assessmentComponents.weightPercent,
-          durationMinutes: assessmentComponents.durationMinutes,
-          totalMarks: assessmentComponents.totalMarks,
-          isExam: assessmentComponents.isExam,
-        })
-        .from(assessmentComponents)
-        .where(
-          eq(
-            assessmentComponents.qualificationVersionId,
-            qualificationVersionId
-          )
-        ),
+      loadActualTopicRecords(db, qualificationVersionId),
+      loadActualComponentRecords(db, qualificationVersionId),
       db
         .select({
           fromTopicId: topicEdgesTable.fromTopicId,
@@ -837,7 +879,7 @@ async function loadActualCoreSnapshot(
     ]);
 
   return {
-    components: components
+    components: componentRecords.records
       .map((component) => ({
         code: component.code,
         name: component.name,
@@ -891,6 +933,7 @@ async function loadActualCoreSnapshot(
       .sort((left, right) =>
         JSON.stringify(left).localeCompare(JSON.stringify(right))
       ),
+    componentRecords,
     topicRecords,
   };
 }
@@ -958,6 +1001,25 @@ function buildPackageTopicBindings(
   return bindings;
 }
 
+function buildPackageComponentBindings(
+  curriculumPackage: CurriculumPackage,
+  componentRecords: ComponentRecordSet
+): Map<string, { dbId: string; componentCode: string }> {
+  const bindings = new Map<string, { dbId: string; componentCode: string }>();
+
+  for (const component of curriculumPackage.components) {
+    const dbId = componentRecords.codeToId.get(component.code);
+    if (!dbId) {
+      throw new Error(
+        `Seeded component list did not contain expected component code ${component.code} from package component ${component.id}`
+      );
+    }
+    bindings.set(component.id, { dbId, componentCode: component.code });
+  }
+
+  return bindings;
+}
+
 function buildExpectedTaskRuleRecords(
   curriculumPackage: CurriculumPackage,
   topicBindings: Map<string, { dbId: string; topicKey: string }>
@@ -1017,7 +1079,8 @@ function buildExpectedTaskRuleRecords(
 function buildExpectedSyntheticSourceMappingRecords(
   curriculumPackage: CurriculumPackage,
   qualificationVersionId: string,
-  topicBindings: Map<string, { dbId: string; topicKey: string }>
+  topicBindings: Map<string, { dbId: string; topicKey: string }>,
+  componentBindings: Map<string, { dbId: string; componentCode: string }>
 ): NormalizedSyntheticSourceMappingRecord[] {
   const sourceById = new Map(
     curriculumPackage.provenance.sources.map((source) => [source.id, source])
@@ -1032,10 +1095,20 @@ function buildExpectedSyntheticSourceMappingRecords(
       );
     }
 
-    const binding = topicBindings.get(mapping.topicId);
-    if (!binding) {
+    const topicBinding = mapping.topicId
+      ? topicBindings.get(mapping.topicId)
+      : null;
+    if (mapping.topicId && !topicBinding) {
       throw new Error(
         `Cannot seed source mapping ${mapping.id} because topic ${mapping.topicId} could not be matched to seeded data`
+      );
+    }
+    const componentBinding = mapping.componentId
+      ? componentBindings.get(mapping.componentId)
+      : null;
+    if (mapping.componentId && !componentBinding) {
+      throw new Error(
+        `Cannot seed source mapping ${mapping.id} because component ${mapping.componentId} could not be matched to seeded data`
       );
     }
 
@@ -1043,8 +1116,10 @@ function buildExpectedSyntheticSourceMappingRecords(
     chunkIndexBySourceId.set(mapping.sourceId, chunkIndex + 1);
 
     return {
-      topicId: binding.dbId,
-      topicKey: binding.topicKey,
+      topicId: topicBinding?.dbId ?? null,
+      topicKey: topicBinding?.topicKey ?? null,
+      componentId: componentBinding?.dbId ?? null,
+      componentCode: componentBinding?.componentCode ?? null,
       filename: curriculumSupportFilename(mapping.sourceId),
       storagePath: curriculumSupportStoragePath(
         qualificationVersionId,
@@ -1065,10 +1140,12 @@ function buildExpectedSyntheticSourceMappingRecords(
     JSON.stringify({
       ...left,
       topicId: undefined,
+      componentId: undefined,
     }).localeCompare(
       JSON.stringify({
         ...right,
         topicId: undefined,
+        componentId: undefined,
       })
     )
   );
@@ -1118,11 +1195,13 @@ async function loadActualTaskRuleRecords(
 async function loadActualSyntheticSourceMappingRecords(
   db: Database,
   collectionId: string,
-  topicRecords: TopicRecordSet
+  topicRecords: TopicRecordSet,
+  componentRecords: ComponentRecordSet
 ): Promise<NormalizedSyntheticSourceMappingRecord[]> {
   const rows = await db
     .select({
       topicId: sourceMappingsTable.topicId,
+      componentId: sourceMappingsTable.componentId,
       filename: sourceFiles.filename,
       storagePath: sourceFiles.storagePath,
       chunkIndex: sourceChunks.chunkIndex,
@@ -1137,11 +1216,16 @@ async function loadActualSyntheticSourceMappingRecords(
 
   return rows
     .map((row) => ({
-      topicId: row.topicId ?? "",
+      topicId: row.topicId ?? null,
       topicKey:
         row.topicId && topicRecords.idToKey.has(row.topicId)
           ? topicRecords.idToKey.get(row.topicId) ?? row.topicId
-          : row.topicId ?? "",
+          : row.topicId ?? null,
+      componentId: row.componentId ?? null,
+      componentCode:
+        row.componentId && componentRecords.idToCode.has(row.componentId)
+          ? componentRecords.idToCode.get(row.componentId) ?? row.componentId
+          : row.componentId ?? null,
       filename: row.filename,
       storagePath: row.storagePath,
       chunkIndex: row.chunkIndex,
@@ -1153,10 +1237,12 @@ async function loadActualSyntheticSourceMappingRecords(
       JSON.stringify({
         ...left,
         topicId: undefined,
+        componentId: undefined,
       }).localeCompare(
         JSON.stringify({
           ...right,
           topicId: undefined,
+          componentId: undefined,
         })
       )
     );
@@ -1237,7 +1323,8 @@ async function findSyntheticSourceCollectionId(
 async function loadSyntheticSourceCollectionState(
   db: Database,
   qualificationVersionId: string,
-  topicRecords: TopicRecordSet
+  topicRecords: TopicRecordSet,
+  componentRecords: ComponentRecordSet
 ): Promise<SyntheticSourceCollectionState> {
   const collectionId = await findSyntheticSourceCollectionId(
     db,
@@ -1262,7 +1349,12 @@ async function loadSyntheticSourceCollectionState(
       .from(sourceChunks)
       .innerJoin(sourceFiles, eq(sourceChunks.fileId, sourceFiles.id))
       .where(eq(sourceFiles.collectionId, collectionId)),
-    loadActualSyntheticSourceMappingRecords(db, collectionId, topicRecords),
+    loadActualSyntheticSourceMappingRecords(
+      db,
+      collectionId,
+      topicRecords,
+      componentRecords
+    ),
   ]);
 
   return {
@@ -1419,6 +1511,7 @@ async function insertSyntheticSourceMappings(
       await db.insert(sourceMappingsTable).values({
         chunkId: chunk.id,
         topicId: row.topicId,
+        componentId: row.componentId,
         confidence: row.confidence,
         mappingMethod: row.mappingMethod,
       });
@@ -1439,6 +1532,10 @@ async function ensurePackageRuntimeArtifacts(
   const topicBindings = buildPackageTopicBindings(
     prepared.curriculumPackage,
     actualCoreSnapshot.topicRecords
+  );
+  const componentBindings = buildPackageComponentBindings(
+    prepared.curriculumPackage,
+    actualCoreSnapshot.componentRecords
   );
 
   const expectedTaskRules = buildExpectedTaskRuleRecords(
@@ -1484,7 +1581,8 @@ async function ensurePackageRuntimeArtifacts(
   const expectedSourceMappings = buildExpectedSyntheticSourceMappingRecords(
     prepared.curriculumPackage,
     qualificationVersionId,
-    topicBindings
+    topicBindings,
+    componentBindings
   );
   if (expectedSourceMappings.length === 0) {
     return;
@@ -1493,13 +1591,14 @@ async function ensurePackageRuntimeArtifacts(
   const sourceCollectionState = await loadSyntheticSourceCollectionState(
     db,
     qualificationVersionId,
-    actualCoreSnapshot.topicRecords
+    actualCoreSnapshot.topicRecords,
+    actualCoreSnapshot.componentRecords
   );
   const comparableActualSourceMappings = sourceCollectionState.mappings.map(
-    ({ topicId: _topicId, ...mapping }) => mapping
+    ({ topicId: _topicId, componentId: _componentId, ...mapping }) => mapping
   );
   const comparableExpectedSourceMappings = expectedSourceMappings.map(
-    ({ topicId: _topicId, ...mapping }) => mapping
+    ({ topicId: _topicId, componentId: _componentId, ...mapping }) => mapping
   );
   const expectedSourceFileCount = new Set(
     expectedSourceMappings.map((mapping) => mapping.filename)
@@ -1578,7 +1677,8 @@ async function assertPreparedCurriculumMatchesDb(
     const sourceCollectionState = await loadSyntheticSourceCollectionState(
       db,
       qualificationVersionId,
-      actual.topicRecords
+      actual.topicRecords,
+      actual.componentRecords
     );
     if (
       sourceCollectionState.collectionId ||
@@ -1598,6 +1698,10 @@ async function assertPreparedCurriculumMatchesDb(
     prepared.curriculumPackage,
     actual.topicRecords
   );
+  const componentBindings = buildPackageComponentBindings(
+    prepared.curriculumPackage,
+    actual.componentRecords
+  );
   const expectedTaskRules = buildExpectedTaskRuleRecords(
     prepared.curriculumPackage,
     topicBindings
@@ -1616,7 +1720,8 @@ async function assertPreparedCurriculumMatchesDb(
   const expectedSourceMappings = buildExpectedSyntheticSourceMappingRecords(
     prepared.curriculumPackage,
     qualificationVersionId,
-    topicBindings
+    topicBindings,
+    componentBindings
   );
 
   if (expectedSourceMappings.length === 0) {
@@ -1630,12 +1735,17 @@ async function assertPreparedCurriculumMatchesDb(
   const actualSourceMappings = await loadActualSyntheticSourceMappingRecords(
     db,
     collectionId,
-    actual.topicRecords
+    actual.topicRecords,
+    actual.componentRecords
   );
   compareCollections(
     "synthetic source mappings",
-    actualSourceMappings.map(({ topicId: _topicId, ...mapping }) => mapping),
-    expectedSourceMappings.map(({ topicId: _topicId, ...mapping }) => mapping)
+    actualSourceMappings.map(
+      ({ topicId: _topicId, componentId: _componentId, ...mapping }) => mapping
+    ),
+    expectedSourceMappings.map(
+      ({ topicId: _topicId, componentId: _componentId, ...mapping }) => mapping
+    )
   );
 }
 

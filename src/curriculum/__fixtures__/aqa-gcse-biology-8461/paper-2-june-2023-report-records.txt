@@ -47,30 +47,6 @@ correctionGuidance: Tissue culture grows plant cells or small tissue samples by 
 severity: 2
 
 [task-rule]
-locator: General / Particular problems
-taskType: mixed_practice
-title: Make compare answers explicitly comparative
-guidance: When the command word is Compare, force paired statements that mention both items in the same sentence so learners do not describe only one side.
-conditions: command word compare || structured question || prior non-comparative answer
-priority: high
-
-[task-rule]
-locator: General / Particular problems
-taskType: timed_problems
-title: Quote the graph or table data the question is pointing at
-guidance: Use timed drills that require learners to pull exact comparative values or months from graphs and tables before they write the sentence that earns the mark.
-conditions: graph question || table question || command word describe
-priority: high
-
-[task-rule]
-locator: General / Particular problems
-taskType: essay_planning
-title: Plan depth before breadth in extended prose
-guidance: For open-response items, plan a short cause-effect structure first so the answer develops a few linked biological points instead of listing many disconnected facts.
-conditions: open-response question || extended prose || command word explain
-priority: high
-
-[task-rule]
 locator: Question 02.4 and 02.5
 taskType: worked_example
 topicRef: 4.5.2.3

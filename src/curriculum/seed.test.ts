@@ -136,6 +136,35 @@ describe("curriculum seed bridge", () => {
     expect(await db.select().from(sourceMappings)).toHaveLength(1);
   });
 
+  it("persists component-targeted synthetic source mappings", async () => {
+    const db = getTestDb();
+    const input = buildApprovedCurriculumPackage();
+    input.sourceMappings.push({
+      id: "source-mapping-paper-2-guidance",
+      sourceId: "specification",
+      componentId: "component-paper-2",
+      locator: "Assessment overview",
+      excerptHint: "Applies across both papers",
+      confidence: "high",
+    });
+
+    await seedCurriculumInput(input, { db });
+
+    const seededSourceMappings = await db
+      .select({
+        topicId: sourceMappings.topicId,
+        componentId: sourceMappings.componentId,
+      })
+      .from(sourceMappings);
+
+    expect(seededSourceMappings).toHaveLength(2);
+    expect(
+      seededSourceMappings.some(
+        (mapping) => mapping.componentId !== null && mapping.topicId === null
+      )
+    ).toBe(true);
+  });
+
   it("rejects a package when existing seeded content for the version differs", async () => {
     const db = getTestDb();
     const original = buildApprovedCurriculumPackage();

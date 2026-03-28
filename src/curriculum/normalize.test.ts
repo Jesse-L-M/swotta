@@ -237,6 +237,46 @@ describe("curriculum normalization", () => {
     );
   });
 
+  it("stabilizes misconception ids against prose edits when provenance stays the same", async () => {
+    const draft = await loadExtractedDraft();
+
+    const firstResult = normalizeCurriculumDraft(draft);
+    expect(firstResult.ok).toBe(true);
+
+    draft.misconceptionRules[0]!.values.description =
+      "Reworded misconception without changing the cited source anchor.";
+    draft.misconceptionRules[0]!.values.correctionGuidance =
+      "Reworded correction guidance without changing the cited source anchor.";
+
+    const secondResult = normalizeCurriculumDraft(draft);
+
+    expect(secondResult.ok).toBe(true);
+    expect(secondResult.package?.misconceptionRules[0]?.id).toBe(
+      firstResult.package?.misconceptionRules[0]?.id
+    );
+  });
+
+  it("maps command-word provenance onto assessment components when no finer runtime target exists", async () => {
+    const draft = await loadExtractedDraft();
+
+    const result = normalizeCurriculumDraft(draft);
+
+    expect(result.ok).toBe(true);
+    expect(
+      result.package?.sourceMappings.filter(
+        (mapping) =>
+          mapping.sourceId === "aqa-biology-spec" &&
+          mapping.componentId === "component-8461-1h"
+      )
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          locator: "Command word glossary",
+        }),
+      ])
+    );
+  });
+
   it("fails explicitly when repeated component blocks conflict", async () => {
     const draft = await loadExtractedDraft();
     draft.provenance.sources.push(addSupportSource());

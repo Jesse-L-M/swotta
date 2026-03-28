@@ -101,6 +101,15 @@ interface NormalizedTopicRecord {
   provenance: CurriculumDraftCitation[];
 }
 
+interface SourceMappingCandidate {
+  sourceId: string;
+  topicId?: string;
+  componentId?: string;
+  locator: string;
+  excerptHint?: string;
+  confidence: CurriculumConfidence;
+}
+
 interface MergeFieldSpec<TValue> {
   path: string;
   getValue: (values: TValue) => unknown;
@@ -1122,24 +1131,177 @@ function confidenceForSource(
   return "low";
 }
 
-function buildSourceMappings(
-  topicRecords: NormalizedTopicRecord[],
-  sources: Map<string, SourceContext>
-): CurriculumSourceMappingHint[] {
-  return topicRecords.flatMap((record) =>
-    dedupeProvenance(record.provenance).map(
-      (citation, citationIndex) => ({
-        id: `source-mapping-${slugify(
-          `${citation.sourceId}-${record.topic.id}-${citationIndex + 1}`
-        )}`,
-        sourceId: citation.sourceId,
-        topicId: record.topic.id,
-        locator: citation.locator,
-        excerptHint: excerptHintFromCitation(citation),
-        confidence: confidenceForSource(sources.get(citation.sourceId)?.source),
-      })
+function buildSourceMappingKey(
+  mapping: Pick<
+    SourceMappingCandidate,
+    "sourceId" | "topicId" | "componentId" | "locator"
+  >
+): string {
+  return [
+    mapping.sourceId,
+    mapping.topicId ?? "",
+    mapping.componentId ?? "",
+    mapping.locator,
+  ].join("|");
+}
+
+function buildSourceMappingBaseId(
+  mapping: Pick<
+    SourceMappingCandidate,
+    "sourceId" | "topicId" | "componentId" | "locator"
+  >
+): string {
+  const targetKey = mapping.topicId
+    ? `topic-${mapping.topicId}`
+    : `component-${mapping.componentId}`;
+  return `source-mapping-${slugify(
+    `${mapping.sourceId}-${targetKey}-${mapping.locator}`
+  )}`;
+}
+
+function buildMisconceptionBaseId(
+  topicId: string,
+  provenance: CurriculumDraftCitation[]
+): string {
+  const citations = dedupeProvenance(provenance).sort((left, right) =>
+    JSON.stringify([
+      left.sourceId,
+      left.locator,
+      left.startLine ?? 0,
+      left.endLine ?? 0,
+    ]).localeCompare(
+      JSON.stringify([
+        right.sourceId,
+        right.locator,
+        right.startLine ?? 0,
+        right.endLine ?? 0,
+      ])
     )
   );
+  const primaryCitation = citations[0];
+
+  return `misconception-${slugify(
+    `${topicId}-${primaryCitation ? `${primaryCitation.sourceId}-${primaryCitation.locator}` : topicId}`
+  )}`;
+}
+
+function resolveSourceMappingTargets(
+  trace: CurriculumNormalizationTrace,
+  components: CurriculumAssessmentComponent[],
+  misconceptionRules: Map<string, string>,
+  taskRules: Map<string, string>
+): Array<Pick<SourceMappingCandidate, "topicId" | "componentId">> {
+  switch (trace.entityType) {
+    case "topic":
+      return [{ topicId: trace.entityKey }];
+    case "component":
+      return [{ componentId: trace.entityKey }];
+    case "misconception_rule": {
+      const topicId = misconceptionRules.get(trace.entityKey);
+      return topicId ? [{ topicId }] : [];
+    }
+    case "task_rule": {
+      const topicId = taskRules.get(trace.entityKey);
+      return topicId ? [{ topicId }] : [];
+    }
+    case "command_word":
+      return components.map((component) => ({ componentId: component.id }));
+    default:
+      return [];
+  }
+}
+
+function buildSourceMappings(
+  traces: CurriculumNormalizationTrace[],
+  components: CurriculumAssessmentComponent[],
+  misconceptionRules: CurriculumMisconceptionRule[],
+  taskRules: CurriculumTaskRule[],
+  sources: Map<string, SourceContext>
+): CurriculumSourceMappingHint[] {
+  const misconceptionRuleTopicIds = new Map(
+    misconceptionRules.map((rule) => [rule.id, rule.topicId] as const)
+  );
+  const taskRuleTopicIds = new Map(
+    taskRules.flatMap((rule) => (rule.topicId ? [[rule.id, rule.topicId] as const] : []))
+  );
+  const dedupedMappings = new Map<string, SourceMappingCandidate>();
+
+  traces.forEach((trace) => {
+    if (trace.origin !== "source") {
+      return;
+    }
+
+    const targets = resolveSourceMappingTargets(
+      trace,
+      components,
+      misconceptionRuleTopicIds,
+      taskRuleTopicIds
+    );
+    if (targets.length === 0) {
+      return;
+    }
+
+    dedupeProvenance(trace.provenance).forEach((citation) => {
+      const excerptHint = excerptHintFromCitation(citation);
+      const confidence = confidenceForSource(sources.get(citation.sourceId)?.source);
+
+      targets.forEach((target) => {
+        const candidate: SourceMappingCandidate = {
+          sourceId: citation.sourceId,
+          ...target,
+          locator: citation.locator,
+          excerptHint,
+          confidence,
+        };
+        const key = buildSourceMappingKey(candidate);
+        const existing = dedupedMappings.get(key);
+
+        if (!existing) {
+          dedupedMappings.set(key, candidate);
+          return;
+        }
+
+        if (!existing.excerptHint && excerptHint) {
+          existing.excerptHint = excerptHint;
+        }
+      });
+    });
+  });
+
+  const sortedMappings = [...dedupedMappings.values()].sort((left, right) =>
+    JSON.stringify([
+      left.sourceId,
+      left.topicId ?? "",
+      left.componentId ?? "",
+      left.locator,
+      left.excerptHint ?? "",
+    ]).localeCompare(
+      JSON.stringify([
+        right.sourceId,
+        right.topicId ?? "",
+        right.componentId ?? "",
+        right.locator,
+        right.excerptHint ?? "",
+      ])
+    )
+  );
+  const baseIdCounts = new Map<string, number>();
+
+  return sortedMappings.map((mapping) => {
+    const baseId = buildSourceMappingBaseId(mapping);
+    const nextCount = (baseIdCounts.get(baseId) ?? 0) + 1;
+    baseIdCounts.set(baseId, nextCount);
+
+    return {
+      id: nextCount === 1 ? baseId : `${baseId}-${nextCount}`,
+      sourceId: mapping.sourceId,
+      topicId: mapping.topicId,
+      componentId: mapping.componentId,
+      locator: mapping.locator,
+      excerptHint: mapping.excerptHint,
+      confidence: mapping.confidence,
+    };
+  });
 }
 
 function normalizeEdges(
@@ -1224,7 +1386,7 @@ function normalizeMisconceptions(
   const misconceptionRules = new Map<
     string,
     {
-      rule: CurriculumMisconceptionRule;
+      rule: Omit<CurriculumMisconceptionRule, "id">;
       provenance: CurriculumDraftCitation[];
     }
   >();
@@ -1255,15 +1417,8 @@ function normalizeMisconceptions(
       return;
     }
 
-    const ruleId = `misconception-${slugify(
-      `${topicId}-${block.values.description}-${normalizeStringSet(
-        block.values.triggerPatterns
-      ).join("-")}`
-    )}`;
-
     misconceptionRules.set(identity, {
       rule: {
-        id: ruleId,
         topicId,
         description: block.values.description,
         triggerPatterns: block.values.triggerPatterns,
@@ -1274,15 +1429,49 @@ function normalizeMisconceptions(
     });
   });
 
-  return [...misconceptionRules.values()].map(({ rule, provenance }) => {
+  const sortedRules = [...misconceptionRules.values()].sort((left, right) =>
+    JSON.stringify([
+      left.rule.topicId,
+      left.provenance.map((citation) => [
+        citation.sourceId,
+        citation.locator,
+        citation.startLine ?? 0,
+        citation.endLine ?? 0,
+      ]),
+      left.rule.description,
+    ]).localeCompare(
+      JSON.stringify([
+        right.rule.topicId,
+        right.provenance.map((citation) => [
+          citation.sourceId,
+          citation.locator,
+          citation.startLine ?? 0,
+          citation.endLine ?? 0,
+        ]),
+        right.rule.description,
+      ])
+    )
+  );
+  const baseIdCounts = new Map<string, number>();
+
+  return sortedRules.map(({ rule, provenance }) => {
+    const baseId = buildMisconceptionBaseId(rule.topicId, provenance);
+    const nextCount = (baseIdCounts.get(baseId) ?? 0) + 1;
+    baseIdCounts.set(baseId, nextCount);
+    const ruleId = nextCount === 1 ? baseId : `${baseId}-${nextCount}`;
+    const normalizedRule: CurriculumMisconceptionRule = {
+      id: ruleId,
+      ...rule,
+    };
+
     traces.push({
       entityType: "misconception_rule",
-      entityKey: rule.id,
+      entityKey: normalizedRule.id,
       origin: "source",
       provenance,
     });
 
-    return rule;
+    return normalizedRule;
   });
 }
 
@@ -1477,7 +1666,10 @@ export function normalizeCurriculumDraft(
     traces
   );
   const sourceMappings = buildSourceMappings(
-    normalizedTopics.topicRecords,
+    traces,
+    components,
+    misconceptionRules,
+    taskRules,
     sources
   );
 

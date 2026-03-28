@@ -11,7 +11,13 @@ describe("curriculum package validation", () => {
 
     expect(report.ok).toBe(true);
     expect(report.errors).toEqual([]);
-    expect(report.warnings).toEqual([]);
+    expect(report.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "annotations.review_only",
+        }),
+      ])
+    );
     expect(report.stats.topics).toBe(3);
     expect(report.stats.sourceMappings).toBe(1);
   });
@@ -111,6 +117,33 @@ describe("curriculum package validation", () => {
     );
   });
 
+  it("accepts component-targeted source mappings and rejects missing components", () => {
+    const curriculumPackage = buildApprovedCurriculumPackage();
+    curriculumPackage.sourceMappings[0] = {
+      ...curriculumPackage.sourceMappings[0]!,
+      topicId: undefined,
+      componentId: "component-paper-2",
+    };
+
+    const validReport = validateCurriculumPackage(curriculumPackage);
+
+    expect(validReport.ok).toBe(true);
+    expect(validReport.errors).toEqual([]);
+
+    curriculumPackage.sourceMappings[0]!.componentId = "component-missing";
+
+    const invalidReport = validateCurriculumPackage(curriculumPackage);
+
+    expect(invalidReport.ok).toBe(false);
+    expect(invalidReport.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "source_mappings.component_missing",
+        }),
+      ])
+    );
+  });
+
   it("rejects unknown fields instead of silently stripping them", () => {
     const curriculumPackage = buildApprovedCurriculumPackage() as Record<
       string,
@@ -182,6 +215,32 @@ describe("curriculum package validation", () => {
       expect.arrayContaining([
         expect.objectContaining({
           code: "task_rules.topic_rule_limit",
+        }),
+      ])
+    );
+  });
+
+  it("warns when packages carry global task rules that seed cannot persist", () => {
+    const curriculumPackage = buildApprovedCurriculumPackage();
+    curriculumPackage.taskRules.push({
+      id: "task-rule-global-compare",
+      taskType: "mixed_practice",
+      title: "Global compare drill",
+      guidance: "Force paired comparisons before free response.",
+      conditions: ["command word compare"],
+      priority: "medium",
+    });
+
+    const report = validateCurriculumPackage(curriculumPackage);
+
+    expect(report.ok).toBe(true);
+    expect(report.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "task_rules.global_not_seeded",
+        }),
+        expect.objectContaining({
+          code: "annotations.review_only",
         }),
       ])
     );

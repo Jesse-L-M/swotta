@@ -50,7 +50,7 @@ async function buildCandidatePackage(): Promise<CandidateCurriculumPackage> {
     commandWords: 28,
     questionTypes: 4,
     misconceptionRules: 12,
-    taskRules: 12,
+    taskRules: 9,
   });
   expect(extraction.draft).not.toBeNull();
 
@@ -62,73 +62,9 @@ async function buildCandidatePackage(): Promise<CandidateCurriculumPackage> {
   expect(normalization.validation?.ok).toBe(true);
   expect(normalization.package).not.toBeNull();
 
-  const candidatePackage = structuredClone(
-    normalization.package
+  const candidatePackage = JSON.parse(
+    JSON.stringify(normalization.package)
   ) as CandidateCurriculumPackage;
-
-  candidatePackage.metadata.updatedAt = "2026-03-28T20:15:00.000Z";
-  candidatePackage.review = {
-    status: "in_review",
-    reviewers: [
-      {
-        name: "Codex curriculum rebuild",
-        role: "ai",
-        outcome: "commented",
-        reviewedAt: "2026-03-28T20:15:00.000Z",
-        notes:
-          "Rebuilt from official AQA specification pages, AQA command-word guidance, and June 2023 examiner reports. Candidate awaits human review before approval or reference promotion.",
-      },
-    ],
-  };
-  candidatePackage.annotations = {
-    markSchemePatterns: [
-      {
-        id: "mark-scheme-comparative-pairing",
-        label: "Comparative pairing",
-        description:
-          "Comparative questions reward paired similarities or differences, not isolated facts about only one side.",
-        questionTypeId: "question-type-structured",
-      },
-      {
-        id: "mark-scheme-graph-precision",
-        label: "Graph precision",
-        description:
-          "Graph marks depend on sensible scales, precise plotted points, and appropriate best-fit lines or curves.",
-        questionTypeId: "question-type-structured",
-      },
-      {
-        id: "mark-scheme-causal-chain",
-        label: "Causal chain",
-        description:
-          "Open responses gain credit when biological mechanisms are linked into a clear cause-effect chain.",
-        questionTypeId: "question-type-open-response",
-      },
-    ],
-    examTechniquePatterns: [
-      {
-        id: "exam-technique-compare-paired",
-        label: "Compare in pairs",
-        description:
-          "When the command word is Compare, write matched statements that mention both items explicitly.",
-        commandWordId: "command-word-compare",
-      },
-      {
-        id: "exam-technique-explain-consequence",
-        label: "Explain then consequence",
-        description:
-          "For Explain, state the mechanism first and then connect it to the biological outcome.",
-        commandWordId: "command-word-explain",
-      },
-      {
-        id: "exam-technique-evaluate-judgement",
-        label: "Evaluate with judgement",
-        description:
-          "For Evaluate, weigh evidence for and against before reaching a final judgement.",
-        commandWordId: "command-word-evaluate",
-      },
-    ],
-  };
-
   const validation = validateCurriculumPackage(candidatePackage);
   expect(validation.ok).toBe(true);
   expect(validation.errors).toEqual([]);
@@ -179,18 +115,32 @@ describe("AQA GCSE Biology rebuilt package", () => {
     expect(
       builtPackage.topics.some((topic) => topic.code === "4.8")
     ).toBe(true);
-    expect(builtPackage.sourceMappings).toHaveLength(126);
+    expect(builtPackage.sourceMappings).toHaveLength(198);
     expect(builtPackage.commandWords).toHaveLength(28);
     expect(builtPackage.misconceptionRules).toHaveLength(12);
-    expect(builtPackage.taskRules).toHaveLength(12);
-    expect(builtPackage.taskRules.filter((rule) => !rule.topicId)).toHaveLength(3);
+    expect(builtPackage.taskRules).toHaveLength(9);
+    expect(builtPackage.taskRules.filter((rule) => !rule.topicId)).toHaveLength(0);
+    expect(builtPackage.metadata.updatedAt).toBeUndefined();
+    expect(builtPackage.review.status).toBe("unreviewed");
+    expect(builtPackage.review.reviewers).toEqual([]);
+    expect(builtPackage.annotations).toBeUndefined();
+    expect(
+      new Set(builtPackage.sourceMappings.map((mapping) => mapping.sourceId))
+    ).toEqual(
+      new Set([
+        "aqa-biology-8461-spec",
+        "aqa-science-command-words",
+        "aqa-8461-1h-jun23-report",
+        "aqa-8461-2h-jun23-report",
+      ])
+    );
 
     const rendered = renderCurriculumReviewReport(builtPackage);
     expect(rendered.report.ok).toBe(true);
     expect(rendered.text).toBe(committedReport.trimEnd());
     expect(rendered.text).toContain("## Topic Tree Summary");
     expect(rendered.text).toContain("- 4.8 Key ideas");
-    expect(rendered.text).toContain("## Annotations");
+    expect(rendered.text).toContain("Source mappings (198 mappings)");
   });
 
   it("exercises verify and seed with a test-only approval wrapper", async () => {
@@ -207,10 +157,7 @@ describe("AQA GCSE Biology rebuilt package", () => {
     expect(seeded.normalizedFrom).toBe("package");
     expect(seeded.topicsCreated).toBe(126);
     expect(seeded.edgesCreated).toBe(13);
-    expect(seeded.adapterNotes.map((note) => note.code)).toEqual([
-      "annotations_not_seeded",
-      "global_task_rules_not_seeded",
-    ]);
+    expect(seeded.adapterNotes).toEqual([]);
 
     const seededTopics = await db
       .select()
@@ -242,7 +189,7 @@ describe("AQA GCSE Biology rebuilt package", () => {
     expect(seededCommandWords).toHaveLength(28);
     expect(seededQuestionTypes).toHaveLength(4);
     expect(seededTaskRules).toHaveLength(9);
-    expect(seededSourceMappings).toHaveLength(126);
+    expect(seededSourceMappings).toHaveLength(198);
     expect(seededMisconceptions).toHaveLength(12);
   });
 });
