@@ -1,9 +1,14 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { formatSeedResult, seedCurriculumFile } from "./seed";
 import {
   formatValidationReport,
   validateCurriculumPackage,
 } from "./validation";
+import {
+  formatVerificationResult,
+  verifyCurriculumInput,
+} from "./verify";
 
 export const curriculumCommandNames = [
   "validate",
@@ -38,11 +43,11 @@ export const curriculumCommandDefinitions: CurriculumCommandDefinition[] = [
   },
   {
     name: "seed",
-    description: "Reserved command surface for idempotent package seeding",
+    description: "Seed an approved/reference package or legacy seed via the real loader",
   },
   {
     name: "verify",
-    description: "Reserved command surface for downstream curriculum checks",
+    description: "Seed and run downstream curriculum verification checks",
   },
   {
     name: "extract",
@@ -63,6 +68,9 @@ function formatHelpText(): string {
       (definition) =>
         `  ${definition.name.padEnd(13)} ${definition.description}`
     ),
+    "",
+    "Seed and verify:",
+    "  <path>             Path to an approved/reference package JSON or legacy seed JSON",
     "",
     "Validate options:",
     "  --format=json    Print the validation report as JSON",
@@ -123,6 +131,81 @@ async function runValidateCommand(
   };
 }
 
+async function runSeedCommand(
+  args: string[]
+): Promise<CurriculumCommandResult> {
+  const filePath = args.find((arg) => !arg.startsWith("--"));
+
+  if (!filePath) {
+    return {
+      exitCode: 1,
+      stdout: "",
+      stderr: "seed requires a path to a JSON file",
+    };
+  }
+
+  try {
+    const result = await seedCurriculumFile(filePath);
+    return {
+      exitCode: 0,
+      stdout: `${formatSeedResult(result)}\n`,
+      stderr: "",
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      exitCode: 1,
+      stdout: "",
+      stderr: message,
+    };
+  }
+}
+
+async function runVerifyCommand(
+  args: string[]
+): Promise<CurriculumCommandResult> {
+  const filePath = args.find((arg) => !arg.startsWith("--"));
+
+  if (!filePath) {
+    return {
+      exitCode: 1,
+      stdout: "",
+      stderr: "verify requires a path to a JSON file",
+    };
+  }
+
+  const absolutePath = path.resolve(process.cwd(), filePath);
+  let input: unknown;
+
+  try {
+    const fileContents = await readFile(absolutePath, "utf8");
+    input = JSON.parse(fileContents) as unknown;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      exitCode: 1,
+      stdout: "",
+      stderr: `Unable to read ${filePath}: ${message}`,
+    };
+  }
+
+  try {
+    const result = await verifyCurriculumInput(input);
+    return {
+      exitCode: result.ok ? 0 : 1,
+      stdout: `${formatVerificationResult(result)}\n`,
+      stderr: "",
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      exitCode: 1,
+      stdout: "",
+      stderr: message,
+    };
+  }
+}
+
 export async function runCurriculumCommand(
   argv: string[]
 ): Promise<CurriculumCommandResult> {
@@ -139,9 +222,11 @@ export async function runCurriculumCommand(
   switch (command) {
     case "validate":
       return runValidateCommand(args);
-    case "review-report":
     case "seed":
+      return runSeedCommand(args);
     case "verify":
+      return runVerifyCommand(args);
+    case "review-report":
     case "extract":
     case "normalize":
       return notImplementedCommand(command);
