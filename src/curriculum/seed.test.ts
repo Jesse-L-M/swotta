@@ -13,7 +13,7 @@ import {
   topics,
 } from "@/db/schema";
 import { getTopicTree } from "@/engine/curriculum";
-import { seedCurriculumInput } from "./seed";
+import { buildLegacySeedFromCurriculumPackage, seedCurriculumInput } from "./seed";
 import {
   buildApprovedCurriculumPackage,
   buildLegacyQualificationSeed,
@@ -136,6 +136,35 @@ describe("curriculum seed bridge", () => {
     expect(await db.select().from(sourceMappings)).toHaveLength(1);
   });
 
+  it("persists component-targeted synthetic source mappings", async () => {
+    const db = getTestDb();
+    const input = buildApprovedCurriculumPackage();
+    input.sourceMappings.push({
+      id: "source-mapping-paper-2-guidance",
+      sourceId: "specification",
+      componentId: "component-paper-2",
+      locator: "Assessment overview",
+      excerptHint: "Applies across both papers",
+      confidence: "high",
+    });
+
+    await seedCurriculumInput(input, { db });
+
+    const seededSourceMappings = await db
+      .select({
+        topicId: sourceMappings.topicId,
+        componentId: sourceMappings.componentId,
+      })
+      .from(sourceMappings);
+
+    expect(seededSourceMappings).toHaveLength(2);
+    expect(
+      seededSourceMappings.some(
+        (mapping) => mapping.componentId !== null && mapping.topicId === null
+      )
+    ).toBe(true);
+  });
+
   it("rejects a package when existing seeded content for the version differs", async () => {
     const db = getTestDb();
     const original = buildApprovedCurriculumPackage();
@@ -146,6 +175,18 @@ describe("curriculum seed bridge", () => {
 
     await expect(seedCurriculumInput(changed, { db })).rejects.toThrow(
       "question types"
+    );
+  });
+
+  it("fails early when a package targets an incompatible existing qualification version", async () => {
+    const db = getTestDb();
+
+    await seedCurriculumInput(buildLegacyQualificationSeed(), { db });
+
+    await expect(
+      seedCurriculumInput(buildApprovedCurriculumPackage(), { db })
+    ).rejects.toThrow(
+      "cannot replace an incompatible existing version in place"
     );
   });
 
@@ -174,5 +215,55 @@ describe("curriculum seed bridge", () => {
         ),
       }),
     ]);
+  });
+
+  it("skips global task rules while keeping topic-scoped rules seedable", async () => {
+    const db = getTestDb();
+    const input = buildApprovedCurriculumPackage();
+    input.taskRules.push({
+      id: "task-rule-global-compare-structure",
+      taskType: "mixed_practice",
+      title: "Compare with paired statements",
+      guidance:
+        "Force paired statements that mention both items explicitly before free response.",
+      conditions: ["command word compare"],
+      priority: "medium",
+    });
+
+    const result = await seedCurriculumInput(input, { db });
+    const seededTaskRules = await db
+      .select()
+      .from(taskRules)
+      .innerJoin(topics, eq(taskRules.topicId, topics.id))
+      .where(eq(topics.qualificationVersionId, result.qualificationVersionId));
+
+    expect(result.adapterNotes.map((note) => note.code)).toEqual([
+      "annotations_not_seeded",
+      "global_task_rules_not_seeded",
+    ]);
+    expect(seededTaskRules).toHaveLength(1);
+  });
+
+  it("clears package-only runtime artifacts when reseeding the same version from legacy input", async () => {
+    const db = getTestDb();
+    const packageInput = buildApprovedCurriculumPackage();
+    const legacyInput = buildLegacySeedFromCurriculumPackage(packageInput);
+
+    const seededPackage = await seedCurriculumInput(packageInput, { db });
+    expect(seededPackage.normalizedFrom).toBe("package");
+    expect(await db.select().from(taskRules)).toHaveLength(1);
+    expect(await db.select().from(sourceCollections)).toHaveLength(1);
+    expect(await db.select().from(sourceFiles)).toHaveLength(1);
+    expect(await db.select().from(sourceChunks)).toHaveLength(1);
+    expect(await db.select().from(sourceMappings)).toHaveLength(1);
+
+    const seededLegacy = await seedCurriculumInput(legacyInput, { db });
+
+    expect(seededLegacy.normalizedFrom).toBe("legacy_seed");
+    expect(await db.select().from(taskRules)).toHaveLength(0);
+    expect(await db.select().from(sourceCollections)).toHaveLength(0);
+    expect(await db.select().from(sourceFiles)).toHaveLength(0);
+    expect(await db.select().from(sourceChunks)).toHaveLength(0);
+    expect(await db.select().from(sourceMappings)).toHaveLength(0);
   });
 });

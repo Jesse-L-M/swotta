@@ -48,7 +48,10 @@ describe("curriculum review report", () => {
     );
     expect(report.text).toContain("## Annotations");
     expect(report.text).toContain("## Validation");
-    expect(report.text).toContain("- No validation warnings or errors.");
+    expect(report.text).toContain("- Status: WARNINGS (1 warning)");
+    expect(report.text).toContain(
+      "[annotations.review_only] annotations: 2 annotation record(s) are review-only in the current curriculum runtime and will not be persisted by seed"
+    );
   });
 
   it("sanitizes multiline content and renders annotations", () => {
@@ -93,6 +96,24 @@ describe("curriculum review report", () => {
     expect(report.text).not.toContain("production\nNeeds");
     expect(report.text).not.toContain("example\nbefore");
     expect(report.text).not.toContain("Mitosis\nand the cell cycle");
+  });
+
+  it("renders component-targeted source mappings with clear targets", () => {
+    const curriculumPackage = buildApprovedCurriculumPackage();
+    curriculumPackage.sourceMappings.push({
+      id: "source-mapping-paper-2-guidance",
+      sourceId: "specification",
+      componentId: "component-paper-2",
+      locator: "Assessment overview",
+      excerptHint: "Applies across both papers",
+      confidence: "high",
+    });
+
+    const report = renderCurriculumReviewReport(curriculumPackage);
+
+    expect(report.text).toContain(
+      "AQA GCSE Biology specification (specification) -> component: 8461-2h Paper 2 | high | Assessment overview"
+    );
   });
 
   it("normalizes legacy seeds before rendering and surfaces validation warnings", () => {

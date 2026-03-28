@@ -1,0 +1,68 @@
+{
+  "derivedFrom": [
+    {
+      "packageId": "aqa-gcse-biology-legacy-seed",
+      "relationship": "legacy_seed",
+      "note": "Legacy seed at src/data/seeds/gcse-biology-aqa.json used only as a regression artifact and cross-check."
+    }
+  ],
+  "generatedBy": {
+    "tool": "curriculum.extract",
+    "version": "0.1.0",
+    "runId": "aqa-gcse-biology-20260328"
+  },
+  "sources": [
+    {
+      "source": {
+        "id": "aqa-biology-8461-spec",
+        "kind": "specification",
+        "authority": "primary",
+        "title": "AQA GCSE Biology 8461 specification",
+        "uri": "https://www.aqa.org.uk/subjects/biology/gcse/biology-8461"
+      },
+      "content": {
+        "format": "record_text",
+        "path": "./specification-records.txt"
+      }
+    },
+    {
+      "source": {
+        "id": "aqa-science-command-words",
+        "kind": "support_material",
+        "authority": "secondary",
+        "title": "AQA GCSE Science command words",
+        "uri": "https://www.aqa.org.uk/resources/science/gcse/teach/command-words"
+      },
+      "content": {
+        "format": "record_text",
+        "path": "./command-words-records.txt"
+      }
+    },
+    {
+      "source": {
+        "id": "aqa-8461-1h-jun23-report",
+        "kind": "examiner_report",
+        "authority": "secondary",
+        "title": "AQA GCSE Biology 8461/1H Report on the Examination June 2023",
+        "uri": "https://filestore.aqa.org.uk/sample-papers-and-mark-schemes/2023/june/AQA-84611H-WRE-JUN23.PDF"
+      },
+      "content": {
+        "format": "record_text",
+        "path": "./paper-1-june-2023-report-records.txt"
+      }
+    },
+    {
+      "source": {
+        "id": "aqa-8461-2h-jun23-report",
+        "kind": "examiner_report",
+        "authority": "secondary",
+        "title": "AQA GCSE Biology 8461/2H Report on the Examination June 2023",
+        "uri": "https://filestore.aqa.org.uk/sample-papers-and-mark-schemes/2023/june/AQA-84612H-WRE-JUN23.PDF"
+      },
+      "content": {
+        "format": "record_text",
+        "path": "./paper-2-june-2023-report-records.txt"
+      }
+    }
+  ]
+}

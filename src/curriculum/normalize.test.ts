@@ -116,6 +116,52 @@ describe("curriculum normalization", () => {
     );
   });
 
+  it("surfaces package validation failures in normalization errors", async () => {
+    const draft = await loadExtractedDraft();
+    for (let index = 0; index < 5; index += 1) {
+      draft.taskRules.push({
+        values: {
+          ...draft.taskRules[0]!.values,
+          title: `Extra rule ${index + 1}`,
+          guidance: `Extra guidance ${index + 1}`,
+          conditions: [`condition-${index + 1}`],
+        },
+        provenance: draft.taskRules[0]!.provenance,
+      });
+    }
+
+    const result = normalizeCurriculumDraft(draft);
+
+    expect(result.ok).toBe(false);
+    expect(result.package).toBeNull();
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "task_rules.topic_rule_limit",
+        }),
+      ])
+    );
+    expect(result.validation?.ok).toBe(false);
+  });
+
+  it("reports wrapped draft validation errors against the wrapped draft payload", () => {
+    const result = normalizeCurriculumDraft({
+      draft: {
+        schemaVersion: "1.0",
+      },
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "normalize.invalid_draft",
+          path: "draftVersion",
+        }),
+      ])
+    );
+  });
+
   it("prefers the later block when the same source corrects metadata", async () => {
     const draft = await loadExtractedDraft();
     draft.metadataBlocks.push({
@@ -187,6 +233,46 @@ describe("curriculum normalization", () => {
       expect.arrayContaining([
         expect.objectContaining({ sourceId: "aqa-biology-spec" }),
         expect.objectContaining({ sourceId: "aqa-biology-support" }),
+      ])
+    );
+  });
+
+  it("stabilizes misconception ids against prose edits when provenance stays the same", async () => {
+    const draft = await loadExtractedDraft();
+
+    const firstResult = normalizeCurriculumDraft(draft);
+    expect(firstResult.ok).toBe(true);
+
+    draft.misconceptionRules[0]!.values.description =
+      "Reworded misconception without changing the cited source anchor.";
+    draft.misconceptionRules[0]!.values.correctionGuidance =
+      "Reworded correction guidance without changing the cited source anchor.";
+
+    const secondResult = normalizeCurriculumDraft(draft);
+
+    expect(secondResult.ok).toBe(true);
+    expect(secondResult.package?.misconceptionRules[0]?.id).toBe(
+      firstResult.package?.misconceptionRules[0]?.id
+    );
+  });
+
+  it("maps command-word provenance onto assessment components when no finer runtime target exists", async () => {
+    const draft = await loadExtractedDraft();
+
+    const result = normalizeCurriculumDraft(draft);
+
+    expect(result.ok).toBe(true);
+    expect(
+      result.package?.sourceMappings.filter(
+        (mapping) =>
+          mapping.sourceId === "aqa-biology-spec" &&
+          mapping.componentId === "component-8461-1h"
+      )
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          locator: "Command word glossary",
+        }),
       ])
     );
   });

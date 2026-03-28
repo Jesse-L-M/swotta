@@ -1,0 +1,3236 @@
+{
+  "schemaVersion": "1.0",
+  "lifecycle": "candidate",
+  "metadata": {
+    "packageId": "aqa-gcse-biology-8461",
+    "packageVersion": "0.1.0-candidate.1",
+    "title": "AQA GCSE Biology (8461)",
+    "summary": "Candidate package rebuilt from official AQA specification pages, official AQA command-word guidance, and June 2023 examiner reports.",
+    "generatedAt": "2026-03-28T19:30:00.000Z"
+  },
+  "qualification": {
+    "name": "GCSE Biology",
+    "slug": "gcse-biology",
+    "level": "GCSE",
+    "versionCode": "8461",
+    "firstExamYear": 2018,
+    "specUrl": "https://www.aqa.org.uk/subjects/biology/gcse/biology-8461",
+    "subject": {
+      "name": "Biology",
+      "slug": "biology"
+    },
+    "examBoard": {
+      "name": "AQA",
+      "code": "AQA"
+    }
+  },
+  "provenance": {
+    "sources": [
+      {
+        "id": "aqa-biology-8461-spec",
+        "kind": "specification",
+        "authority": "primary",
+        "title": "AQA GCSE Biology 8461 specification",
+        "uri": "https://www.aqa.org.uk/subjects/biology/gcse/biology-8461"
+      },
+      {
+        "id": "aqa-science-command-words",
+        "kind": "support_material",
+        "authority": "secondary",
+        "title": "AQA GCSE Science command words",
+        "uri": "https://www.aqa.org.uk/resources/science/gcse/teach/command-words"
+      },
+      {
+        "id": "aqa-8461-1h-jun23-report",
+        "kind": "examiner_report",
+        "authority": "secondary",
+        "title": "AQA GCSE Biology 8461/1H Report on the Examination June 2023",
+        "uri": "https://filestore.aqa.org.uk/sample-papers-and-mark-schemes/2023/june/AQA-84611H-WRE-JUN23.PDF"
+      },
+      {
+        "id": "aqa-8461-2h-jun23-report",
+        "kind": "examiner_report",
+        "authority": "secondary",
+        "title": "AQA GCSE Biology 8461/2H Report on the Examination June 2023",
+        "uri": "https://filestore.aqa.org.uk/sample-papers-and-mark-schemes/2023/june/AQA-84612H-WRE-JUN23.PDF"
+      }
+    ],
+    "derivedFrom": [
+      {
+        "packageId": "aqa-gcse-biology-legacy-seed",
+        "relationship": "legacy_seed",
+        "note": "Legacy seed at src/data/seeds/gcse-biology-aqa.json used only as a regression artifact and cross-check."
+      }
+    ],
+    "generatedBy": {
+      "tool": "curriculum.extract",
+      "version": "0.1.0",
+      "runId": "aqa-gcse-biology-20260328"
+    }
+  },
+  "review": {
+    "status": "unreviewed",
+    "reviewers": []
+  },
+  "components": [
+    {
+      "id": "component-paper-1",
+      "name": "Paper 1: Cell biology; Organisation; Infection and response; Bioenergetics",
+      "code": "paper-1",
+      "weightPercent": 50,
+      "durationMinutes": 105,
+      "totalMarks": 100,
+      "isExam": true
+    },
+    {
+      "id": "component-paper-2",
+      "name": "Paper 2: Homeostasis and response; Inheritance, variation and evolution; Ecology",
+      "code": "paper-2",
+      "weightPercent": 50,
+      "durationMinutes": 105,
+      "totalMarks": 100,
+      "isExam": true
+    }
+  ],
+  "topics": [
+    {
+      "id": "topic-4-1",
+      "name": "Cell biology",
+      "code": "4.1",
+      "parentId": null,
+      "depth": 0,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-1-1",
+      "name": "Cell structure",
+      "code": "4.1.1",
+      "parentId": "topic-4-1",
+      "depth": 1,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-1-1-1",
+      "name": "Eukaryotes and prokaryotes",
+      "code": "4.1.1.1",
+      "parentId": "topic-4-1-1",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-1-1-2",
+      "name": "Animal and plant cells",
+      "code": "4.1.1.2",
+      "parentId": "topic-4-1-1",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-1-1-3",
+      "name": "Cell specialisation",
+      "code": "4.1.1.3",
+      "parentId": "topic-4-1-1",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-1-1-4",
+      "name": "Cell differentiation",
+      "code": "4.1.1.4",
+      "parentId": "topic-4-1-1",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-1-1-5",
+      "name": "Microscopy",
+      "code": "4.1.1.5",
+      "parentId": "topic-4-1-1",
+      "depth": 2,
+      "sortOrder": 5
+    },
+    {
+      "id": "topic-4-1-1-6",
+      "name": "Culturing microorganisms (biology only)",
+      "code": "4.1.1.6",
+      "parentId": "topic-4-1-1",
+      "depth": 2,
+      "sortOrder": 6
+    },
+    {
+      "id": "topic-4-1-2",
+      "name": "Cell division",
+      "code": "4.1.2",
+      "parentId": "topic-4-1",
+      "depth": 1,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-1-2-1",
+      "name": "Chromosomes",
+      "code": "4.1.2.1",
+      "parentId": "topic-4-1-2",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-1-2-2",
+      "name": "Mitosis and the cell cycle",
+      "code": "4.1.2.2",
+      "parentId": "topic-4-1-2",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-1-2-3",
+      "name": "Stem cells",
+      "code": "4.1.2.3",
+      "parentId": "topic-4-1-2",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-1-3",
+      "name": "Transport in cells",
+      "code": "4.1.3",
+      "parentId": "topic-4-1",
+      "depth": 1,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-1-3-1",
+      "name": "Diffusion",
+      "code": "4.1.3.1",
+      "parentId": "topic-4-1-3",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-1-3-2",
+      "name": "Osmosis",
+      "code": "4.1.3.2",
+      "parentId": "topic-4-1-3",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-1-3-3",
+      "name": "Active transport",
+      "code": "4.1.3.3",
+      "parentId": "topic-4-1-3",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-2",
+      "name": "Organisation",
+      "code": "4.2",
+      "parentId": null,
+      "depth": 0,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-2-1",
+      "name": "Principles of organisation",
+      "code": "4.2.1",
+      "parentId": "topic-4-2",
+      "depth": 1,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-2-2",
+      "name": "Animal tissues, organs and organ systems",
+      "code": "4.2.2",
+      "parentId": "topic-4-2",
+      "depth": 1,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-2-2-1",
+      "name": "The human digestive system",
+      "code": "4.2.2.1",
+      "parentId": "topic-4-2-2",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-2-2-2",
+      "name": "The heart and blood vessels",
+      "code": "4.2.2.2",
+      "parentId": "topic-4-2-2",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-2-2-3",
+      "name": "Blood",
+      "code": "4.2.2.3",
+      "parentId": "topic-4-2-2",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-2-2-4",
+      "name": "Coronary heart disease: a non-communicable disease",
+      "code": "4.2.2.4",
+      "parentId": "topic-4-2-2",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-2-2-5",
+      "name": "Health issues",
+      "code": "4.2.2.5",
+      "parentId": "topic-4-2-2",
+      "depth": 2,
+      "sortOrder": 5
+    },
+    {
+      "id": "topic-4-2-2-6",
+      "name": "The effect of lifestyle on some non-communicable diseases",
+      "code": "4.2.2.6",
+      "parentId": "topic-4-2-2",
+      "depth": 2,
+      "sortOrder": 6
+    },
+    {
+      "id": "topic-4-2-2-7",
+      "name": "Cancer",
+      "code": "4.2.2.7",
+      "parentId": "topic-4-2-2",
+      "depth": 2,
+      "sortOrder": 7
+    },
+    {
+      "id": "topic-4-2-3",
+      "name": "Plant tissues, organs and systems",
+      "code": "4.2.3",
+      "parentId": "topic-4-2",
+      "depth": 1,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-2-3-1",
+      "name": "Plant tissues",
+      "code": "4.2.3.1",
+      "parentId": "topic-4-2-3",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-2-3-2",
+      "name": "Plant organ system",
+      "code": "4.2.3.2",
+      "parentId": "topic-4-2-3",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-3",
+      "name": "Infection and response",
+      "code": "4.3",
+      "parentId": null,
+      "depth": 0,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-3-1",
+      "name": "Communicable diseases",
+      "code": "4.3.1",
+      "parentId": "topic-4-3",
+      "depth": 1,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-3-1-1",
+      "name": "Communicable (infectious) diseases",
+      "code": "4.3.1.1",
+      "parentId": "topic-4-3-1",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-3-1-2",
+      "name": "Viral diseases",
+      "code": "4.3.1.2",
+      "parentId": "topic-4-3-1",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-3-1-3",
+      "name": "Bacterial diseases",
+      "code": "4.3.1.3",
+      "parentId": "topic-4-3-1",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-3-1-4",
+      "name": "Fungal diseases",
+      "code": "4.3.1.4",
+      "parentId": "topic-4-3-1",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-3-1-5",
+      "name": "Protist diseases",
+      "code": "4.3.1.5",
+      "parentId": "topic-4-3-1",
+      "depth": 2,
+      "sortOrder": 5
+    },
+    {
+      "id": "topic-4-3-1-6",
+      "name": "Human defence systems",
+      "code": "4.3.1.6",
+      "parentId": "topic-4-3-1",
+      "depth": 2,
+      "sortOrder": 6
+    },
+    {
+      "id": "topic-4-3-1-7",
+      "name": "Vaccination",
+      "code": "4.3.1.7",
+      "parentId": "topic-4-3-1",
+      "depth": 2,
+      "sortOrder": 7
+    },
+    {
+      "id": "topic-4-3-1-8",
+      "name": "Antibiotics and painkillers",
+      "code": "4.3.1.8",
+      "parentId": "topic-4-3-1",
+      "depth": 2,
+      "sortOrder": 8
+    },
+    {
+      "id": "topic-4-3-1-9",
+      "name": "Discovery and development of drugs",
+      "code": "4.3.1.9",
+      "parentId": "topic-4-3-1",
+      "depth": 2,
+      "sortOrder": 9
+    },
+    {
+      "id": "topic-4-3-2",
+      "name": "Monoclonal antibodies (biology only) (HT only)",
+      "code": "4.3.2",
+      "parentId": "topic-4-3",
+      "depth": 1,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-3-2-1",
+      "name": "Producing monoclonal antibodies",
+      "code": "4.3.2.1",
+      "parentId": "topic-4-3-2",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-3-2-2",
+      "name": "Uses of monoclonal antibodies",
+      "code": "4.3.2.2",
+      "parentId": "topic-4-3-2",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-3-3",
+      "name": "Plant disease (biology only)",
+      "code": "4.3.3",
+      "parentId": "topic-4-3",
+      "depth": 1,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-3-3-1",
+      "name": "Detection and identification of plant diseases",
+      "code": "4.3.3.1",
+      "parentId": "topic-4-3-3",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-3-3-2",
+      "name": "Plant defence responses",
+      "code": "4.3.3.2",
+      "parentId": "topic-4-3-3",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-4",
+      "name": "Bioenergetics",
+      "code": "4.4",
+      "parentId": null,
+      "depth": 0,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-4-1",
+      "name": "Photosynthesis",
+      "code": "4.4.1",
+      "parentId": "topic-4-4",
+      "depth": 1,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-4-1-1",
+      "name": "Photosynthetic reaction",
+      "code": "4.4.1.1",
+      "parentId": "topic-4-4-1",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-4-1-2",
+      "name": "Rate of photosynthesis",
+      "code": "4.4.1.2",
+      "parentId": "topic-4-4-1",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-4-1-3",
+      "name": "Uses of glucose from photosynthesis",
+      "code": "4.4.1.3",
+      "parentId": "topic-4-4-1",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-4-2",
+      "name": "Respiration",
+      "code": "4.4.2",
+      "parentId": "topic-4-4",
+      "depth": 1,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-4-2-1",
+      "name": "Aerobic and anaerobic respiration",
+      "code": "4.4.2.1",
+      "parentId": "topic-4-4-2",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-4-2-2",
+      "name": "Response to exercise",
+      "code": "4.4.2.2",
+      "parentId": "topic-4-4-2",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-4-2-3",
+      "name": "Metabolism",
+      "code": "4.4.2.3",
+      "parentId": "topic-4-4-2",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-5",
+      "name": "Homeostasis and response",
+      "code": "4.5",
+      "parentId": null,
+      "depth": 0,
+      "sortOrder": 5
+    },
+    {
+      "id": "topic-4-5-1",
+      "name": "Homeostasis",
+      "code": "4.5.1",
+      "parentId": "topic-4-5",
+      "depth": 1,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-5-2",
+      "name": "The human nervous system",
+      "code": "4.5.2",
+      "parentId": "topic-4-5",
+      "depth": 1,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-5-2-1",
+      "name": "Structure and function",
+      "code": "4.5.2.1",
+      "parentId": "topic-4-5-2",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-5-2-2",
+      "name": "The brain (biology only)",
+      "code": "4.5.2.2",
+      "parentId": "topic-4-5-2",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-5-2-3",
+      "name": "The eye (biology only)",
+      "code": "4.5.2.3",
+      "parentId": "topic-4-5-2",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-5-2-4",
+      "name": "Control of body temperature (biology only)",
+      "code": "4.5.2.4",
+      "parentId": "topic-4-5-2",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-5-3",
+      "name": "Hormonal coordination in humans",
+      "code": "4.5.3",
+      "parentId": "topic-4-5",
+      "depth": 1,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-5-3-1",
+      "name": "Human endocrine system",
+      "code": "4.5.3.1",
+      "parentId": "topic-4-5-3",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-5-3-2",
+      "name": "Control of blood glucose concentration",
+      "code": "4.5.3.2",
+      "parentId": "topic-4-5-3",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-5-3-3",
+      "name": "Maintaining water and nitrogen balance in the body (biology only)",
+      "code": "4.5.3.3",
+      "parentId": "topic-4-5-3",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-5-3-4",
+      "name": "Hormones in human reproduction",
+      "code": "4.5.3.4",
+      "parentId": "topic-4-5-3",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-5-3-5",
+      "name": "Contraception",
+      "code": "4.5.3.5",
+      "parentId": "topic-4-5-3",
+      "depth": 2,
+      "sortOrder": 5
+    },
+    {
+      "id": "topic-4-5-3-6",
+      "name": "The use of hormones to treat infertility (HT only)",
+      "code": "4.5.3.6",
+      "parentId": "topic-4-5-3",
+      "depth": 2,
+      "sortOrder": 6
+    },
+    {
+      "id": "topic-4-5-3-7",
+      "name": "Feedback systems (HT only)",
+      "code": "4.5.3.7",
+      "parentId": "topic-4-5-3",
+      "depth": 2,
+      "sortOrder": 7
+    },
+    {
+      "id": "topic-4-5-4",
+      "name": "Plant hormones (biology only)",
+      "code": "4.5.4",
+      "parentId": "topic-4-5",
+      "depth": 1,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-5-4-1",
+      "name": "Control and coordination",
+      "code": "4.5.4.1",
+      "parentId": "topic-4-5-4",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-5-4-2",
+      "name": "Use of plant hormones (HT only)",
+      "code": "4.5.4.2",
+      "parentId": "topic-4-5-4",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-6",
+      "name": "Inheritance, variation and evolution",
+      "code": "4.6",
+      "parentId": null,
+      "depth": 0,
+      "sortOrder": 6
+    },
+    {
+      "id": "topic-4-6-1",
+      "name": "Reproduction",
+      "code": "4.6.1",
+      "parentId": "topic-4-6",
+      "depth": 1,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-6-1-1",
+      "name": "Sexual and asexual reproduction",
+      "code": "4.6.1.1",
+      "parentId": "topic-4-6-1",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-6-1-2",
+      "name": "Meiosis",
+      "code": "4.6.1.2",
+      "parentId": "topic-4-6-1",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-6-1-3",
+      "name": "Advantages and disadvantages of sexual and asexual reproduction (biology only)",
+      "code": "4.6.1.3",
+      "parentId": "topic-4-6-1",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-6-1-4",
+      "name": "DNA and the genome",
+      "code": "4.6.1.4",
+      "parentId": "topic-4-6-1",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-6-1-5",
+      "name": "DNA structure (biology only)",
+      "code": "4.6.1.5",
+      "parentId": "topic-4-6-1",
+      "depth": 2,
+      "sortOrder": 5
+    },
+    {
+      "id": "topic-4-6-1-6",
+      "name": "Genetic inheritance",
+      "code": "4.6.1.6",
+      "parentId": "topic-4-6-1",
+      "depth": 2,
+      "sortOrder": 6
+    },
+    {
+      "id": "topic-4-6-1-7",
+      "name": "Inherited disorders",
+      "code": "4.6.1.7",
+      "parentId": "topic-4-6-1",
+      "depth": 2,
+      "sortOrder": 7
+    },
+    {
+      "id": "topic-4-6-1-8",
+      "name": "Sex determination",
+      "code": "4.6.1.8",
+      "parentId": "topic-4-6-1",
+      "depth": 2,
+      "sortOrder": 8
+    },
+    {
+      "id": "topic-4-6-2",
+      "name": "Variation and evolution",
+      "code": "4.6.2",
+      "parentId": "topic-4-6",
+      "depth": 1,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-6-2-1",
+      "name": "Variation",
+      "code": "4.6.2.1",
+      "parentId": "topic-4-6-2",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-6-2-2",
+      "name": "Evolution",
+      "code": "4.6.2.2",
+      "parentId": "topic-4-6-2",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-6-2-3",
+      "name": "Selective breeding",
+      "code": "4.6.2.3",
+      "parentId": "topic-4-6-2",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-6-2-4",
+      "name": "Genetic engineering",
+      "code": "4.6.2.4",
+      "parentId": "topic-4-6-2",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-6-2-5",
+      "name": "Cloning (biology only)",
+      "code": "4.6.2.5",
+      "parentId": "topic-4-6-2",
+      "depth": 2,
+      "sortOrder": 5
+    },
+    {
+      "id": "topic-4-6-3",
+      "name": "The development of understanding of genetics and evolution",
+      "code": "4.6.3",
+      "parentId": "topic-4-6",
+      "depth": 1,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-6-3-1",
+      "name": "Theory of evolution (biology only)",
+      "code": "4.6.3.1",
+      "parentId": "topic-4-6-3",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-6-3-2",
+      "name": "Speciation (biology only)",
+      "code": "4.6.3.2",
+      "parentId": "topic-4-6-3",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-6-3-3",
+      "name": "The understanding of genetics (biology only)",
+      "code": "4.6.3.3",
+      "parentId": "topic-4-6-3",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-6-3-4",
+      "name": "Evidence for evolution",
+      "code": "4.6.3.4",
+      "parentId": "topic-4-6-3",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-6-3-5",
+      "name": "Fossils",
+      "code": "4.6.3.5",
+      "parentId": "topic-4-6-3",
+      "depth": 2,
+      "sortOrder": 5
+    },
+    {
+      "id": "topic-4-6-3-6",
+      "name": "Extinction",
+      "code": "4.6.3.6",
+      "parentId": "topic-4-6-3",
+      "depth": 2,
+      "sortOrder": 6
+    },
+    {
+      "id": "topic-4-6-3-7",
+      "name": "Resistant bacteria",
+      "code": "4.6.3.7",
+      "parentId": "topic-4-6-3",
+      "depth": 2,
+      "sortOrder": 7
+    },
+    {
+      "id": "topic-4-6-4",
+      "name": "Classification of living organisms",
+      "code": "4.6.4",
+      "parentId": "topic-4-6",
+      "depth": 1,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-7",
+      "name": "Ecology",
+      "code": "4.7",
+      "parentId": null,
+      "depth": 0,
+      "sortOrder": 7
+    },
+    {
+      "id": "topic-4-7-1",
+      "name": "Adaptations, interdependence and competition",
+      "code": "4.7.1",
+      "parentId": "topic-4-7",
+      "depth": 1,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-7-1-1",
+      "name": "Communities",
+      "code": "4.7.1.1",
+      "parentId": "topic-4-7-1",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-7-1-2",
+      "name": "Abiotic factors",
+      "code": "4.7.1.2",
+      "parentId": "topic-4-7-1",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-7-1-3",
+      "name": "Biotic factors",
+      "code": "4.7.1.3",
+      "parentId": "topic-4-7-1",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-7-1-4",
+      "name": "Adaptations",
+      "code": "4.7.1.4",
+      "parentId": "topic-4-7-1",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-7-2",
+      "name": "Organisation of an ecosystem",
+      "code": "4.7.2",
+      "parentId": "topic-4-7",
+      "depth": 1,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-7-2-1",
+      "name": "Levels of organisation",
+      "code": "4.7.2.1",
+      "parentId": "topic-4-7-2",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-7-2-2",
+      "name": "How materials are cycled",
+      "code": "4.7.2.2",
+      "parentId": "topic-4-7-2",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-7-2-3",
+      "name": "Decomposition (biology only)",
+      "code": "4.7.2.3",
+      "parentId": "topic-4-7-2",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-7-2-4",
+      "name": "Impact of environmental change (biology only) (HT only)",
+      "code": "4.7.2.4",
+      "parentId": "topic-4-7-2",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-7-3",
+      "name": "Biodiversity and the effect of human interaction on ecosystems",
+      "code": "4.7.3",
+      "parentId": "topic-4-7",
+      "depth": 1,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-7-3-1",
+      "name": "Biodiversity",
+      "code": "4.7.3.1",
+      "parentId": "topic-4-7-3",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-7-3-2",
+      "name": "Waste management",
+      "code": "4.7.3.2",
+      "parentId": "topic-4-7-3",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-7-3-3",
+      "name": "Land use",
+      "code": "4.7.3.3",
+      "parentId": "topic-4-7-3",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-7-3-4",
+      "name": "Deforestation",
+      "code": "4.7.3.4",
+      "parentId": "topic-4-7-3",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-7-3-5",
+      "name": "Global warming",
+      "code": "4.7.3.5",
+      "parentId": "topic-4-7-3",
+      "depth": 2,
+      "sortOrder": 5
+    },
+    {
+      "id": "topic-4-7-3-6",
+      "name": "Maintaining biodiversity",
+      "code": "4.7.3.6",
+      "parentId": "topic-4-7-3",
+      "depth": 2,
+      "sortOrder": 6
+    },
+    {
+      "id": "topic-4-7-4",
+      "name": "Trophic levels in an ecosystem (biology only)",
+      "code": "4.7.4",
+      "parentId": "topic-4-7",
+      "depth": 1,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-7-4-1",
+      "name": "Trophic levels",
+      "code": "4.7.4.1",
+      "parentId": "topic-4-7-4",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-7-4-2",
+      "name": "Pyramids of biomass",
+      "code": "4.7.4.2",
+      "parentId": "topic-4-7-4",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-7-4-3",
+      "name": "Transfer of biomass",
+      "code": "4.7.4.3",
+      "parentId": "topic-4-7-4",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-7-5",
+      "name": "Food production (biology only)",
+      "code": "4.7.5",
+      "parentId": "topic-4-7",
+      "depth": 1,
+      "sortOrder": 5
+    },
+    {
+      "id": "topic-4-7-5-1",
+      "name": "Factors affecting food security",
+      "code": "4.7.5.1",
+      "parentId": "topic-4-7-5",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-7-5-2",
+      "name": "Farming techniques",
+      "code": "4.7.5.2",
+      "parentId": "topic-4-7-5",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-7-5-3",
+      "name": "Sustainable fisheries",
+      "code": "4.7.5.3",
+      "parentId": "topic-4-7-5",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-7-5-4",
+      "name": "Role of biotechnology",
+      "code": "4.7.5.4",
+      "parentId": "topic-4-7-5",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-8",
+      "name": "Key ideas",
+      "code": "4.8",
+      "parentId": null,
+      "depth": 0,
+      "sortOrder": 8
+    }
+  ],
+  "edges": [
+    {
+      "fromTopicId": "topic-4-1-2",
+      "toTopicId": "topic-4-1-1",
+      "type": "prerequisite",
+      "rationale": "Cell division assumes secure cell-structure knowledge."
+    },
+    {
+      "fromTopicId": "topic-4-1-3",
+      "toTopicId": "topic-4-1-1",
+      "type": "prerequisite",
+      "rationale": "Membrane transport depends on cell structure and membranes."
+    },
+    {
+      "fromTopicId": "topic-4-2-2",
+      "toTopicId": "topic-4-2-1",
+      "type": "builds_on",
+      "rationale": "Animal organ systems build on the cell-tissue-organ hierarchy."
+    },
+    {
+      "fromTopicId": "topic-4-2-3",
+      "toTopicId": "topic-4-2-1",
+      "type": "builds_on",
+      "rationale": "Plant systems build on the same organisation model."
+    },
+    {
+      "fromTopicId": "topic-4-3-1-7",
+      "toTopicId": "topic-4-3-1",
+      "type": "builds_on",
+      "rationale": "Vaccination is taught within the communicable-disease model."
+    },
+    {
+      "fromTopicId": "topic-4-3-1-8",
+      "toTopicId": "topic-4-3-1-3",
+      "type": "builds_on",
+      "rationale": "Antibiotic use and resistance build on bacterial disease knowledge."
+    },
+    {
+      "fromTopicId": "topic-4-5-2",
+      "toTopicId": "topic-4-5-1",
+      "type": "builds_on",
+      "rationale": "Coordination topics extend the core homeostasis idea."
+    },
+    {
+      "fromTopicId": "topic-4-5-3",
+      "toTopicId": "topic-4-5-1",
+      "type": "builds_on",
+      "rationale": "Hormonal control is another homeostatic control pathway."
+    },
+    {
+      "fromTopicId": "topic-4-6-2",
+      "toTopicId": "topic-4-6-1",
+      "type": "builds_on",
+      "rationale": "Variation and evolution rely on prior reproduction and meiosis content."
+    },
+    {
+      "fromTopicId": "topic-4-6-3",
+      "toTopicId": "topic-4-6-2",
+      "type": "builds_on",
+      "rationale": "Genetics-and-evolution development builds on inherited variation."
+    },
+    {
+      "fromTopicId": "topic-4-7-2",
+      "toTopicId": "topic-4-7-1",
+      "type": "builds_on",
+      "rationale": "Ecosystem organisation assumes prior adaptation and community knowledge."
+    },
+    {
+      "fromTopicId": "topic-4-7-3",
+      "toTopicId": "topic-4-7-2",
+      "type": "builds_on",
+      "rationale": "Human-impact topics depend on the ecosystem model."
+    },
+    {
+      "fromTopicId": "topic-4-7-5",
+      "toTopicId": "topic-4-7-3",
+      "type": "builds_on",
+      "rationale": "Food production decisions build on biodiversity and human-impact trade-offs."
+    }
+  ],
+  "commandWords": [
+    {
+      "id": "command-word-balance",
+      "word": "Balance",
+      "definition": "Students need to balance a chemical equation.",
+      "expectedDepth": 2
+    },
+    {
+      "id": "command-word-calculate",
+      "word": "Calculate",
+      "definition": "Students should use numbers given in the question to work out the answer.",
+      "expectedDepth": 2
+    },
+    {
+      "id": "command-word-choose",
+      "word": "Choose",
+      "definition": "Select from a range of alternatives.",
+      "expectedDepth": 1
+    },
+    {
+      "id": "command-word-compare",
+      "word": "Compare",
+      "definition": "This requires the student to describe the similarities and/or differences between things, not just write about one.",
+      "expectedDepth": 3,
+      "guidance": "Write paired similarities or differences rather than isolated facts about one side."
+    },
+    {
+      "id": "command-word-complete",
+      "word": "Complete",
+      "definition": "Answers should be written in the space provided, for example, on a diagram, in spaces in a sentence or in a table.",
+      "expectedDepth": 1
+    },
+    {
+      "id": "command-word-define",
+      "word": "Define",
+      "definition": "Specify the meaning of something.",
+      "expectedDepth": 1
+    },
+    {
+      "id": "command-word-describe",
+      "word": "Describe",
+      "definition": "Students may be asked to recall some facts, events or process in an accurate way.",
+      "expectedDepth": 3
+    },
+    {
+      "id": "command-word-design",
+      "word": "Design",
+      "definition": "Set out how something will be done.",
+      "expectedDepth": 3
+    },
+    {
+      "id": "command-word-determine",
+      "word": "Determine",
+      "definition": "Use given data or information to obtain and answer.",
+      "expectedDepth": 2
+    },
+    {
+      "id": "command-word-draw",
+      "word": "Draw",
+      "definition": "To produce, or add to, a diagram.",
+      "expectedDepth": 1
+    },
+    {
+      "id": "command-word-estimate",
+      "word": "Estimate",
+      "definition": "Assign an approximate value.",
+      "expectedDepth": 2
+    },
+    {
+      "id": "command-word-evaluate",
+      "word": "Evaluate",
+      "definition": "Students should use the information supplied, as well as their knowledge and understanding, to consider evidence for and against when making a judgement.",
+      "expectedDepth": 4,
+      "guidance": "Use the evidence provided, weigh both sides, then reach a justified judgement."
+    },
+    {
+      "id": "command-word-explain",
+      "word": "Explain",
+      "definition": "Students should make something clear, or state the reasons for something happening.",
+      "expectedDepth": 3,
+      "guidance": "State the biological mechanism and link it to the resulting outcome."
+    },
+    {
+      "id": "command-word-give",
+      "word": "Give",
+      "definition": "Only a short answer is required, not an explanation or a description.",
+      "expectedDepth": 1
+    },
+    {
+      "id": "command-word-how-what-when-where-which-who-why",
+      "word": "How/What/When/Where/Which/Who/Why",
+      "definition": "These can be used for more direct questions.",
+      "expectedDepth": 1
+    },
+    {
+      "id": "command-word-identify",
+      "word": "Identify",
+      "definition": "Name or otherwise characterise.",
+      "expectedDepth": 1
+    },
+    {
+      "id": "command-word-justify",
+      "word": "Justify",
+      "definition": "Use evidence from the information supplied to support an answer.",
+      "expectedDepth": 4,
+      "guidance": "Support the choice or conclusion with evidence from the question or data provided."
+    },
+    {
+      "id": "command-word-label",
+      "word": "Label",
+      "definition": "Provide appropriate names on a diagram.",
+      "expectedDepth": 1
+    },
+    {
+      "id": "command-word-measure",
+      "word": "Measure",
+      "definition": "Find an item of data for a given quantity.",
+      "expectedDepth": 1
+    },
+    {
+      "id": "command-word-name",
+      "word": "Name",
+      "definition": "Only a short answer is required, not an explanation or a description. Often it can be answered with a single word, phrase or sentence.",
+      "expectedDepth": 1
+    },
+    {
+      "id": "command-word-plan",
+      "word": "Plan",
+      "definition": "Write a method.",
+      "expectedDepth": 3
+    },
+    {
+      "id": "command-word-plot",
+      "word": "Plot",
+      "definition": "Mark on a graph using data given.",
+      "expectedDepth": 2
+    },
+    {
+      "id": "command-word-predict",
+      "word": "Predict",
+      "definition": "Give a plausible outcome.",
+      "expectedDepth": 2
+    },
+    {
+      "id": "command-word-show",
+      "word": "Show",
+      "definition": "Provide structured evidence to reach a conclusion.",
+      "expectedDepth": 3
+    },
+    {
+      "id": "command-word-sketch",
+      "word": "Sketch",
+      "definition": "Draw approximately.",
+      "expectedDepth": 1
+    },
+    {
+      "id": "command-word-suggest",
+      "word": "Suggest",
+      "definition": "This term is used in questions where students need to apply their knowledge and understanding to a new situation.",
+      "expectedDepth": 3,
+      "guidance": "Apply existing knowledge to the unfamiliar context instead of recalling a memorised sentence."
+    },
+    {
+      "id": "command-word-use",
+      "word": "Use",
+      "definition": "The answer must be based on the information given in the question. Unless the information given in the question is used, no marks can be given. In some cases students might be asked to use their own knowledge and understanding.",
+      "expectedDepth": 2,
+      "guidance": "Reference the given data or information explicitly or the answer will not secure credit."
+    },
+    {
+      "id": "command-word-write",
+      "word": "Write",
+      "definition": "Only a short answer is required, not an explanation or a description.",
+      "expectedDepth": 1
+    }
+  ],
+  "questionTypes": [
+    {
+      "id": "question-type-multiple-choice",
+      "name": "Multiple choice",
+      "description": "Objective single-best-answer questions listed in the specification at a glance question format.",
+      "typicalMarks": 1
+    },
+    {
+      "id": "question-type-structured",
+      "name": "Structured",
+      "description": "Multi-step structured items that require ordered scientific reasoning and method/application detail.",
+      "typicalMarks": 4
+    },
+    {
+      "id": "question-type-closed-short-answer",
+      "name": "Closed short answer",
+      "description": "Short-response items with tightly delimited factual, procedural, or data-reading answers.",
+      "typicalMarks": 2
+    },
+    {
+      "id": "question-type-open-response",
+      "name": "Open response",
+      "description": "Extended written responses that reward linked biological reasoning and judgement.",
+      "typicalMarks": 6
+    }
+  ],
+  "misconceptionRules": [
+    {
+      "id": "misconception-topic-4-1-3-2-aqa-8461-1h-jun23-report-question-03-9",
+      "topicId": "topic-4-1-3-2",
+      "description": "Treats osmosis as antibiotic molecules entering bacteria rather than water moving across a partially permeable membrane.",
+      "triggerPatterns": [
+        "antibiotic enters by osmosis",
+        "osmosis means chemicals move into bacteria",
+        "osmosis moves the antibiotic into the cell"
+      ],
+      "correctionGuidance": "Osmosis is the net movement of water through a partially permeable membrane from higher water potential to lower water potential.",
+      "severity": 3
+    },
+    {
+      "id": "misconception-topic-4-2-1-aqa-8461-1h-jun23-report-question-01-1",
+      "topicId": "topic-4-2-1",
+      "description": "Treats a tissue as any group of cells and omits the idea that the cells are similar in structure or function.",
+      "triggerPatterns": [
+        "tissue is a group of cells",
+        "tissues are many cells together",
+        "any cells working together make a tissue"
+      ],
+      "correctionGuidance": "A tissue is a group of similar cells organised to carry out a particular shared function.",
+      "severity": 2
+    },
+    {
+      "id": "misconception-topic-4-2-2-2-aqa-8461-1h-jun23-report-question-02-8",
+      "topicId": "topic-4-2-2-2",
+      "description": "Confuses the role of the coronary arteries with vessels that carry blood to the lungs or around the rest of the body.",
+      "triggerPatterns": [
+        "coronary arteries take blood to the lungs",
+        "coronary arteries move blood around the body",
+        "blocked coronary artery stops blood reaching the lungs"
+      ],
+      "correctionGuidance": "Coronary arteries supply oxygenated blood to the heart muscle itself, so blockage reduces aerobic respiration in cardiac muscle.",
+      "severity": 3
+    },
+    {
+      "id": "misconception-topic-4-3-1-3-aqa-8461-1h-jun23-report-question-03-1",
+      "topicId": "topic-4-3-1-3",
+      "description": "Knows that toxins matter in salmonella infection but does not state that the bacteria release or secrete them.",
+      "triggerPatterns": [
+        "salmonella has toxins",
+        "salmonella contains toxin",
+        "toxin inside the bacteria causes diarrhoea"
+      ],
+      "correctionGuidance": "Salmonella bacteria produce and release toxins, and those toxins damage the body and cause symptoms such as diarrhoea and vomiting.",
+      "severity": 2
+    },
+    {
+      "id": "misconception-topic-4-3-1-7-aqa-8461-1h-jun23-report-question-03-2",
+      "topicId": "topic-4-3-1-7",
+      "description": "Mixes up antigens, antibodies, antitoxins and memory cells when explaining vaccination.",
+      "triggerPatterns": [
+        "memory cells are antibodies",
+        "antibodies make white blood cells",
+        "vaccine gives antitoxins directly"
+      ],
+      "correctionGuidance": "Vaccination introduces antigens, stimulates antibody production, and leaves memory cells that speed up the secondary response on re-exposure.",
+      "severity": 3
+    },
+    {
+      "id": "misconception-topic-4-4-2-1-aqa-8461-2h-jun23-report-general-particular-problems",
+      "topicId": "topic-4-4-2-1",
+      "description": "Thinks plants respire only at night rather than continuously.",
+      "triggerPatterns": [
+        "plants respire at night only",
+        "plants stop respiration in daylight",
+        "respiration happens only when photosynthesis stops"
+      ],
+      "correctionGuidance": "Plants respire all the time; photosynthesis happens only in light, but respiration continues day and night.",
+      "severity": 2
+    },
+    {
+      "id": "misconception-topic-4-5-2-3-aqa-8461-2h-jun23-report-question-02-4",
+      "topicId": "topic-4-5-2-3",
+      "description": "Describes the lens as larger or more concave when focusing on a near object.",
+      "triggerPatterns": [
+        "lens gets larger for near focus",
+        "lens becomes concave to see near objects",
+        "lens stretches flatter for nearby objects"
+      ],
+      "correctionGuidance": "To focus on a near object the lens becomes thicker, rounder and more convex.",
+      "severity": 2
+    },
+    {
+      "id": "misconception-topic-4-5-3-3-aqa-8461-2h-jun23-report-general-particular-problems",
+      "topicId": "topic-4-5-3-3",
+      "description": "Has weak or fragmented understanding of kidney function and the role of the kidney in homeostasis.",
+      "triggerPatterns": [
+        "kidneys remove all water",
+        "kidneys only store urine",
+        "kidneys make urea"
+      ],
+      "correctionGuidance": "The kidneys filter the blood, selectively reabsorb useful substances and water, and regulate water and ion balance while urea is excreted in urine.",
+      "severity": 3
+    },
+    {
+      "id": "misconception-topic-4-6-1-1-aqa-8461-2h-jun23-report-question-03-3",
+      "topicId": "topic-4-6-1-1",
+      "description": "Treats tissue culture as simply using tissue instead of growing cells to produce clones.",
+      "triggerPatterns": [
+        "tissue culture means using plant tissue",
+        "tissue culture is cutting up tissue only",
+        "tissue culture means growing tissue without cells"
+      ],
+      "correctionGuidance": "Tissue culture grows plant cells or small tissue samples by mitosis to produce many genetically identical clones.",
+      "severity": 2
+    },
+    {
+      "id": "misconception-topic-4-6-1-2-aqa-8461-2h-jun23-report-general-particular-problems",
+      "topicId": "topic-4-6-1-2",
+      "description": "Confuses meiosis with mitosis or cannot use meiosis to explain genetic variation.",
+      "triggerPatterns": [
+        "meiosis makes identical cells",
+        "meiosis has one division only",
+        "meiosis is for growth and repair"
+      ],
+      "correctionGuidance": "Meiosis halves the chromosome number, produces genetically different gametes, and underpins variation in sexual reproduction.",
+      "severity": 3
+    },
+    {
+      "id": "misconception-topic-4-6-3-7-aqa-8461-1h-jun23-report-question-03-8",
+      "topicId": "topic-4-6-3-7",
+      "description": "Says bacteria become immune to antibiotics instead of resistant to them.",
+      "triggerPatterns": [
+        "bacteria become immune to antibiotics",
+        "animal becomes immune to antibiotics",
+        "antibiotic creates immunity in bacteria"
+      ],
+      "correctionGuidance": "Random mutations can make some bacteria resistant to an antibiotic, and selection increases the frequency of resistant strains.",
+      "severity": 3
+    },
+    {
+      "id": "misconception-topic-4-7-1-1-aqa-8461-2h-jun23-report-question-01-1",
+      "topicId": "topic-4-7-1-1",
+      "description": "Uses ecosystem when the question is asking for the community of organisms living together in a habitat.",
+      "triggerPatterns": [
+        "all organisms in a habitat make an ecosystem only",
+        "community means one population",
+        "habitat equals community"
+      ],
+      "correctionGuidance": "A community is all the populations of different species living together in a habitat, while an ecosystem also includes the abiotic environment.",
+      "severity": 2
+    }
+  ],
+  "taskRules": [
+    {
+      "id": "task-rule-worked-example-topic-4-2-2-2-build-coronary-artery-explanations-as-a-causal-chain",
+      "taskType": "worked_example",
+      "topicId": "topic-4-2-2-2",
+      "title": "Build coronary-artery explanations as a causal chain",
+      "guidance": "Rehearse the chain blocked coronary artery -> less oxygen to heart muscle -> less aerobic respiration -> less energy released -> reduced pumping efficiency / fatigue / heart attack risk.",
+      "conditions": [
+        "command word explain",
+        "open-response question",
+        "circulation topic"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "task-rule-worked-example-topic-4-3-1-7-sequence-vaccination-responses-explicitly",
+      "taskType": "worked_example",
+      "topicId": "topic-4-3-1-7",
+      "title": "Sequence vaccination responses explicitly",
+      "guidance": "Make students state antigen, antibody, memory cell, and faster secondary response in order before attempting prose answers about vaccination.",
+      "conditions": [
+        "vaccination topic",
+        "immune-response explanation",
+        "command word explain"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "task-rule-retrieval-drill-topic-4-6-3-7-separate-resistance-from-immunity",
+      "taskType": "retrieval_drill",
+      "topicId": "topic-4-6-3-7",
+      "title": "Separate resistance from immunity",
+      "guidance": "Use short retrieval drills that contrast resistant bacteria, immune individuals, and the selective pressure produced by antibiotic use.",
+      "conditions": [
+        "antibiotic-resistance question",
+        "low-confidence response history"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "task-rule-worked-example-topic-4-1-3-2-model-osmosis-with-water-potential-language",
+      "taskType": "worked_example",
+      "topicId": "topic-4-1-3-2",
+      "title": "Model osmosis with water-potential language",
+      "guidance": "Use worked examples that force learners to name water as the moving substance, identify the partially permeable membrane, and state the direction of net movement.",
+      "conditions": [
+        "osmosis topic",
+        "membrane-transport explanation",
+        "prior misconception triggered"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "task-rule-worked-example-topic-4-5-2-3-rehearse-accommodation-as-muscle-lens-pupil-changes",
+      "taskType": "worked_example",
+      "topicId": "topic-4-5-2-3",
+      "title": "Rehearse accommodation as muscle-lens-pupil changes",
+      "guidance": "Model near and bright-light responses as linked changes in ciliary muscle, lens shape, iris muscles and pupil size, using precise anatomical vocabulary.",
+      "conditions": [
+        "eye topic",
+        "structure-and-function explanation",
+        "prior lens-shape misconception"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "task-rule-reentry-topic-4-5-3-3-re-enter-kidney-questions-through-the-blood-filter-reabsorb-excrete-sequence",
+      "taskType": "reentry",
+      "topicId": "topic-4-5-3-3",
+      "title": "Re-enter kidney questions through the blood-filter-reabsorb-excrete sequence",
+      "guidance": "If kidney questions are going badly, route the learner back through the ordered sequence blood filtration -> selective reabsorption -> urine formation before asking for detail.",
+      "conditions": [
+        "kidney topic",
+        "repeated failure",
+        "homeostasis unit"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "task-rule-retrieval-drill-topic-4-6-1-2-contrast-meiosis-with-mitosis-before-genetics-problems",
+      "taskType": "retrieval_drill",
+      "topicId": "topic-4-6-1-2",
+      "title": "Contrast meiosis with mitosis before genetics problems",
+      "guidance": "Use short retrieval prompts that force chromosome number, number of divisions, cell type produced and genetic similarity for both meiosis and mitosis.",
+      "conditions": [
+        "reproduction topic",
+        "genetics problem",
+        "low-confidence response history"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "task-rule-explanation-topic-4-4-2-1-state-that-plants-respire-continuously-before-discussing-day-night-differences",
+      "taskType": "explanation",
+      "topicId": "topic-4-4-2-1",
+      "title": "State that plants respire continuously before discussing day-night differences",
+      "guidance": "Require the learner to say 'plants respire all the time' before adding what changes between day and night in photosynthesis and gas exchange.",
+      "conditions": [
+        "respiration topic",
+        "plant processes question"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "task-rule-mistake-review-topic-4-6-2-3-lock-down-control-variables-and-sample-size-reasoning-in-breeding-investigations",
+      "taskType": "mistake_review",
+      "topicId": "topic-4-6-2-3",
+      "title": "Lock down control variables and sample-size reasoning in breeding investigations",
+      "guidance": "Review answers that use vague environment wording and replace them with named control variables plus a clear reason why larger sample sizes improve representativeness and reduce anomaly effects.",
+      "conditions": [
+        "investigation planning",
+        "selective-breeding context",
+        "variable-control question"
+      ],
+      "priority": "medium"
+    }
+  ],
+  "sourceMappings": [
+    {
+      "id": "source-mapping-aqa-8461-1h-jun23-report-topic-topic-4-1-3-2-question-03-9",
+      "sourceId": "aqa-8461-1h-jun23-report",
+      "topicId": "topic-4-1-3-2",
+      "locator": "Question 03.9",
+      "excerptHint": "locator: Question 03.9 topicRef: 4.1.3.2 description: Treats osmosis as antibiotic molecules entering bacteria rather than water moving across a partially pe...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-8461-1h-jun23-report-topic-topic-4-2-1-question-01-1",
+      "sourceId": "aqa-8461-1h-jun23-report",
+      "topicId": "topic-4-2-1",
+      "locator": "Question 01.1",
+      "excerptHint": "locator: Question 01.1 topicRef: 4.2.1 description: Treats a tissue as any group of cells and omits the idea that the cells are similar in structure or funct...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-8461-1h-jun23-report-topic-topic-4-2-2-2-question-02-8",
+      "sourceId": "aqa-8461-1h-jun23-report",
+      "topicId": "topic-4-2-2-2",
+      "locator": "Question 02.8",
+      "excerptHint": "locator: Question 02.8 topicRef: 4.2.2.2 description: Confuses the role of the coronary arteries with vessels that carry blood to the lungs or around the res...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-8461-1h-jun23-report-topic-topic-4-3-1-3-question-03-1",
+      "sourceId": "aqa-8461-1h-jun23-report",
+      "topicId": "topic-4-3-1-3",
+      "locator": "Question 03.1",
+      "excerptHint": "locator: Question 03.1 topicRef: 4.3.1.3 description: Knows that toxins matter in salmonella infection but does not state that the bacteria release or secret...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-8461-1h-jun23-report-topic-topic-4-3-1-7-question-03-2",
+      "sourceId": "aqa-8461-1h-jun23-report",
+      "topicId": "topic-4-3-1-7",
+      "locator": "Question 03.2",
+      "excerptHint": "locator: Question 03.2 topicRef: 4.3.1.7 description: Mixes up antigens, antibodies, antitoxins and memory cells when explaining vaccination. triggerPatterns...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-8461-1h-jun23-report-topic-topic-4-6-3-7-question-03-8",
+      "sourceId": "aqa-8461-1h-jun23-report",
+      "topicId": "topic-4-6-3-7",
+      "locator": "Question 03.8",
+      "excerptHint": "locator: Question 03.8 topicRef: 4.6.3.7 description: Says bacteria become immune to antibiotics instead of resistant to them. triggerPatterns: bacteria beco...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-8461-2h-jun23-report-topic-topic-4-4-2-1-general-particular-problems",
+      "sourceId": "aqa-8461-2h-jun23-report",
+      "topicId": "topic-4-4-2-1",
+      "locator": "General / Particular problems",
+      "excerptHint": "locator: General / Particular problems topicRef: 4.4.2.1 description: Thinks plants respire only at night rather than continuously. triggerPatterns: plants r...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-8461-2h-jun23-report-topic-topic-4-5-2-3-question-02-4-and-02-5",
+      "sourceId": "aqa-8461-2h-jun23-report",
+      "topicId": "topic-4-5-2-3",
+      "locator": "Question 02.4 and 02.5",
+      "excerptHint": "locator: Question 02.4 and 02.5 taskType: worked_example topicRef: 4.5.2.3 title: Rehearse accommodation as muscle-lens-pupil changes guidance: Model near an...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-8461-2h-jun23-report-topic-topic-4-5-2-3-question-02-4",
+      "sourceId": "aqa-8461-2h-jun23-report",
+      "topicId": "topic-4-5-2-3",
+      "locator": "Question 02.4",
+      "excerptHint": "locator: Question 02.4 topicRef: 4.5.2.3 description: Describes the lens as larger or more concave when focusing on a near object. triggerPatterns: lens gets...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-8461-2h-jun23-report-topic-topic-4-5-3-3-general-particular-problems",
+      "sourceId": "aqa-8461-2h-jun23-report",
+      "topicId": "topic-4-5-3-3",
+      "locator": "General / Particular problems",
+      "excerptHint": "locator: General / Particular problems topicRef: 4.5.3.3 description: Has weak or fragmented understanding of kidney function and the role of the kidney in h...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-8461-2h-jun23-report-topic-topic-4-6-1-1-question-03-3",
+      "sourceId": "aqa-8461-2h-jun23-report",
+      "topicId": "topic-4-6-1-1",
+      "locator": "Question 03.3",
+      "excerptHint": "locator: Question 03.3 topicRef: 4.6.1.1 description: Treats tissue culture as simply using tissue instead of growing cells to produce clones. triggerPattern...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-8461-2h-jun23-report-topic-topic-4-6-1-2-general-particular-problems",
+      "sourceId": "aqa-8461-2h-jun23-report",
+      "topicId": "topic-4-6-1-2",
+      "locator": "General / Particular problems",
+      "excerptHint": "locator: General / Particular problems topicRef: 4.6.1.2 description: Confuses meiosis with mitosis or cannot use meiosis to explain genetic variation. trigg...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-8461-2h-jun23-report-topic-topic-4-6-2-3-question-03-7-and-03-8",
+      "sourceId": "aqa-8461-2h-jun23-report",
+      "topicId": "topic-4-6-2-3",
+      "locator": "Question 03.7 and 03.8",
+      "excerptHint": "locator: Question 03.7 and 03.8 taskType: mistake_review topicRef: 4.6.2.3 title: Lock down control variables and sample-size reasoning in breeding investiga...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-8461-2h-jun23-report-topic-topic-4-7-1-1-question-01-1",
+      "sourceId": "aqa-8461-2h-jun23-report",
+      "topicId": "topic-4-7-1-1",
+      "locator": "Question 01.1",
+      "excerptHint": "locator: Question 01.1 topicRef: 4.7.1.1 description: Uses ecosystem when the question is asking for the community of organisms living together in a habitat....",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-component-component-paper-1-specification-at-a-glance-paper-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "componentId": "component-paper-1",
+      "locator": "Specification at a glance / Paper 1",
+      "excerptHint": "locator: Specification at a glance / Paper 1 name: Paper 1: Cell biology; Organisation; Infection and response; Bioenergetics code: paper-1 weightPercent: 50...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-component-component-paper-2-specification-at-a-glance-paper-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "componentId": "component-paper-2",
+      "locator": "Specification at a glance / Paper 2",
+      "excerptHint": "locator: Specification at a glance / Paper 2 name: Paper 2: Homeostasis and response; Inheritance, variation and evolution; Ecology code: paper-2 weightPerce...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-1-1-1-section-4-1-1-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-1-1-1",
+      "locator": "Section 4.1.1.1",
+      "excerptHint": "locator: Section 4.1.1.1 name: Eukaryotes and prokaryotes code: 4.1.1.1 parentRef: 4.1.1 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-1-1-2-section-4-1-1-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-1-1-2",
+      "locator": "Section 4.1.1.2",
+      "excerptHint": "locator: Section 4.1.1.2 name: Animal and plant cells code: 4.1.1.2 parentRef: 4.1.1 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-1-1-3-section-4-1-1-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-1-1-3",
+      "locator": "Section 4.1.1.3",
+      "excerptHint": "locator: Section 4.1.1.3 name: Cell specialisation code: 4.1.1.3 parentRef: 4.1.1 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-1-1-4-section-4-1-1-4",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-1-1-4",
+      "locator": "Section 4.1.1.4",
+      "excerptHint": "locator: Section 4.1.1.4 name: Cell differentiation code: 4.1.1.4 parentRef: 4.1.1 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-1-1-5-section-4-1-1-5",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-1-1-5",
+      "locator": "Section 4.1.1.5",
+      "excerptHint": "locator: Section 4.1.1.5 name: Microscopy code: 4.1.1.5 parentRef: 4.1.1 sortOrder: 5",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-1-1-6-section-4-1-1-6",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-1-1-6",
+      "locator": "Section 4.1.1.6",
+      "excerptHint": "locator: Section 4.1.1.6 name: Culturing microorganisms (biology only) code: 4.1.1.6 parentRef: 4.1.1 sortOrder: 6",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-1-1-section-4-1-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-1-1",
+      "locator": "Section 4.1.1",
+      "excerptHint": "locator: Section 4.1.1 name: Cell structure code: 4.1.1 parentRef: 4.1 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-1-2-1-section-4-1-2-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-1-2-1",
+      "locator": "Section 4.1.2.1",
+      "excerptHint": "locator: Section 4.1.2.1 name: Chromosomes code: 4.1.2.1 parentRef: 4.1.2 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-1-2-2-section-4-1-2-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-1-2-2",
+      "locator": "Section 4.1.2.2",
+      "excerptHint": "locator: Section 4.1.2.2 name: Mitosis and the cell cycle code: 4.1.2.2 parentRef: 4.1.2 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-1-2-3-section-4-1-2-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-1-2-3",
+      "locator": "Section 4.1.2.3",
+      "excerptHint": "locator: Section 4.1.2.3 name: Stem cells code: 4.1.2.3 parentRef: 4.1.2 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-1-2-section-4-1-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-1-2",
+      "locator": "Section 4.1.2",
+      "excerptHint": "locator: Section 4.1.2 name: Cell division code: 4.1.2 parentRef: 4.1 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-1-3-1-section-4-1-3-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-1-3-1",
+      "locator": "Section 4.1.3.1",
+      "excerptHint": "locator: Section 4.1.3.1 name: Diffusion code: 4.1.3.1 parentRef: 4.1.3 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-1-3-2-section-4-1-3-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-1-3-2",
+      "locator": "Section 4.1.3.2",
+      "excerptHint": "locator: Section 4.1.3.2 name: Osmosis code: 4.1.3.2 parentRef: 4.1.3 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-1-3-3-section-4-1-3-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-1-3-3",
+      "locator": "Section 4.1.3.3",
+      "excerptHint": "locator: Section 4.1.3.3 name: Active transport code: 4.1.3.3 parentRef: 4.1.3 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-1-3-section-4-1-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-1-3",
+      "locator": "Section 4.1.3",
+      "excerptHint": "locator: Section 4.1.3 name: Transport in cells code: 4.1.3 parentRef: 4.1 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-1-section-4-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-1",
+      "locator": "Section 4.1",
+      "excerptHint": "locator: Section 4.1 name: Cell biology code: 4.1 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-2-1-section-4-2-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-2-1",
+      "locator": "Section 4.2.1",
+      "excerptHint": "locator: Section 4.2.1 name: Principles of organisation code: 4.2.1 parentRef: 4.2 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-2-2-1-section-4-2-2-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-2-2-1",
+      "locator": "Section 4.2.2.1",
+      "excerptHint": "locator: Section 4.2.2.1 name: The human digestive system code: 4.2.2.1 parentRef: 4.2.2 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-2-2-2-section-4-2-2-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-2-2-2",
+      "locator": "Section 4.2.2.2",
+      "excerptHint": "locator: Section 4.2.2.2 name: The heart and blood vessels code: 4.2.2.2 parentRef: 4.2.2 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-2-2-3-section-4-2-2-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-2-2-3",
+      "locator": "Section 4.2.2.3",
+      "excerptHint": "locator: Section 4.2.2.3 name: Blood code: 4.2.2.3 parentRef: 4.2.2 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-2-2-4-section-4-2-2-4",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-2-2-4",
+      "locator": "Section 4.2.2.4",
+      "excerptHint": "locator: Section 4.2.2.4 name: Coronary heart disease: a non-communicable disease code: 4.2.2.4 parentRef: 4.2.2 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-2-2-5-section-4-2-2-5",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-2-2-5",
+      "locator": "Section 4.2.2.5",
+      "excerptHint": "locator: Section 4.2.2.5 name: Health issues code: 4.2.2.5 parentRef: 4.2.2 sortOrder: 5",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-2-2-6-section-4-2-2-6",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-2-2-6",
+      "locator": "Section 4.2.2.6",
+      "excerptHint": "locator: Section 4.2.2.6 name: The effect of lifestyle on some non-communicable diseases code: 4.2.2.6 parentRef: 4.2.2 sortOrder: 6",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-2-2-7-section-4-2-2-7",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-2-2-7",
+      "locator": "Section 4.2.2.7",
+      "excerptHint": "locator: Section 4.2.2.7 name: Cancer code: 4.2.2.7 parentRef: 4.2.2 sortOrder: 7",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-2-2-section-4-2-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-2-2",
+      "locator": "Section 4.2.2",
+      "excerptHint": "locator: Section 4.2.2 name: Animal tissues, organs and organ systems code: 4.2.2 parentRef: 4.2 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-2-3-1-section-4-2-3-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-2-3-1",
+      "locator": "Section 4.2.3.1",
+      "excerptHint": "locator: Section 4.2.3.1 name: Plant tissues code: 4.2.3.1 parentRef: 4.2.3 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-2-3-2-section-4-2-3-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-2-3-2",
+      "locator": "Section 4.2.3.2",
+      "excerptHint": "locator: Section 4.2.3.2 name: Plant organ system code: 4.2.3.2 parentRef: 4.2.3 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-2-3-section-4-2-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-2-3",
+      "locator": "Section 4.2.3",
+      "excerptHint": "locator: Section 4.2.3 name: Plant tissues, organs and systems code: 4.2.3 parentRef: 4.2 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-2-section-4-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-2",
+      "locator": "Section 4.2",
+      "excerptHint": "locator: Section 4.2 name: Organisation code: 4.2 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-3-1-1-section-4-3-1-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-3-1-1",
+      "locator": "Section 4.3.1.1",
+      "excerptHint": "locator: Section 4.3.1.1 name: Communicable (infectious) diseases code: 4.3.1.1 parentRef: 4.3.1 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-3-1-2-section-4-3-1-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-3-1-2",
+      "locator": "Section 4.3.1.2",
+      "excerptHint": "locator: Section 4.3.1.2 name: Viral diseases code: 4.3.1.2 parentRef: 4.3.1 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-3-1-3-section-4-3-1-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-3-1-3",
+      "locator": "Section 4.3.1.3",
+      "excerptHint": "locator: Section 4.3.1.3 name: Bacterial diseases code: 4.3.1.3 parentRef: 4.3.1 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-3-1-4-section-4-3-1-4",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-3-1-4",
+      "locator": "Section 4.3.1.4",
+      "excerptHint": "locator: Section 4.3.1.4 name: Fungal diseases code: 4.3.1.4 parentRef: 4.3.1 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-3-1-5-section-4-3-1-5",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-3-1-5",
+      "locator": "Section 4.3.1.5",
+      "excerptHint": "locator: Section 4.3.1.5 name: Protist diseases code: 4.3.1.5 parentRef: 4.3.1 sortOrder: 5",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-3-1-6-section-4-3-1-6",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-3-1-6",
+      "locator": "Section 4.3.1.6",
+      "excerptHint": "locator: Section 4.3.1.6 name: Human defence systems code: 4.3.1.6 parentRef: 4.3.1 sortOrder: 6",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-3-1-7-section-4-3-1-7",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-3-1-7",
+      "locator": "Section 4.3.1.7",
+      "excerptHint": "locator: Section 4.3.1.7 name: Vaccination code: 4.3.1.7 parentRef: 4.3.1 sortOrder: 7",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-3-1-8-section-4-3-1-8",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-3-1-8",
+      "locator": "Section 4.3.1.8",
+      "excerptHint": "locator: Section 4.3.1.8 name: Antibiotics and painkillers code: 4.3.1.8 parentRef: 4.3.1 sortOrder: 8",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-3-1-9-section-4-3-1-9",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-3-1-9",
+      "locator": "Section 4.3.1.9",
+      "excerptHint": "locator: Section 4.3.1.9 name: Discovery and development of drugs code: 4.3.1.9 parentRef: 4.3.1 sortOrder: 9",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-3-1-section-4-3-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-3-1",
+      "locator": "Section 4.3.1",
+      "excerptHint": "locator: Section 4.3.1 name: Communicable diseases code: 4.3.1 parentRef: 4.3 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-3-2-1-section-4-3-2-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-3-2-1",
+      "locator": "Section 4.3.2.1",
+      "excerptHint": "locator: Section 4.3.2.1 name: Producing monoclonal antibodies code: 4.3.2.1 parentRef: 4.3.2 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-3-2-2-section-4-3-2-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-3-2-2",
+      "locator": "Section 4.3.2.2",
+      "excerptHint": "locator: Section 4.3.2.2 name: Uses of monoclonal antibodies code: 4.3.2.2 parentRef: 4.3.2 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-3-2-section-4-3-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-3-2",
+      "locator": "Section 4.3.2",
+      "excerptHint": "locator: Section 4.3.2 name: Monoclonal antibodies (biology only) (HT only) code: 4.3.2 parentRef: 4.3 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-3-3-1-section-4-3-3-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-3-3-1",
+      "locator": "Section 4.3.3.1",
+      "excerptHint": "locator: Section 4.3.3.1 name: Detection and identification of plant diseases code: 4.3.3.1 parentRef: 4.3.3 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-3-3-2-section-4-3-3-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-3-3-2",
+      "locator": "Section 4.3.3.2",
+      "excerptHint": "locator: Section 4.3.3.2 name: Plant defence responses code: 4.3.3.2 parentRef: 4.3.3 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-3-3-section-4-3-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-3-3",
+      "locator": "Section 4.3.3",
+      "excerptHint": "locator: Section 4.3.3 name: Plant disease (biology only) code: 4.3.3 parentRef: 4.3 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-3-section-4-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-3",
+      "locator": "Section 4.3",
+      "excerptHint": "locator: Section 4.3 name: Infection and response code: 4.3 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-4-1-1-section-4-4-1-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-4-1-1",
+      "locator": "Section 4.4.1.1",
+      "excerptHint": "locator: Section 4.4.1.1 name: Photosynthetic reaction code: 4.4.1.1 parentRef: 4.4.1 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-4-1-2-section-4-4-1-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-4-1-2",
+      "locator": "Section 4.4.1.2",
+      "excerptHint": "locator: Section 4.4.1.2 name: Rate of photosynthesis code: 4.4.1.2 parentRef: 4.4.1 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-4-1-3-section-4-4-1-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-4-1-3",
+      "locator": "Section 4.4.1.3",
+      "excerptHint": "locator: Section 4.4.1.3 name: Uses of glucose from photosynthesis code: 4.4.1.3 parentRef: 4.4.1 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-4-1-section-4-4-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-4-1",
+      "locator": "Section 4.4.1",
+      "excerptHint": "locator: Section 4.4.1 name: Photosynthesis code: 4.4.1 parentRef: 4.4 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-4-2-1-section-4-4-2-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-4-2-1",
+      "locator": "Section 4.4.2.1",
+      "excerptHint": "locator: Section 4.4.2.1 name: Aerobic and anaerobic respiration code: 4.4.2.1 parentRef: 4.4.2 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-4-2-2-section-4-4-2-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-4-2-2",
+      "locator": "Section 4.4.2.2",
+      "excerptHint": "locator: Section 4.4.2.2 name: Response to exercise code: 4.4.2.2 parentRef: 4.4.2 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-4-2-3-section-4-4-2-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-4-2-3",
+      "locator": "Section 4.4.2.3",
+      "excerptHint": "locator: Section 4.4.2.3 name: Metabolism code: 4.4.2.3 parentRef: 4.4.2 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-4-2-section-4-4-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-4-2",
+      "locator": "Section 4.4.2",
+      "excerptHint": "locator: Section 4.4.2 name: Respiration code: 4.4.2 parentRef: 4.4 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-4-section-4-4",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-4",
+      "locator": "Section 4.4",
+      "excerptHint": "locator: Section 4.4 name: Bioenergetics code: 4.4 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-5-1-section-4-5-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-5-1",
+      "locator": "Section 4.5.1",
+      "excerptHint": "locator: Section 4.5.1 name: Homeostasis code: 4.5.1 parentRef: 4.5 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-5-2-1-section-4-5-2-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-5-2-1",
+      "locator": "Section 4.5.2.1",
+      "excerptHint": "locator: Section 4.5.2.1 name: Structure and function code: 4.5.2.1 parentRef: 4.5.2 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-5-2-2-section-4-5-2-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-5-2-2",
+      "locator": "Section 4.5.2.2",
+      "excerptHint": "locator: Section 4.5.2.2 name: The brain (biology only) code: 4.5.2.2 parentRef: 4.5.2 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-5-2-3-section-4-5-2-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-5-2-3",
+      "locator": "Section 4.5.2.3",
+      "excerptHint": "locator: Section 4.5.2.3 name: The eye (biology only) code: 4.5.2.3 parentRef: 4.5.2 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-5-2-4-section-4-5-2-4",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-5-2-4",
+      "locator": "Section 4.5.2.4",
+      "excerptHint": "locator: Section 4.5.2.4 name: Control of body temperature (biology only) code: 4.5.2.4 parentRef: 4.5.2 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-5-2-section-4-5-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-5-2",
+      "locator": "Section 4.5.2",
+      "excerptHint": "locator: Section 4.5.2 name: The human nervous system code: 4.5.2 parentRef: 4.5 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-5-3-1-section-4-5-3-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-5-3-1",
+      "locator": "Section 4.5.3.1",
+      "excerptHint": "locator: Section 4.5.3.1 name: Human endocrine system code: 4.5.3.1 parentRef: 4.5.3 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-5-3-2-section-4-5-3-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-5-3-2",
+      "locator": "Section 4.5.3.2",
+      "excerptHint": "locator: Section 4.5.3.2 name: Control of blood glucose concentration code: 4.5.3.2 parentRef: 4.5.3 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-5-3-3-section-4-5-3-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-5-3-3",
+      "locator": "Section 4.5.3.3",
+      "excerptHint": "locator: Section 4.5.3.3 name: Maintaining water and nitrogen balance in the body (biology only) code: 4.5.3.3 parentRef: 4.5.3 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-5-3-4-section-4-5-3-4",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-5-3-4",
+      "locator": "Section 4.5.3.4",
+      "excerptHint": "locator: Section 4.5.3.4 name: Hormones in human reproduction code: 4.5.3.4 parentRef: 4.5.3 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-5-3-5-section-4-5-3-5",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-5-3-5",
+      "locator": "Section 4.5.3.5",
+      "excerptHint": "locator: Section 4.5.3.5 name: Contraception code: 4.5.3.5 parentRef: 4.5.3 sortOrder: 5",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-5-3-6-section-4-5-3-6",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-5-3-6",
+      "locator": "Section 4.5.3.6",
+      "excerptHint": "locator: Section 4.5.3.6 name: The use of hormones to treat infertility (HT only) code: 4.5.3.6 parentRef: 4.5.3 sortOrder: 6",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-5-3-7-section-4-5-3-7",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-5-3-7",
+      "locator": "Section 4.5.3.7",
+      "excerptHint": "locator: Section 4.5.3.7 name: Feedback systems (HT only) code: 4.5.3.7 parentRef: 4.5.3 sortOrder: 7",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-5-3-section-4-5-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-5-3",
+      "locator": "Section 4.5.3",
+      "excerptHint": "locator: Section 4.5.3 name: Hormonal coordination in humans code: 4.5.3 parentRef: 4.5 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-5-4-1-section-4-5-4-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-5-4-1",
+      "locator": "Section 4.5.4.1",
+      "excerptHint": "locator: Section 4.5.4.1 name: Control and coordination code: 4.5.4.1 parentRef: 4.5.4 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-5-4-2-section-4-5-4-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-5-4-2",
+      "locator": "Section 4.5.4.2",
+      "excerptHint": "locator: Section 4.5.4.2 name: Use of plant hormones (HT only) code: 4.5.4.2 parentRef: 4.5.4 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-5-4-section-4-5-4",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-5-4",
+      "locator": "Section 4.5.4",
+      "excerptHint": "locator: Section 4.5.4 name: Plant hormones (biology only) code: 4.5.4 parentRef: 4.5 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-5-section-4-5",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-5",
+      "locator": "Section 4.5",
+      "excerptHint": "locator: Section 4.5 name: Homeostasis and response code: 4.5 sortOrder: 5",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-1-1-section-4-6-1-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-1-1",
+      "locator": "Section 4.6.1.1",
+      "excerptHint": "locator: Section 4.6.1.1 name: Sexual and asexual reproduction code: 4.6.1.1 parentRef: 4.6.1 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-1-2-section-4-6-1-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-1-2",
+      "locator": "Section 4.6.1.2",
+      "excerptHint": "locator: Section 4.6.1.2 name: Meiosis code: 4.6.1.2 parentRef: 4.6.1 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-1-3-section-4-6-1-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-1-3",
+      "locator": "Section 4.6.1.3",
+      "excerptHint": "locator: Section 4.6.1.3 name: Advantages and disadvantages of sexual and asexual reproduction (biology only) code: 4.6.1.3 parentRef: 4.6.1 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-1-4-section-4-6-1-4",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-1-4",
+      "locator": "Section 4.6.1.4",
+      "excerptHint": "locator: Section 4.6.1.4 name: DNA and the genome code: 4.6.1.4 parentRef: 4.6.1 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-1-5-section-4-6-1-5",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-1-5",
+      "locator": "Section 4.6.1.5",
+      "excerptHint": "locator: Section 4.6.1.5 name: DNA structure (biology only) code: 4.6.1.5 parentRef: 4.6.1 sortOrder: 5",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-1-6-section-4-6-1-6",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-1-6",
+      "locator": "Section 4.6.1.6",
+      "excerptHint": "locator: Section 4.6.1.6 name: Genetic inheritance code: 4.6.1.6 parentRef: 4.6.1 sortOrder: 6",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-1-7-section-4-6-1-7",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-1-7",
+      "locator": "Section 4.6.1.7",
+      "excerptHint": "locator: Section 4.6.1.7 name: Inherited disorders code: 4.6.1.7 parentRef: 4.6.1 sortOrder: 7",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-1-8-section-4-6-1-8",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-1-8",
+      "locator": "Section 4.6.1.8",
+      "excerptHint": "locator: Section 4.6.1.8 name: Sex determination code: 4.6.1.8 parentRef: 4.6.1 sortOrder: 8",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-1-section-4-6-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-1",
+      "locator": "Section 4.6.1",
+      "excerptHint": "locator: Section 4.6.1 name: Reproduction code: 4.6.1 parentRef: 4.6 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-2-1-section-4-6-2-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-2-1",
+      "locator": "Section 4.6.2.1",
+      "excerptHint": "locator: Section 4.6.2.1 name: Variation code: 4.6.2.1 parentRef: 4.6.2 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-2-2-section-4-6-2-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-2-2",
+      "locator": "Section 4.6.2.2",
+      "excerptHint": "locator: Section 4.6.2.2 name: Evolution code: 4.6.2.2 parentRef: 4.6.2 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-2-3-section-4-6-2-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-2-3",
+      "locator": "Section 4.6.2.3",
+      "excerptHint": "locator: Section 4.6.2.3 name: Selective breeding code: 4.6.2.3 parentRef: 4.6.2 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-2-4-section-4-6-2-4",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-2-4",
+      "locator": "Section 4.6.2.4",
+      "excerptHint": "locator: Section 4.6.2.4 name: Genetic engineering code: 4.6.2.4 parentRef: 4.6.2 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-2-5-section-4-6-2-5",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-2-5",
+      "locator": "Section 4.6.2.5",
+      "excerptHint": "locator: Section 4.6.2.5 name: Cloning (biology only) code: 4.6.2.5 parentRef: 4.6.2 sortOrder: 5",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-2-section-4-6-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-2",
+      "locator": "Section 4.6.2",
+      "excerptHint": "locator: Section 4.6.2 name: Variation and evolution code: 4.6.2 parentRef: 4.6 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-3-1-section-4-6-3-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-3-1",
+      "locator": "Section 4.6.3.1",
+      "excerptHint": "locator: Section 4.6.3.1 name: Theory of evolution (biology only) code: 4.6.3.1 parentRef: 4.6.3 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-3-2-section-4-6-3-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-3-2",
+      "locator": "Section 4.6.3.2",
+      "excerptHint": "locator: Section 4.6.3.2 name: Speciation (biology only) code: 4.6.3.2 parentRef: 4.6.3 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-3-3-section-4-6-3-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-3-3",
+      "locator": "Section 4.6.3.3",
+      "excerptHint": "locator: Section 4.6.3.3 name: The understanding of genetics (biology only) code: 4.6.3.3 parentRef: 4.6.3 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-3-4-section-4-6-3-4",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-3-4",
+      "locator": "Section 4.6.3.4",
+      "excerptHint": "locator: Section 4.6.3.4 name: Evidence for evolution code: 4.6.3.4 parentRef: 4.6.3 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-3-5-section-4-6-3-5",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-3-5",
+      "locator": "Section 4.6.3.5",
+      "excerptHint": "locator: Section 4.6.3.5 name: Fossils code: 4.6.3.5 parentRef: 4.6.3 sortOrder: 5",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-3-6-section-4-6-3-6",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-3-6",
+      "locator": "Section 4.6.3.6",
+      "excerptHint": "locator: Section 4.6.3.6 name: Extinction code: 4.6.3.6 parentRef: 4.6.3 sortOrder: 6",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-3-7-section-4-6-3-7",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-3-7",
+      "locator": "Section 4.6.3.7",
+      "excerptHint": "locator: Section 4.6.3.7 name: Resistant bacteria code: 4.6.3.7 parentRef: 4.6.3 sortOrder: 7",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-3-section-4-6-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-3",
+      "locator": "Section 4.6.3",
+      "excerptHint": "locator: Section 4.6.3 name: The development of understanding of genetics and evolution code: 4.6.3 parentRef: 4.6 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-4-section-4-6-4",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6-4",
+      "locator": "Section 4.6.4",
+      "excerptHint": "locator: Section 4.6.4 name: Classification of living organisms code: 4.6.4 parentRef: 4.6 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-6-section-4-6",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-6",
+      "locator": "Section 4.6",
+      "excerptHint": "locator: Section 4.6 name: Inheritance, variation and evolution code: 4.6 sortOrder: 6",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-1-1-section-4-7-1-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-1-1",
+      "locator": "Section 4.7.1.1",
+      "excerptHint": "locator: Section 4.7.1.1 name: Communities code: 4.7.1.1 parentRef: 4.7.1 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-1-2-section-4-7-1-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-1-2",
+      "locator": "Section 4.7.1.2",
+      "excerptHint": "locator: Section 4.7.1.2 name: Abiotic factors code: 4.7.1.2 parentRef: 4.7.1 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-1-3-section-4-7-1-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-1-3",
+      "locator": "Section 4.7.1.3",
+      "excerptHint": "locator: Section 4.7.1.3 name: Biotic factors code: 4.7.1.3 parentRef: 4.7.1 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-1-4-section-4-7-1-4",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-1-4",
+      "locator": "Section 4.7.1.4",
+      "excerptHint": "locator: Section 4.7.1.4 name: Adaptations code: 4.7.1.4 parentRef: 4.7.1 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-1-section-4-7-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-1",
+      "locator": "Section 4.7.1",
+      "excerptHint": "locator: Section 4.7.1 name: Adaptations, interdependence and competition code: 4.7.1 parentRef: 4.7 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-2-1-section-4-7-2-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-2-1",
+      "locator": "Section 4.7.2.1",
+      "excerptHint": "locator: Section 4.7.2.1 name: Levels of organisation code: 4.7.2.1 parentRef: 4.7.2 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-2-2-section-4-7-2-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-2-2",
+      "locator": "Section 4.7.2.2",
+      "excerptHint": "locator: Section 4.7.2.2 name: How materials are cycled code: 4.7.2.2 parentRef: 4.7.2 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-2-3-section-4-7-2-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-2-3",
+      "locator": "Section 4.7.2.3",
+      "excerptHint": "locator: Section 4.7.2.3 name: Decomposition (biology only) code: 4.7.2.3 parentRef: 4.7.2 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-2-4-section-4-7-2-4",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-2-4",
+      "locator": "Section 4.7.2.4",
+      "excerptHint": "locator: Section 4.7.2.4 name: Impact of environmental change (biology only) (HT only) code: 4.7.2.4 parentRef: 4.7.2 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-2-section-4-7-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-2",
+      "locator": "Section 4.7.2",
+      "excerptHint": "locator: Section 4.7.2 name: Organisation of an ecosystem code: 4.7.2 parentRef: 4.7 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-3-1-section-4-7-3-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-3-1",
+      "locator": "Section 4.7.3.1",
+      "excerptHint": "locator: Section 4.7.3.1 name: Biodiversity code: 4.7.3.1 parentRef: 4.7.3 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-3-2-section-4-7-3-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-3-2",
+      "locator": "Section 4.7.3.2",
+      "excerptHint": "locator: Section 4.7.3.2 name: Waste management code: 4.7.3.2 parentRef: 4.7.3 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-3-3-section-4-7-3-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-3-3",
+      "locator": "Section 4.7.3.3",
+      "excerptHint": "locator: Section 4.7.3.3 name: Land use code: 4.7.3.3 parentRef: 4.7.3 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-3-4-section-4-7-3-4",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-3-4",
+      "locator": "Section 4.7.3.4",
+      "excerptHint": "locator: Section 4.7.3.4 name: Deforestation code: 4.7.3.4 parentRef: 4.7.3 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-3-5-section-4-7-3-5",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-3-5",
+      "locator": "Section 4.7.3.5",
+      "excerptHint": "locator: Section 4.7.3.5 name: Global warming code: 4.7.3.5 parentRef: 4.7.3 sortOrder: 5",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-3-6-section-4-7-3-6",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-3-6",
+      "locator": "Section 4.7.3.6",
+      "excerptHint": "locator: Section 4.7.3.6 name: Maintaining biodiversity code: 4.7.3.6 parentRef: 4.7.3 sortOrder: 6",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-3-section-4-7-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-3",
+      "locator": "Section 4.7.3",
+      "excerptHint": "locator: Section 4.7.3 name: Biodiversity and the effect of human interaction on ecosystems code: 4.7.3 parentRef: 4.7 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-4-1-section-4-7-4-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-4-1",
+      "locator": "Section 4.7.4.1",
+      "excerptHint": "locator: Section 4.7.4.1 name: Trophic levels code: 4.7.4.1 parentRef: 4.7.4 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-4-2-section-4-7-4-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-4-2",
+      "locator": "Section 4.7.4.2",
+      "excerptHint": "locator: Section 4.7.4.2 name: Pyramids of biomass code: 4.7.4.2 parentRef: 4.7.4 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-4-3-section-4-7-4-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-4-3",
+      "locator": "Section 4.7.4.3",
+      "excerptHint": "locator: Section 4.7.4.3 name: Transfer of biomass code: 4.7.4.3 parentRef: 4.7.4 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-4-section-4-7-4",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-4",
+      "locator": "Section 4.7.4",
+      "excerptHint": "locator: Section 4.7.4 name: Trophic levels in an ecosystem (biology only) code: 4.7.4 parentRef: 4.7 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-5-1-section-4-7-5-1",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-5-1",
+      "locator": "Section 4.7.5.1",
+      "excerptHint": "locator: Section 4.7.5.1 name: Factors affecting food security code: 4.7.5.1 parentRef: 4.7.5 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-5-2-section-4-7-5-2",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-5-2",
+      "locator": "Section 4.7.5.2",
+      "excerptHint": "locator: Section 4.7.5.2 name: Farming techniques code: 4.7.5.2 parentRef: 4.7.5 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-5-3-section-4-7-5-3",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-5-3",
+      "locator": "Section 4.7.5.3",
+      "excerptHint": "locator: Section 4.7.5.3 name: Sustainable fisheries code: 4.7.5.3 parentRef: 4.7.5 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-5-4-section-4-7-5-4",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-5-4",
+      "locator": "Section 4.7.5.4",
+      "excerptHint": "locator: Section 4.7.5.4 name: Role of biotechnology code: 4.7.5.4 parentRef: 4.7.5 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-5-section-4-7-5",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7-5",
+      "locator": "Section 4.7.5",
+      "excerptHint": "locator: Section 4.7.5 name: Food production (biology only) code: 4.7.5 parentRef: 4.7 sortOrder: 5",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-7-section-4-7",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-7",
+      "locator": "Section 4.7",
+      "excerptHint": "locator: Section 4.7 name: Ecology code: 4.7 sortOrder: 7",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-biology-8461-spec-topic-topic-4-8-section-4-8",
+      "sourceId": "aqa-biology-8461-spec",
+      "topicId": "topic-4-8",
+      "locator": "Section 4.8",
+      "excerptHint": "locator: Section 4.8 name: Key ideas code: 4.8 sortOrder: 8",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-balance",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Balance",
+      "excerptHint": "locator: Command words / Balance word: Balance definition: Students need to balance a chemical equation. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-calculate",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Calculate",
+      "excerptHint": "locator: Command words / Calculate word: Calculate definition: Students should use numbers given in the question to work out the answer. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-choose",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Choose",
+      "excerptHint": "locator: Command words / Choose word: Choose definition: Select from a range of alternatives. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-compare",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Compare",
+      "excerptHint": "locator: Command words / Compare word: Compare definition: This requires the student to describe the similarities and/or differences between things, not just...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-complete",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Complete",
+      "excerptHint": "locator: Command words / Complete word: Complete definition: Answers should be written in the space provided, for example, on a diagram, in spaces in a sente...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-define",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Define",
+      "excerptHint": "locator: Command words / Define word: Define definition: Specify the meaning of something. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-describe",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Describe",
+      "excerptHint": "locator: Command words / Describe word: Describe definition: Students may be asked to recall some facts, events or process in an accurate way. expectedDepth: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-design",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Design",
+      "excerptHint": "locator: Command words / Design word: Design definition: Set out how something will be done. expectedDepth: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-determine",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Determine",
+      "excerptHint": "locator: Command words / Determine word: Determine definition: Use given data or information to obtain and answer. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-draw",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Draw",
+      "excerptHint": "locator: Command words / Draw word: Draw definition: To produce, or add to, a diagram. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-estimate",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Estimate",
+      "excerptHint": "locator: Command words / Estimate word: Estimate definition: Assign an approximate value. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-evaluate",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Evaluate",
+      "excerptHint": "locator: Command words / Evaluate word: Evaluate definition: Students should use the information supplied, as well as their knowledge and understanding, to c...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-explain",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Explain",
+      "excerptHint": "locator: Command words / Explain word: Explain definition: Students should make something clear, or state the reasons for something happening. expectedDepth:...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-give",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Give",
+      "excerptHint": "locator: Command words / Give word: Give definition: Only a short answer is required, not an explanation or a description. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-how-what-when-where-which-who-why",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / How/What/When/Where/Which/Who/Why",
+      "excerptHint": "locator: Command words / How/What/When/Where/Which/Who/Why word: How/What/When/Where/Which/Who/Why definition: These can be used for more direct questions. e...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-identify",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Identify",
+      "excerptHint": "locator: Command words / Identify word: Identify definition: Name or otherwise characterise. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-justify",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Justify",
+      "excerptHint": "locator: Command words / Justify word: Justify definition: Use evidence from the information supplied to support an answer. expectedDepth: 4 guidance: Suppor...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-label",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Label",
+      "excerptHint": "locator: Command words / Label word: Label definition: Provide appropriate names on a diagram. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-measure",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Measure",
+      "excerptHint": "locator: Command words / Measure word: Measure definition: Find an item of data for a given quantity. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-name",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Name",
+      "excerptHint": "locator: Command words / Name word: Name definition: Only a short answer is required, not an explanation or a description. Often it can be answered with a si...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-plan",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Plan",
+      "excerptHint": "locator: Command words / Plan word: Plan definition: Write a method. expectedDepth: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-plot",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Plot",
+      "excerptHint": "locator: Command words / Plot word: Plot definition: Mark on a graph using data given. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-predict",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Predict",
+      "excerptHint": "locator: Command words / Predict word: Predict definition: Give a plausible outcome. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-show",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Show",
+      "excerptHint": "locator: Command words / Show word: Show definition: Provide structured evidence to reach a conclusion. expectedDepth: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-sketch",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Sketch",
+      "excerptHint": "locator: Command words / Sketch word: Sketch definition: Draw approximately. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-suggest",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Suggest",
+      "excerptHint": "locator: Command words / Suggest word: Suggest definition: This term is used in questions where students need to apply their knowledge and understanding to a...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-use",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Use",
+      "excerptHint": "locator: Command words / Use word: Use definition: The answer must be based on the information given in the question. Unless the information given in the que...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-write",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Write",
+      "excerptHint": "locator: Command words / Write word: Write definition: Only a short answer is required, not an explanation or a description. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-balance",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Balance",
+      "excerptHint": "locator: Command words / Balance word: Balance definition: Students need to balance a chemical equation. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-calculate",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Calculate",
+      "excerptHint": "locator: Command words / Calculate word: Calculate definition: Students should use numbers given in the question to work out the answer. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-choose",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Choose",
+      "excerptHint": "locator: Command words / Choose word: Choose definition: Select from a range of alternatives. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-compare",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Compare",
+      "excerptHint": "locator: Command words / Compare word: Compare definition: This requires the student to describe the similarities and/or differences between things, not just...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-complete",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Complete",
+      "excerptHint": "locator: Command words / Complete word: Complete definition: Answers should be written in the space provided, for example, on a diagram, in spaces in a sente...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-define",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Define",
+      "excerptHint": "locator: Command words / Define word: Define definition: Specify the meaning of something. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-describe",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Describe",
+      "excerptHint": "locator: Command words / Describe word: Describe definition: Students may be asked to recall some facts, events or process in an accurate way. expectedDepth: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-design",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Design",
+      "excerptHint": "locator: Command words / Design word: Design definition: Set out how something will be done. expectedDepth: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-determine",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Determine",
+      "excerptHint": "locator: Command words / Determine word: Determine definition: Use given data or information to obtain and answer. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-draw",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Draw",
+      "excerptHint": "locator: Command words / Draw word: Draw definition: To produce, or add to, a diagram. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-estimate",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Estimate",
+      "excerptHint": "locator: Command words / Estimate word: Estimate definition: Assign an approximate value. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-evaluate",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Evaluate",
+      "excerptHint": "locator: Command words / Evaluate word: Evaluate definition: Students should use the information supplied, as well as their knowledge and understanding, to c...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-explain",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Explain",
+      "excerptHint": "locator: Command words / Explain word: Explain definition: Students should make something clear, or state the reasons for something happening. expectedDepth:...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-give",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Give",
+      "excerptHint": "locator: Command words / Give word: Give definition: Only a short answer is required, not an explanation or a description. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-how-what-when-where-which-who-why",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / How/What/When/Where/Which/Who/Why",
+      "excerptHint": "locator: Command words / How/What/When/Where/Which/Who/Why word: How/What/When/Where/Which/Who/Why definition: These can be used for more direct questions. e...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-identify",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Identify",
+      "excerptHint": "locator: Command words / Identify word: Identify definition: Name or otherwise characterise. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-justify",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Justify",
+      "excerptHint": "locator: Command words / Justify word: Justify definition: Use evidence from the information supplied to support an answer. expectedDepth: 4 guidance: Suppor...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-label",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Label",
+      "excerptHint": "locator: Command words / Label word: Label definition: Provide appropriate names on a diagram. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-measure",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Measure",
+      "excerptHint": "locator: Command words / Measure word: Measure definition: Find an item of data for a given quantity. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-name",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Name",
+      "excerptHint": "locator: Command words / Name word: Name definition: Only a short answer is required, not an explanation or a description. Often it can be answered with a si...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-plan",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Plan",
+      "excerptHint": "locator: Command words / Plan word: Plan definition: Write a method. expectedDepth: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-plot",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Plot",
+      "excerptHint": "locator: Command words / Plot word: Plot definition: Mark on a graph using data given. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-predict",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Predict",
+      "excerptHint": "locator: Command words / Predict word: Predict definition: Give a plausible outcome. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-show",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Show",
+      "excerptHint": "locator: Command words / Show word: Show definition: Provide structured evidence to reach a conclusion. expectedDepth: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-sketch",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Sketch",
+      "excerptHint": "locator: Command words / Sketch word: Sketch definition: Draw approximately. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-suggest",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Suggest",
+      "excerptHint": "locator: Command words / Suggest word: Suggest definition: This term is used in questions where students need to apply their knowledge and understanding to a...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-use",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Use",
+      "excerptHint": "locator: Command words / Use word: Use definition: The answer must be based on the information given in the question. Unless the information given in the que...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-write",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Write",
+      "excerptHint": "locator: Command words / Write word: Write definition: Only a short answer is required, not an explanation or a description. expectedDepth: 1",
+      "confidence": "high"
+    }
+  ]
+}

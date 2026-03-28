@@ -309,6 +309,29 @@ function validateCollectionUniqueness(
         `Duplicate source id: ${value}`
       )
   );
+  collectDuplicates(
+    curriculumPackage.annotations?.markSchemePatterns.map((pattern) => pattern.id) ??
+      [],
+    (value) =>
+      addIssue(
+        "error",
+        "annotations.duplicate_mark_scheme_pattern_id",
+        "annotations.markSchemePatterns",
+        `Duplicate mark scheme pattern id: ${value}`
+      )
+  );
+  collectDuplicates(
+    curriculumPackage.annotations?.examTechniquePatterns.map(
+      (pattern) => pattern.id
+    ) ?? [],
+    (value) =>
+      addIssue(
+        "error",
+        "annotations.duplicate_exam_technique_pattern_id",
+        "annotations.examTechniquePatterns",
+        `Duplicate exam technique pattern id: ${value}`
+      )
+  );
 }
 
 function validateTopicGraph(
@@ -471,13 +494,43 @@ function validateCrossReferences(
     }
   });
 
+  const taskRuleCountsByTopicId = new Map<string, number>();
+  curriculumPackage.taskRules.forEach((rule) => {
+    if (!rule.topicId) {
+      return;
+    }
+
+    const nextCount = (taskRuleCountsByTopicId.get(rule.topicId) ?? 0) + 1;
+    taskRuleCountsByTopicId.set(rule.topicId, nextCount);
+  });
+  for (const [topicId, count] of taskRuleCountsByTopicId.entries()) {
+    if (count <= 5) {
+      continue;
+    }
+
+    addIssue(
+      "error",
+      "task_rules.topic_rule_limit",
+      "taskRules",
+      `Topic ${topicId} has ${count} task rules, but the current scheduler contract supports at most 5 topic-scoped rules per topic`
+    );
+  }
+
   curriculumPackage.sourceMappings.forEach((mapping) => {
-    if (!topicIds.has(mapping.topicId)) {
+    if (mapping.topicId && !topicIds.has(mapping.topicId)) {
       addIssue(
         "error",
         "source_mappings.topic_missing",
         `sourceMappings.${mapping.id}.topicId`,
         `Source mapping ${mapping.id} references unknown topic ${mapping.topicId}`
+      );
+    }
+    if (mapping.componentId && !componentIds.has(mapping.componentId)) {
+      addIssue(
+        "error",
+        "source_mappings.component_missing",
+        `sourceMappings.${mapping.id}.componentId`,
+        `Source mapping ${mapping.id} references unknown component ${mapping.componentId}`
       );
     }
     if (!sourceIds.has(mapping.sourceId)) {
@@ -522,6 +575,35 @@ function validateCrossReferences(
       );
     }
   });
+}
+
+function validateSeedCompatibilityWarnings(
+  curriculumPackage: CurriculumPackage,
+  addIssue: ReturnType<typeof createIssueCollector>["add"]
+): void {
+  const globalTaskRuleCount = curriculumPackage.taskRules.filter(
+    (rule) => !rule.topicId
+  ).length;
+  if (globalTaskRuleCount > 0) {
+    addIssue(
+      "warning",
+      "task_rules.global_not_seeded",
+      "taskRules",
+      `${globalTaskRuleCount} global task rule(s) are review-only in the current curriculum runtime and will not be persisted by seed`
+    );
+  }
+
+  const annotationCount =
+    (curriculumPackage.annotations?.markSchemePatterns.length ?? 0) +
+    (curriculumPackage.annotations?.examTechniquePatterns.length ?? 0);
+  if (annotationCount > 0) {
+    addIssue(
+      "warning",
+      "annotations.review_only",
+      "annotations",
+      `${annotationCount} annotation record(s) are review-only in the current curriculum runtime and will not be persisted by seed`
+    );
+  }
 }
 
 function validateCompleteness(
@@ -674,6 +756,7 @@ export function validateCurriculumPackage(
   validateCollectionUniqueness(curriculumPackage, issueCollector.add);
   validateTopicGraph(curriculumPackage, issueCollector.add);
   validateCrossReferences(curriculumPackage, issueCollector.add);
+  validateSeedCompatibilityWarnings(curriculumPackage, issueCollector.add);
   validateCompleteness(curriculumPackage, issueCollector.add);
 
   return {

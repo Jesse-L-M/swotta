@@ -1,0 +1,83 @@
+[misconception]
+locator: Question 01.1
+topicRef: 4.2.1
+description: Treats a tissue as any group of cells and omits the idea that the cells are similar in structure or function.
+triggerPatterns: tissue is a group of cells || tissues are many cells together || any cells working together make a tissue
+correctionGuidance: A tissue is a group of similar cells organised to carry out a particular shared function.
+severity: 2
+
+[misconception]
+locator: Question 02.8
+topicRef: 4.2.2.2
+description: Confuses the role of the coronary arteries with vessels that carry blood to the lungs or around the rest of the body.
+triggerPatterns: coronary arteries take blood to the lungs || coronary arteries move blood around the body || blocked coronary artery stops blood reaching the lungs
+correctionGuidance: Coronary arteries supply oxygenated blood to the heart muscle itself, so blockage reduces aerobic respiration in cardiac muscle.
+severity: 3
+
+[misconception]
+locator: Question 03.1
+topicRef: 4.3.1.3
+description: Knows that toxins matter in salmonella infection but does not state that the bacteria release or secrete them.
+triggerPatterns: salmonella has toxins || salmonella contains toxin || toxin inside the bacteria causes diarrhoea
+correctionGuidance: Salmonella bacteria produce and release toxins, and those toxins damage the body and cause symptoms such as diarrhoea and vomiting.
+severity: 2
+
+[misconception]
+locator: Question 03.2
+topicRef: 4.3.1.7
+description: Mixes up antigens, antibodies, antitoxins and memory cells when explaining vaccination.
+triggerPatterns: memory cells are antibodies || antibodies make white blood cells || vaccine gives antitoxins directly
+correctionGuidance: Vaccination introduces antigens, stimulates antibody production, and leaves memory cells that speed up the secondary response on re-exposure.
+severity: 3
+
+[misconception]
+locator: Question 03.8
+topicRef: 4.6.3.7
+description: Says bacteria become immune to antibiotics instead of resistant to them.
+triggerPatterns: bacteria become immune to antibiotics || animal becomes immune to antibiotics || antibiotic creates immunity in bacteria
+correctionGuidance: Random mutations can make some bacteria resistant to an antibiotic, and selection increases the frequency of resistant strains.
+severity: 3
+
+[misconception]
+locator: Question 03.9
+topicRef: 4.1.3.2
+description: Treats osmosis as antibiotic molecules entering bacteria rather than water moving across a partially permeable membrane.
+triggerPatterns: antibiotic enters by osmosis || osmosis means chemicals move into bacteria || osmosis moves the antibiotic into the cell
+correctionGuidance: Osmosis is the net movement of water through a partially permeable membrane from higher water potential to lower water potential.
+severity: 3
+
+[task-rule]
+locator: Question 02.8
+taskType: worked_example
+topicRef: 4.2.2.2
+title: Build coronary-artery explanations as a causal chain
+guidance: Rehearse the chain blocked coronary artery -> less oxygen to heart muscle -> less aerobic respiration -> less energy released -> reduced pumping efficiency / fatigue / heart attack risk.
+conditions: command word explain || open-response question || circulation topic
+priority: high
+
+[task-rule]
+locator: Question 03.2
+taskType: worked_example
+topicRef: 4.3.1.7
+title: Sequence vaccination responses explicitly
+guidance: Make students state antigen, antibody, memory cell, and faster secondary response in order before attempting prose answers about vaccination.
+conditions: vaccination topic || immune-response explanation || command word explain
+priority: high
+
+[task-rule]
+locator: Question 03.8
+taskType: retrieval_drill
+topicRef: 4.6.3.7
+title: Separate resistance from immunity
+guidance: Use short retrieval drills that contrast resistant bacteria, immune individuals, and the selective pressure produced by antibiotic use.
+conditions: antibiotic-resistance question || low-confidence response history
+priority: high
+
+[task-rule]
+locator: Question 03.9
+taskType: worked_example
+topicRef: 4.1.3.2
+title: Model osmosis with water-potential language
+guidance: Use worked examples that force learners to name water as the moving substance, identify the partially permeable membrane, and state the direction of net movement.
+conditions: osmosis topic || membrane-transport explanation || prior misconception triggered
+priority: high

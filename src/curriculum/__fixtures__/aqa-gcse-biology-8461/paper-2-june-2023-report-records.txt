@@ -1,0 +1,92 @@
+[misconception]
+locator: General / Particular problems
+topicRef: 4.5.3.3
+description: Has weak or fragmented understanding of kidney function and the role of the kidney in homeostasis.
+triggerPatterns: kidneys remove all water || kidneys only store urine || kidneys make urea
+correctionGuidance: The kidneys filter the blood, selectively reabsorb useful substances and water, and regulate water and ion balance while urea is excreted in urine.
+severity: 3
+
+[misconception]
+locator: General / Particular problems
+topicRef: 4.6.1.2
+description: Confuses meiosis with mitosis or cannot use meiosis to explain genetic variation.
+triggerPatterns: meiosis makes identical cells || meiosis has one division only || meiosis is for growth and repair
+correctionGuidance: Meiosis halves the chromosome number, produces genetically different gametes, and underpins variation in sexual reproduction.
+severity: 3
+
+[misconception]
+locator: General / Particular problems
+topicRef: 4.4.2.1
+description: Thinks plants respire only at night rather than continuously.
+triggerPatterns: plants respire at night only || plants stop respiration in daylight || respiration happens only when photosynthesis stops
+correctionGuidance: Plants respire all the time; photosynthesis happens only in light, but respiration continues day and night.
+severity: 2
+
+[misconception]
+locator: Question 01.1
+topicRef: 4.7.1.1
+description: Uses ecosystem when the question is asking for the community of organisms living together in a habitat.
+triggerPatterns: all organisms in a habitat make an ecosystem only || community means one population || habitat equals community
+correctionGuidance: A community is all the populations of different species living together in a habitat, while an ecosystem also includes the abiotic environment.
+severity: 2
+
+[misconception]
+locator: Question 02.4
+topicRef: 4.5.2.3
+description: Describes the lens as larger or more concave when focusing on a near object.
+triggerPatterns: lens gets larger for near focus || lens becomes concave to see near objects || lens stretches flatter for nearby objects
+correctionGuidance: To focus on a near object the lens becomes thicker, rounder and more convex.
+severity: 2
+
+[misconception]
+locator: Question 03.3
+topicRef: 4.6.1.1
+description: Treats tissue culture as simply using tissue instead of growing cells to produce clones.
+triggerPatterns: tissue culture means using plant tissue || tissue culture is cutting up tissue only || tissue culture means growing tissue without cells
+correctionGuidance: Tissue culture grows plant cells or small tissue samples by mitosis to produce many genetically identical clones.
+severity: 2
+
+[task-rule]
+locator: Question 02.4 and 02.5
+taskType: worked_example
+topicRef: 4.5.2.3
+title: Rehearse accommodation as muscle-lens-pupil changes
+guidance: Model near and bright-light responses as linked changes in ciliary muscle, lens shape, iris muscles and pupil size, using precise anatomical vocabulary.
+conditions: eye topic || structure-and-function explanation || prior lens-shape misconception
+priority: medium
+
+[task-rule]
+locator: General / Particular problems
+taskType: reentry
+topicRef: 4.5.3.3
+title: Re-enter kidney questions through the blood-filter-reabsorb-excrete sequence
+guidance: If kidney questions are going badly, route the learner back through the ordered sequence blood filtration -> selective reabsorption -> urine formation before asking for detail.
+conditions: kidney topic || repeated failure || homeostasis unit
+priority: high
+
+[task-rule]
+locator: General / Particular problems
+taskType: retrieval_drill
+topicRef: 4.6.1.2
+title: Contrast meiosis with mitosis before genetics problems
+guidance: Use short retrieval prompts that force chromosome number, number of divisions, cell type produced and genetic similarity for both meiosis and mitosis.
+conditions: reproduction topic || genetics problem || low-confidence response history
+priority: high
+
+[task-rule]
+locator: General / Particular problems
+taskType: explanation
+topicRef: 4.4.2.1
+title: State that plants respire continuously before discussing day-night differences
+guidance: Require the learner to say 'plants respire all the time' before adding what changes between day and night in photosynthesis and gas exchange.
+conditions: respiration topic || plant processes question
+priority: medium
+
+[task-rule]
+locator: Question 03.7 and 03.8
+taskType: mistake_review
+topicRef: 4.6.2.3
+title: Lock down control variables and sample-size reasoning in breeding investigations
+guidance: Review answers that use vague environment wording and replace them with named control variables plus a clear reason why larger sample sizes improve representativeness and reduce anomaly effects.
+conditions: investigation planning || selective-breeding context || variable-control question
+priority: medium

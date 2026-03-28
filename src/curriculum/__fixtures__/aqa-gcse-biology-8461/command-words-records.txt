@@ -1,0 +1,173 @@
+[command-word]
+locator: Command words / Balance
+word: Balance
+definition: Students need to balance a chemical equation.
+expectedDepth: 2
+
+[command-word]
+locator: Command words / Calculate
+word: Calculate
+definition: Students should use numbers given in the question to work out the answer.
+expectedDepth: 2
+
+[command-word]
+locator: Command words / Choose
+word: Choose
+definition: Select from a range of alternatives.
+expectedDepth: 1
+
+[command-word]
+locator: Command words / Compare
+word: Compare
+definition: This requires the student to describe the similarities and/or differences between things, not just write about one.
+expectedDepth: 3
+guidance: Write paired similarities or differences rather than isolated facts about one side.
+
+[command-word]
+locator: Command words / Complete
+word: Complete
+definition: Answers should be written in the space provided, for example, on a diagram, in spaces in a sentence or in a table.
+expectedDepth: 1
+
+[command-word]
+locator: Command words / Define
+word: Define
+definition: Specify the meaning of something.
+expectedDepth: 1
+
+[command-word]
+locator: Command words / Describe
+word: Describe
+definition: Students may be asked to recall some facts, events or process in an accurate way.
+expectedDepth: 3
+
+[command-word]
+locator: Command words / Design
+word: Design
+definition: Set out how something will be done.
+expectedDepth: 3
+
+[command-word]
+locator: Command words / Determine
+word: Determine
+definition: Use given data or information to obtain and answer.
+expectedDepth: 2
+
+[command-word]
+locator: Command words / Draw
+word: Draw
+definition: To produce, or add to, a diagram.
+expectedDepth: 1
+
+[command-word]
+locator: Command words / Estimate
+word: Estimate
+definition: Assign an approximate value.
+expectedDepth: 2
+
+[command-word]
+locator: Command words / Evaluate
+word: Evaluate
+definition: Students should use the information supplied, as well as their knowledge and understanding, to consider evidence for and against when making a judgement.
+expectedDepth: 4
+guidance: Use the evidence provided, weigh both sides, then reach a justified judgement.
+
+[command-word]
+locator: Command words / Explain
+word: Explain
+definition: Students should make something clear, or state the reasons for something happening.
+expectedDepth: 3
+guidance: State the biological mechanism and link it to the resulting outcome.
+
+[command-word]
+locator: Command words / Give
+word: Give
+definition: Only a short answer is required, not an explanation or a description.
+expectedDepth: 1
+
+[command-word]
+locator: Command words / How/What/When/Where/Which/Who/Why
+word: How/What/When/Where/Which/Who/Why
+definition: These can be used for more direct questions.
+expectedDepth: 1
+
+[command-word]
+locator: Command words / Identify
+word: Identify
+definition: Name or otherwise characterise.
+expectedDepth: 1
+
+[command-word]
+locator: Command words / Justify
+word: Justify
+definition: Use evidence from the information supplied to support an answer.
+expectedDepth: 4
+guidance: Support the choice or conclusion with evidence from the question or data provided.
+
+[command-word]
+locator: Command words / Label
+word: Label
+definition: Provide appropriate names on a diagram.
+expectedDepth: 1
+
+[command-word]
+locator: Command words / Measure
+word: Measure
+definition: Find an item of data for a given quantity.
+expectedDepth: 1
+
+[command-word]
+locator: Command words / Name
+word: Name
+definition: Only a short answer is required, not an explanation or a description. Often it can be answered with a single word, phrase or sentence.
+expectedDepth: 1
+
+[command-word]
+locator: Command words / Plan
+word: Plan
+definition: Write a method.
+expectedDepth: 3
+
+[command-word]
+locator: Command words / Plot
+word: Plot
+definition: Mark on a graph using data given.
+expectedDepth: 2
+
+[command-word]
+locator: Command words / Predict
+word: Predict
+definition: Give a plausible outcome.
+expectedDepth: 2
+
+[command-word]
+locator: Command words / Show
+word: Show
+definition: Provide structured evidence to reach a conclusion.
+expectedDepth: 3
+
+[command-word]
+locator: Command words / Sketch
+word: Sketch
+definition: Draw approximately.
+expectedDepth: 1
+
+[command-word]
+locator: Command words / Suggest
+word: Suggest
+definition: This term is used in questions where students need to apply their knowledge and understanding to a new situation.
+expectedDepth: 3
+guidance: Apply existing knowledge to the unfamiliar context instead of recalling a memorised sentence.
+
+[command-word]
+locator: Command words / Use
+word: Use
+definition: The answer must be based on the information given in the question. Unless the information given in the question is used, no marks can be given. In some cases students might be asked to use their own knowledge and understanding.
+expectedDepth: 2
+guidance: Reference the given data or information explicitly or the answer will not secure credit.
+
+[command-word]
+locator: Command words / Write
+word: Write
+definition: Only a short answer is required, not an explanation or a description.
+expectedDepth: 1

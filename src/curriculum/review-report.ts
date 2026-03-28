@@ -142,6 +142,25 @@ function formatComponentReference(
   return `${component.code} ${formatValue(component.name)}`;
 }
 
+function formatSourceMappingTarget(
+  topicMap: Map<string, CurriculumTopic>,
+  componentMap: Map<string, CurriculumAssessmentComponent>,
+  mapping: CurriculumPackage["sourceMappings"][number]
+): string {
+  const targets: string[] = [];
+
+  if (mapping.topicId) {
+    targets.push(`topic: ${formatTopicReference(topicMap, mapping.topicId)}`);
+  }
+  if (mapping.componentId) {
+    targets.push(
+      `component: ${formatComponentReference(componentMap, mapping.componentId)}`
+    );
+  }
+
+  return targets.join("; ");
+}
+
 function formatQuestionTypeReference(
   questionTypeMap: Map<string, CurriculumQuestionType>,
   questionTypeId: string
@@ -481,6 +500,9 @@ function formatPedagogicalSummary(curriculumPackage: CurriculumPackage): string[
   const topicMap = new Map(
     curriculumPackage.topics.map((topic) => [topic.id, topic] as const)
   );
+  const componentMap = new Map(
+    curriculumPackage.components.map((component) => [component.id, component] as const)
+  );
   const sourceMap = new Map(
     curriculumPackage.provenance.sources.map((source) => [source.id, source] as const)
   );
@@ -500,8 +522,8 @@ function formatPedagogicalSummary(curriculumPackage: CurriculumPackage): string[
   const sourceMappings = [...curriculumPackage.sourceMappings].sort(
     (left, right) =>
       compareText(
-        `${left.sourceId}|${left.topicId}|${left.locator}|${left.id}`,
-        `${right.sourceId}|${right.topicId}|${right.locator}|${right.id}`
+        `${left.sourceId}|${left.topicId ?? ""}|${left.componentId ?? ""}|${left.locator}|${left.id}`,
+        `${right.sourceId}|${right.topicId ?? ""}|${right.componentId ?? ""}|${right.locator}|${right.id}`
       )
   );
 
@@ -539,7 +561,7 @@ function formatPedagogicalSummary(curriculumPackage: CurriculumPackage): string[
     sourceMappings.map((mapping) => {
       const source = sourceMap.get(mapping.sourceId);
       const detailLines = [
-        `- ${source ? `${formatValue(source.title)} (${mapping.sourceId})` : mapping.sourceId} -> ${formatTopicReference(topicMap, mapping.topicId)} | ${mapping.confidence} | ${formatValue(mapping.locator)}`,
+        `- ${source ? `${formatValue(source.title)} (${mapping.sourceId})` : mapping.sourceId} -> ${formatSourceMappingTarget(topicMap, componentMap, mapping)} | ${mapping.confidence} | ${formatValue(mapping.locator)}`,
       ];
 
       if (mapping.excerptHint) {

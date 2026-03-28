@@ -67,6 +67,35 @@ describe("curriculum CLI", () => {
     }
   });
 
+  it("treats warnings as failures consistently in strict validate mode", () => {
+    const tempDir = mkdtempSync(path.join(tmpdir(), "curriculum-cli-"));
+    const packagePath = path.join(tempDir, "warning-package.json");
+    const warningPackage = buildApprovedCurriculumPackage();
+    warningPackage.components[0]!.weightPercent = 40;
+
+    writeFileSync(packagePath, JSON.stringify(warningPackage, null, 2), "utf8");
+
+    try {
+      const textResult = runCli(["validate", "--strict", packagePath]);
+      expect(textResult.status).toBe(1);
+      expect(textResult.stdout).toContain("Status: FAILED");
+      expect(textResult.stdout).toContain("components.weight_percent_total");
+
+      const jsonResult = runCli([
+        "validate",
+        "--strict",
+        "--format=json",
+        packagePath,
+      ]);
+      expect(jsonResult.status).toBe(1);
+      expect(JSON.parse(jsonResult.stdout) as { ok: boolean }).toMatchObject({
+        ok: false,
+      });
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   it("renders a review report for a legacy seed file", () => {
     const tempDir = mkdtempSync(path.join(tmpdir(), "curriculum-cli-"));
     const packagePath = path.join(tempDir, "legacy-seed.json");

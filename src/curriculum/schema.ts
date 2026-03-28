@@ -210,10 +210,14 @@ export const curriculumTaskRuleSchema = strictObject({
 export const curriculumSourceMappingHintSchema = strictObject({
   id: identifierSchema,
   sourceId: identifierSchema,
-  topicId: identifierSchema,
+  topicId: identifierSchema.optional(),
+  componentId: identifierSchema.optional(),
   locator: nonEmptyStringSchema,
   excerptHint: nonEmptyStringSchema.optional(),
   confidence: curriculumConfidenceSchema.default("medium"),
+}).refine((value) => value.topicId || value.componentId, {
+  message: "Source mappings must reference a topic or component",
+  path: ["topicId"],
 });
 
 export const curriculumMarkSchemePatternSchema = strictObject({
