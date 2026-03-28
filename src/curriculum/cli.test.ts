@@ -199,8 +199,18 @@ describe("curriculum CLI", () => {
 
       expect(result.status).toBe(0);
       expect(result.stdout).toContain("Verify: PASS");
+      expect(result.stdout).toContain("Mode: dry-run");
       expect(result.stdout).toContain("Input: legacy_seed");
       expect(result.stdout).toContain("PASS repeat seed is idempotent");
+
+      const db = getTestDb();
+      return db
+        .select({ count: count() })
+        .from(qualificationVersions)
+        .where(eq(qualificationVersions.versionCode, "8461-verify"))
+        .then((rows) => {
+          expect(Number(rows[0]?.count ?? 0)).toBe(0);
+        });
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }

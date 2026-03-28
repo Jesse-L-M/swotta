@@ -1,10 +1,11 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { loadQualification, type LoadQualificationResult } from "@/engine/curriculum";
 import { estimateBlockDuration } from "@/engine/scheduler";
 import {
   assessmentComponents,
+  chunkEmbeddings,
   commandWords as commandWordsTable,
   misconceptionRules as misconceptionRulesTable,
   questionTypes as questionTypesTable,
@@ -107,6 +108,13 @@ interface NormalizedSyntheticSourceMappingRecord {
   content: string;
   confidence: string;
   mappingMethod: "manual" | "auto";
+}
+
+interface SyntheticSourceCollectionState {
+  collectionId: string | null;
+  fileCount: number;
+  chunkCount: number;
+  mappings: NormalizedSyntheticSourceMappingRecord[];
 }
 
 function asErrorMessage(error: unknown): string {
@@ -226,6 +234,35 @@ function compareCollections<T>(
       );
     }
   }
+}
+
+function collectionsEqual<T>(actual: T[], expected: T[]): boolean {
+  if (actual.length !== expected.length) {
+    return false;
+  }
+
+  return actual.every(
+    (row, index) => JSON.stringify(row) === JSON.stringify(expected[index])
+  );
+}
+
+function isSubsetCollection<T>(actual: T[], expected: T[]): boolean {
+  const expectedCounts = new Map<string, number>();
+  for (const row of expected) {
+    const key = JSON.stringify(row);
+    expectedCounts.set(key, (expectedCounts.get(key) ?? 0) + 1);
+  }
+
+  for (const row of actual) {
+    const key = JSON.stringify(row);
+    const remaining = expectedCounts.get(key) ?? 0;
+    if (remaining === 0) {
+      return false;
+    }
+    expectedCounts.set(key, remaining - 1);
+  }
+
+  return true;
 }
 
 function createAdapterNotes(
@@ -1065,6 +1102,30 @@ async function ensureSyntheticSourceCollection(
   db: Database,
   qualificationVersionId: string
 ): Promise<string> {
+  const existingId = await findSyntheticSourceCollectionId(
+    db,
+    qualificationVersionId
+  );
+  if (existingId) {
+    return existingId;
+  }
+
+  const [collection] = await db
+    .insert(sourceCollections)
+    .values({
+      scope: "system",
+      name: curriculumSupportCollectionName(qualificationVersionId),
+      description: `Synthetic curriculum source mapping hints for ${qualificationVersionId}`,
+    })
+    .returning({ id: sourceCollections.id });
+
+  return collection.id;
+}
+
+async function findSyntheticSourceCollectionId(
+  db: Database,
+  qualificationVersionId: string
+): Promise<string | null> {
   const name = curriculumSupportCollectionName(qualificationVersionId);
   const existing = await db
     .select({ id: sourceCollections.id })
@@ -1082,20 +1143,171 @@ async function ensureSyntheticSourceCollection(
     );
   }
 
-  if (existing[0]) {
-    return existing[0].id;
+  return existing[0]?.id ?? null;
+}
+
+async function loadSyntheticSourceCollectionState(
+  db: Database,
+  qualificationVersionId: string,
+  topicRecords: TopicRecordSet
+): Promise<SyntheticSourceCollectionState> {
+  const collectionId = await findSyntheticSourceCollectionId(
+    db,
+    qualificationVersionId
+  );
+  if (!collectionId) {
+    return {
+      collectionId: null,
+      fileCount: 0,
+      chunkCount: 0,
+      mappings: [],
+    };
   }
 
-  const [collection] = await db
-    .insert(sourceCollections)
-    .values({
-      scope: "system",
-      name,
-      description: `Synthetic curriculum source mapping hints for ${qualificationVersionId}`,
-    })
-    .returning({ id: sourceCollections.id });
+  const [fileRows, chunkRows, mappings] = await Promise.all([
+    db
+      .select({ id: sourceFiles.id })
+      .from(sourceFiles)
+      .where(eq(sourceFiles.collectionId, collectionId)),
+    db
+      .select({ id: sourceChunks.id })
+      .from(sourceChunks)
+      .innerJoin(sourceFiles, eq(sourceChunks.fileId, sourceFiles.id))
+      .where(eq(sourceFiles.collectionId, collectionId)),
+    loadActualSyntheticSourceMappingRecords(db, collectionId, topicRecords),
+  ]);
 
-  return collection.id;
+  return {
+    collectionId,
+    fileCount: fileRows.length,
+    chunkCount: chunkRows.length,
+    mappings,
+  };
+}
+
+async function insertTaskRuleRecords(
+  db: Database,
+  expectedTaskRules: NormalizedTaskRuleRecord[]
+): Promise<void> {
+  if (expectedTaskRules.length === 0) {
+    return;
+  }
+
+  await db.insert(taskRulesTable).values(
+    expectedTaskRules.map((rule) => ({
+      topicId: rule.topicId,
+      blockType: rule.blockType,
+      difficultyMin: rule.difficultyMin,
+      difficultyMax: rule.difficultyMax,
+      timeEstimateMinutes: rule.timeEstimateMinutes,
+      instructions: rule.instructions,
+    }))
+  );
+}
+
+async function replaceTaskRuleRecords(
+  db: Database,
+  topicIds: string[],
+  expectedTaskRules: NormalizedTaskRuleRecord[]
+): Promise<void> {
+  if (topicIds.length > 0) {
+    await db
+      .delete(taskRulesTable)
+      .where(inArray(taskRulesTable.topicId, topicIds));
+  }
+
+  await insertTaskRuleRecords(db, expectedTaskRules);
+}
+
+async function clearSyntheticSourceCollectionContents(
+  db: Database,
+  collectionId: string
+): Promise<void> {
+  const fileRows = await db
+    .select({ id: sourceFiles.id })
+    .from(sourceFiles)
+    .where(eq(sourceFiles.collectionId, collectionId));
+  const fileIds = fileRows.map((row) => row.id);
+
+  if (fileIds.length === 0) {
+    return;
+  }
+
+  const chunkRows = await db
+    .select({ id: sourceChunks.id })
+    .from(sourceChunks)
+    .where(inArray(sourceChunks.fileId, fileIds));
+  const chunkIds = chunkRows.map((row) => row.id);
+
+  if (chunkIds.length > 0) {
+    await db
+      .delete(sourceMappingsTable)
+      .where(inArray(sourceMappingsTable.chunkId, chunkIds));
+    await db
+      .delete(chunkEmbeddings)
+      .where(inArray(chunkEmbeddings.chunkId, chunkIds));
+    await db.delete(sourceChunks).where(inArray(sourceChunks.id, chunkIds));
+  }
+
+  await db.delete(sourceFiles).where(inArray(sourceFiles.id, fileIds));
+}
+
+async function insertSyntheticSourceMappings(
+  db: Database,
+  collectionId: string,
+  expectedSourceMappings: NormalizedSyntheticSourceMappingRecord[]
+): Promise<void> {
+  if (expectedSourceMappings.length === 0) {
+    return;
+  }
+
+  const syntheticUserId = await ensureSystemCurriculumUser(db);
+  const mappingsByFile = new Map<string, NormalizedSyntheticSourceMappingRecord[]>();
+  for (const mapping of expectedSourceMappings) {
+    const group = mappingsByFile.get(mapping.filename) ?? [];
+    group.push(mapping);
+    mappingsByFile.set(mapping.filename, group);
+  }
+
+  for (const [filename, rows] of mappingsByFile.entries()) {
+    const storagePath = rows[0].storagePath;
+    const sizeBytes = rows.reduce(
+      (total, row) => total + Buffer.byteLength(row.content, "utf8"),
+      0
+    );
+
+    const [file] = await db
+      .insert(sourceFiles)
+      .values({
+        collectionId,
+        uploadedByUserId: syntheticUserId,
+        filename,
+        mimeType: "text/plain",
+        storagePath,
+        sizeBytes,
+        status: "ready",
+      })
+      .returning({ id: sourceFiles.id });
+
+    for (const row of rows.sort((left, right) => left.chunkIndex - right.chunkIndex)) {
+      const [chunk] = await db
+        .insert(sourceChunks)
+        .values({
+          fileId: file.id,
+          content: row.content,
+          chunkIndex: row.chunkIndex,
+          tokenCount: countApproximateTokens(row.content),
+        })
+        .returning({ id: sourceChunks.id });
+
+      await db.insert(sourceMappingsTable).values({
+        chunkId: chunk.id,
+        topicId: row.topicId,
+        confidence: row.confidence,
+        mappingMethod: row.mappingMethod,
+      });
+    }
+  }
 }
 
 async function ensurePackageRuntimeArtifacts(
@@ -1122,24 +1334,35 @@ async function ensurePackageRuntimeArtifacts(
     qualificationVersionId,
     actualCoreSnapshot.topicRecords
   );
+  const comparableActualTaskRules = actualTaskRules.map(
+    ({ topicId: _topicId, ...rule }) => rule
+  );
+  const comparableExpectedTaskRules = expectedTaskRules.map(
+    ({ topicId: _topicId, ...rule }) => rule
+  );
 
-  if (actualTaskRules.length === 0 && expectedTaskRules.length > 0) {
-    await db.insert(taskRulesTable).values(
-      expectedTaskRules.map((rule) => ({
-        topicId: rule.topicId,
-        blockType: rule.blockType,
-        difficultyMin: rule.difficultyMin,
-        difficultyMax: rule.difficultyMax,
-        timeEstimateMinutes: rule.timeEstimateMinutes,
-        instructions: rule.instructions,
-      }))
-    );
-  } else if (actualTaskRules.length > 0) {
-    compareCollections(
-      "task rules",
-      actualTaskRules.map(({ topicId: _topicId, ...rule }) => rule),
-      expectedTaskRules.map(({ topicId: _topicId, ...rule }) => rule)
-    );
+  if (
+    !collectionsEqual(comparableActualTaskRules, comparableExpectedTaskRules)
+  ) {
+    if (comparableActualTaskRules.length === 0) {
+      await insertTaskRuleRecords(db, expectedTaskRules);
+    } else if (
+      isSubsetCollection(comparableActualTaskRules, comparableExpectedTaskRules)
+    ) {
+      await replaceTaskRuleRecords(
+        db,
+        actualCoreSnapshot.topicRecords.records.flatMap((topic) =>
+          topic.id ? [topic.id] : []
+        ),
+        expectedTaskRules
+      );
+    } else {
+      compareCollections(
+        "task rules",
+        comparableActualTaskRules,
+        comparableExpectedTaskRules
+      );
+    }
   }
 
   const expectedSourceMappings = buildExpectedSyntheticSourceMappingRecords(
@@ -1151,70 +1374,57 @@ async function ensurePackageRuntimeArtifacts(
     return;
   }
 
-  const collectionId = await ensureSyntheticSourceCollection(
+  const sourceCollectionState = await loadSyntheticSourceCollectionState(
     db,
-    qualificationVersionId
-  );
-  const actualSourceMappings = await loadActualSyntheticSourceMappingRecords(
-    db,
-    collectionId,
+    qualificationVersionId,
     actualCoreSnapshot.topicRecords
   );
+  const comparableActualSourceMappings = sourceCollectionState.mappings.map(
+    ({ topicId: _topicId, ...mapping }) => mapping
+  );
+  const comparableExpectedSourceMappings = expectedSourceMappings.map(
+    ({ topicId: _topicId, ...mapping }) => mapping
+  );
+  const expectedSourceFileCount = new Set(
+    expectedSourceMappings.map((mapping) => mapping.filename)
+  ).size;
 
-  if (actualSourceMappings.length === 0) {
-    const syntheticUserId = await ensureSystemCurriculumUser(db);
-    const mappingsByFile = new Map<string, NormalizedSyntheticSourceMappingRecord[]>();
-    for (const mapping of expectedSourceMappings) {
-      const group = mappingsByFile.get(mapping.filename) ?? [];
-      group.push(mapping);
-      mappingsByFile.set(mapping.filename, group);
-    }
-
-    for (const [filename, rows] of mappingsByFile.entries()) {
-      const storagePath = rows[0].storagePath;
-      const sizeBytes = rows.reduce(
-        (total, row) => total + Buffer.byteLength(row.content, "utf8"),
-        0
+  if (
+    !collectionsEqual(
+      comparableActualSourceMappings,
+      comparableExpectedSourceMappings
+    ) ||
+    sourceCollectionState.fileCount !== expectedSourceFileCount ||
+    sourceCollectionState.chunkCount !== expectedSourceMappings.length
+  ) {
+    if (
+      comparableActualSourceMappings.length === 0 &&
+      sourceCollectionState.fileCount === 0 &&
+      sourceCollectionState.chunkCount === 0
+    ) {
+      const collectionId = await ensureSyntheticSourceCollection(
+        db,
+        qualificationVersionId
       );
-
-      const [file] = await db
-        .insert(sourceFiles)
-        .values({
-          collectionId,
-          uploadedByUserId: syntheticUserId,
-          filename,
-          mimeType: "text/plain",
-          storagePath,
-          sizeBytes,
-          status: "ready",
-        })
-        .returning({ id: sourceFiles.id });
-
-      for (const row of rows.sort((left, right) => left.chunkIndex - right.chunkIndex)) {
-        const [chunk] = await db
-          .insert(sourceChunks)
-          .values({
-            fileId: file.id,
-            content: row.content,
-            chunkIndex: row.chunkIndex,
-            tokenCount: countApproximateTokens(row.content),
-          })
-          .returning({ id: sourceChunks.id });
-
-        await db.insert(sourceMappingsTable).values({
-          chunkId: chunk.id,
-          topicId: row.topicId,
-          confidence: row.confidence,
-          mappingMethod: row.mappingMethod,
-        });
-      }
+      await insertSyntheticSourceMappings(db, collectionId, expectedSourceMappings);
+    } else if (
+      isSubsetCollection(
+        comparableActualSourceMappings,
+        comparableExpectedSourceMappings
+      )
+    ) {
+      const collectionId =
+        sourceCollectionState.collectionId ??
+        (await ensureSyntheticSourceCollection(db, qualificationVersionId));
+      await clearSyntheticSourceCollectionContents(db, collectionId);
+      await insertSyntheticSourceMappings(db, collectionId, expectedSourceMappings);
+    } else {
+      compareCollections(
+        "synthetic source mappings",
+        comparableActualSourceMappings,
+        comparableExpectedSourceMappings
+      );
     }
-  } else {
-    compareCollections(
-      "synthetic source mappings",
-      actualSourceMappings.map(({ topicId: _topicId, ...mapping }) => mapping),
-      expectedSourceMappings.map(({ topicId: _topicId, ...mapping }) => mapping)
-    );
   }
 }
 
@@ -1291,23 +1501,26 @@ export async function seedPreparedCurriculum(
   options: { db?: Database } = {}
 ): Promise<CurriculumSeedResult> {
   const targetDb = await resolveCurriculumDb(options.db);
-  const loadResult = await loadQualification(targetDb, prepared.seedData);
+  return targetDb.transaction(async (tx) => {
+    const transactionalDb = tx as unknown as Database;
+    const loadResult = await loadQualification(transactionalDb, prepared.seedData);
 
-  await ensurePackageRuntimeArtifacts(
-    prepared,
-    loadResult.qualificationVersionId,
-    targetDb
-  );
-  await assertPreparedCurriculumMatchesDb(
-    prepared,
-    loadResult.qualificationVersionId,
-    targetDb
-  );
+    await ensurePackageRuntimeArtifacts(
+      prepared,
+      loadResult.qualificationVersionId,
+      transactionalDb
+    );
+    await assertPreparedCurriculumMatchesDb(
+      prepared,
+      loadResult.qualificationVersionId,
+      transactionalDb
+    );
 
-  return {
-    ...prepared,
-    ...loadResult,
-  };
+    return {
+      ...prepared,
+      ...loadResult,
+    };
+  });
 }
 
 export async function seedCurriculumInput(
@@ -1374,6 +1587,28 @@ export function getLegacySeedStats(seedData: LegacyQualificationSeed): LegacySee
     questionTypes: seedData.questionTypes.length,
     misconceptionRules,
   };
+}
+
+export async function loadSyntheticSourceMappingTopicIds(
+  db: Database,
+  qualificationVersionId: string
+): Promise<string[]> {
+  const collectionId = await findSyntheticSourceCollectionId(
+    db,
+    qualificationVersionId
+  );
+  if (!collectionId) {
+    return [];
+  }
+
+  const rows = await db
+    .select({ topicId: sourceMappingsTable.topicId })
+    .from(sourceMappingsTable)
+    .innerJoin(sourceChunks, eq(sourceMappingsTable.chunkId, sourceChunks.id))
+    .innerJoin(sourceFiles, eq(sourceChunks.fileId, sourceFiles.id))
+    .where(eq(sourceFiles.collectionId, collectionId));
+
+  return [...new Set(rows.flatMap((row) => (row.topicId ? [row.topicId] : [])))];
 }
 
 export function formatSeedResult(result: CurriculumSeedResult): string {

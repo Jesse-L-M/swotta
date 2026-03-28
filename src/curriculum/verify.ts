@@ -27,6 +27,7 @@ import type {
 } from "@/lib/types";
 import {
   getLegacySeedStats,
+  loadSyntheticSourceMappingTopicIds,
   prepareCurriculumSeedInput,
   resolveCurriculumDb,
   seedPreparedCurriculum,
@@ -42,11 +43,13 @@ export interface CurriculumVerificationCheck {
 
 export interface CurriculumVerificationResult {
   ok: boolean;
+  mode: "dry_run";
   packageId: string | null;
   lifecycle: CurriculumPackageLifecycle | null;
   normalizedFrom: "package" | "legacy_seed" | null;
   qualificationVersionId: string | null;
   adapterNotes: CurriculumSeedNote[];
+  limitations: string[];
   checks: CurriculumVerificationCheck[];
 }
 
@@ -179,6 +182,22 @@ async function withTemporaryLearner<T>(
   return result;
 }
 
+async function withRollbackTransaction(
+  db: Database,
+  run: (tx: Database) => Promise<void>
+): Promise<void> {
+  try {
+    await db.transaction(async (tx) => {
+      await run(tx as unknown as Database);
+      throw VERIFY_ROLLBACK;
+    });
+  } catch (error) {
+    if (error !== VERIFY_ROLLBACK) {
+      throw error;
+    }
+  }
+}
+
 async function verifySchedulerAssumptions(
   db: Database,
   qualificationVersionId: QualificationVersionId
@@ -225,32 +244,45 @@ async function verifySchedulerAssumptions(
 async function verifySourceCoverageAssumptions(
   db: Database,
   qualificationVersionId: QualificationVersionId,
-  expectedCoveredTopicCount: number
+  expectedMappedTopicIds: TopicId[]
 ): Promise<string> {
-  if (expectedCoveredTopicCount === 0) {
-    return "no source mappings to exercise";
+  if (expectedMappedTopicIds.length === 0) {
+    throw new Error(
+      "Synthetic source mappings were not materialized for source-side verification"
+    );
   }
 
-  const coveredTopicCount = await withTemporaryLearner(
+  const coverageRows = await withTemporaryLearner(
     db,
     async (tx, learnerId) => {
-      const coverage = await getCoverageReport(
+      return getCoverageReport(
         learnerId,
         qualificationVersionId,
         { db: tx }
       );
-
-      return coverage.filter((row) => row.hasSources).length;
     }
   );
+  const expectedTopicIds = new Set(expectedMappedTopicIds);
+  const coverageByTopicId = new Map(
+    coverageRows.map((row) => [row.topicId, row] as const)
+  );
+  const missingTopicNames = [...expectedTopicIds].flatMap((topicId) => {
+    const coverage = coverageByTopicId.get(topicId);
+    if (coverage?.hasSources) {
+      return [];
+    }
 
-  if (coveredTopicCount < expectedCoveredTopicCount) {
+    return [coverage?.topicName ?? topicId];
+  });
+
+  if (missingTopicNames.length > 0) {
     throw new Error(
-      `Expected at least ${expectedCoveredTopicCount} covered topic(s), got ${coveredTopicCount}`
+      `Coverage report did not expose synthetic mapped topic(s): ${missingTopicNames.join(", ")}`
     );
   }
 
-  return `coveredTopics=${coveredTopicCount}`;
+  const coveredTopicCount = coverageRows.filter((row) => row.hasSources).length;
+  return `visibleSyntheticTopics=${expectedTopicIds.size} totalCoveredTopics=${coveredTopicCount}`;
 }
 
 export async function verifyCurriculumInput(
@@ -260,11 +292,13 @@ export async function verifyCurriculumInput(
   const checks: CurriculumVerificationCheck[] = [];
   const result: CurriculumVerificationResult = {
     ok: false,
+    mode: "dry_run",
     packageId: null,
     lifecycle: null,
     normalizedFrom: null,
     qualificationVersionId: null,
     adapterNotes: [],
+    limitations: [],
     checks,
   };
 
@@ -280,6 +314,21 @@ export async function verifyCurriculumInput(
     result.normalizedFrom = prepared.normalizedFrom;
     result.adapterNotes = prepared.adapterNotes;
     targetDb = await resolveCurriculumDb(options.db);
+    if (
+      prepared.normalizedFrom === "package" &&
+      prepared.curriculumPackage.sourceMappings.length > 0
+    ) {
+      result.limitations.push(
+        "Source verification uses synthetic source artifacts and the coverage query. It does not re-run extraction, chunking, embeddings, or classifier mapping."
+      );
+    } else if (
+      prepared.normalizedFrom === "package" &&
+      prepared.curriculumPackage.sourceMappings.length === 0
+    ) {
+      result.limitations.push(
+        "No source-side verification ran because the package has no source mapping hints."
+      );
+    }
 
     checks.push({
       name: "package validates",
@@ -295,216 +344,233 @@ export async function verifyCurriculumInput(
     return result;
   }
 
-  try {
-    const seedResult = await seedPreparedCurriculum(prepared, { db: targetDb });
-    qualificationVersionId =
-      seedResult.qualificationVersionId as QualificationVersionId;
-    result.qualificationVersionId = qualificationVersionId;
-
-    expectedStats = getLegacySeedStats(prepared.seedData);
-    const actualCounts = await loadSeededCounts(targetDb, qualificationVersionId);
-
-    if (
-      actualCounts.components !== prepared.seedData.components.length ||
-      actualCounts.topics !== expectedStats.topics ||
-      actualCounts.edges !== expectedStats.edges ||
-      actualCounts.commandWords !== expectedStats.commandWords ||
-      actualCounts.questionTypes !== expectedStats.questionTypes ||
-      actualCounts.misconceptionRules !== expectedStats.misconceptionRules
-    ) {
-      throw new Error(
-        `Seeded row counts did not match expectations: expected components=${prepared.seedData.components.length} topics=${expectedStats.topics} edges=${expectedStats.edges} commandWords=${expectedStats.commandWords} questionTypes=${expectedStats.questionTypes} misconceptionRules=${expectedStats.misconceptionRules}; got components=${actualCounts.components} topics=${actualCounts.topics} edges=${actualCounts.edges} commandWords=${actualCounts.commandWords} questionTypes=${actualCounts.questionTypes} misconceptionRules=${actualCounts.misconceptionRules}`
-      );
-    }
-
-    checks.push({
-      name: "seed succeeds",
-      ok: true,
-      detail: `components=${seedResult.componentsCreated} topics=${seedResult.topicsCreated} edges=${seedResult.edgesCreated}`,
-    });
-  } catch (error) {
-    checks.push({
-      name: "seed succeeds",
-      ok: false,
-      detail: asErrorMessage(error),
-    });
-    return result;
-  }
-
-  try {
-    const topicTree = await getTopicTree(targetDb, qualificationVersionId);
-    const flattenedTree = flattenTopicTree(topicTree);
-
-    if (topicTree.length !== expectedStats.rootTopics) {
-      throw new Error(
-        `Expected ${expectedStats.rootTopics} root topic(s), got ${topicTree.length}`
-      );
-    }
-
-    if (flattenedTree.length !== expectedStats.topics) {
-      throw new Error(
-        `Expected ${expectedStats.topics} topic(s) in the loaded tree, got ${flattenedTree.length}`
-      );
-    }
-
-    checks.push({
-      name: "topic tree loads",
-      ok: true,
-      detail: `roots=${topicTree.length} topics=${flattenedTree.length}`,
-    });
-  } catch (error) {
-    checks.push({
-      name: "topic tree loads",
-      ok: false,
-      detail: asErrorMessage(error),
-    });
-    return result;
-  }
-
-  try {
-    const [qualificationName, diagnosticTopics, qualificationOptions] =
-      await Promise.all([
-        getQualificationName(targetDb, qualificationVersionId),
-        getDiagnosticTopics(targetDb, qualificationVersionId),
-        loadQualificationOptions(targetDb),
-      ]);
-
-    const expectedQualificationName = `${prepared.seedData.level} ${prepared.seedData.subject.name}`;
-    if (qualificationName !== expectedQualificationName) {
-      throw new Error(
-        `Expected qualification name ${expectedQualificationName}, got ${qualificationName ?? "<missing>"}`
-      );
-    }
-
-    if (diagnosticTopics.length !== expectedStats.rootTopics) {
-      throw new Error(
-        `Expected ${expectedStats.rootTopics} diagnostic topic(s), got ${diagnosticTopics.length}`
-      );
-    }
-
-    const seededOption = qualificationOptions.find(
-      (option) => option.qualificationVersionId === qualificationVersionId
-    );
-    if (!seededOption) {
-      throw new Error("Seeded qualification did not appear in loadQualificationOptions");
-    }
-
-    if (
-      seededOption.subjectName !== prepared.seedData.subject.name ||
-      seededOption.examBoardCode !== prepared.seedData.examBoard.code ||
-      seededOption.versionCode !== prepared.seedData.versionCode
-    ) {
-      throw new Error(
-        `Seeded qualification option did not match expected metadata: subject=${seededOption.subjectName} board=${seededOption.examBoardCode} version=${seededOption.versionCode}`
-      );
-    }
-
-    checks.push({
-      name: "curriculum queries cohere",
-      ok: true,
-      detail: `qualificationName=${qualificationName} diagnosticTopics=${diagnosticTopics.length}`,
-    });
-  } catch (error) {
-    checks.push({
-      name: "curriculum queries cohere",
-      ok: false,
-      detail: asErrorMessage(error),
-    });
-    return result;
-  }
-
-  try {
-    const repeatSeed = await seedPreparedCurriculum(prepared, { db: targetDb });
-    const repeatedCounts = await loadSeededCounts(targetDb, qualificationVersionId);
-
-    if (
-      repeatSeed.qualificationVersionId !== qualificationVersionId ||
-      repeatSeed.componentsCreated !== 0 ||
-      repeatSeed.topicsCreated !== 0 ||
-      repeatSeed.edgesCreated !== 0
-    ) {
-      throw new Error(
-        `Repeat seed was not idempotent: qualificationVersionId=${repeatSeed.qualificationVersionId} components=${repeatSeed.componentsCreated} topics=${repeatSeed.topicsCreated} edges=${repeatSeed.edgesCreated}`
-      );
-    }
-
-    if (
-      repeatedCounts.components !== prepared.seedData.components.length ||
-      repeatedCounts.topics !== expectedStats.topics ||
-      repeatedCounts.edges !== expectedStats.edges ||
-      repeatedCounts.commandWords !== expectedStats.commandWords ||
-      repeatedCounts.questionTypes !== expectedStats.questionTypes ||
-      repeatedCounts.misconceptionRules !== expectedStats.misconceptionRules
-    ) {
-      throw new Error("Repeat seed changed seeded row counts");
-    }
-
-    checks.push({
-      name: "repeat seed is idempotent",
-      ok: true,
-      detail: "second run created no additional rows",
-    });
-  } catch (error) {
-    checks.push({
-      name: "repeat seed is idempotent",
-      ok: false,
-      detail: asErrorMessage(error),
-    });
-    return result;
-  }
-
-  if (
-    prepared.normalizedFrom === "package" &&
-    prepared.curriculumPackage.taskRules.length > 0
-  ) {
+  await withRollbackTransaction(targetDb, async (verificationDb) => {
     try {
-      const detail = await verifySchedulerAssumptions(
-        targetDb,
+      const seedResult = await seedPreparedCurriculum(prepared, {
+        db: verificationDb,
+      });
+      qualificationVersionId =
+        seedResult.qualificationVersionId as QualificationVersionId;
+      result.qualificationVersionId = qualificationVersionId;
+
+      expectedStats = getLegacySeedStats(prepared.seedData);
+      const actualCounts = await loadSeededCounts(
+        verificationDb,
         qualificationVersionId
       );
+
+      if (
+        actualCounts.components !== prepared.seedData.components.length ||
+        actualCounts.topics !== expectedStats.topics ||
+        actualCounts.edges !== expectedStats.edges ||
+        actualCounts.commandWords !== expectedStats.commandWords ||
+        actualCounts.questionTypes !== expectedStats.questionTypes ||
+        actualCounts.misconceptionRules !== expectedStats.misconceptionRules
+      ) {
+        throw new Error(
+          `Seeded row counts did not match expectations: expected components=${prepared.seedData.components.length} topics=${expectedStats.topics} edges=${expectedStats.edges} commandWords=${expectedStats.commandWords} questionTypes=${expectedStats.questionTypes} misconceptionRules=${expectedStats.misconceptionRules}; got components=${actualCounts.components} topics=${actualCounts.topics} edges=${actualCounts.edges} commandWords=${actualCounts.commandWords} questionTypes=${actualCounts.questionTypes} misconceptionRules=${actualCounts.misconceptionRules}`
+        );
+      }
+
       checks.push({
-        name: "scheduler assumptions cohere",
+        name: "seed succeeds",
         ok: true,
-        detail,
+        detail: `components=${seedResult.componentsCreated} topics=${seedResult.topicsCreated} edges=${seedResult.edgesCreated}`,
       });
     } catch (error) {
       checks.push({
-        name: "scheduler assumptions cohere",
+        name: "seed succeeds",
         ok: false,
         detail: asErrorMessage(error),
       });
-      return result;
+      return;
     }
-  }
 
-  if (
-    prepared.normalizedFrom === "package" &&
-    prepared.curriculumPackage.sourceMappings.length > 0
-  ) {
     try {
-      const detail = await verifySourceCoverageAssumptions(
-        targetDb,
-        qualificationVersionId,
-        new Set(
-          prepared.curriculumPackage.sourceMappings.map((mapping) => mapping.topicId)
-        ).size
-      );
+      const topicTree = await getTopicTree(verificationDb, qualificationVersionId);
+      const flattenedTree = flattenTopicTree(topicTree);
+
+      if (topicTree.length !== expectedStats.rootTopics) {
+        throw new Error(
+          `Expected ${expectedStats.rootTopics} root topic(s), got ${topicTree.length}`
+        );
+      }
+
+      if (flattenedTree.length !== expectedStats.topics) {
+        throw new Error(
+          `Expected ${expectedStats.topics} topic(s) in the loaded tree, got ${flattenedTree.length}`
+        );
+      }
+
       checks.push({
-        name: "source coverage assumptions cohere",
+        name: "topic tree loads",
         ok: true,
-        detail,
+        detail: `roots=${topicTree.length} topics=${flattenedTree.length}`,
       });
     } catch (error) {
       checks.push({
-        name: "source coverage assumptions cohere",
+        name: "topic tree loads",
         ok: false,
         detail: asErrorMessage(error),
       });
-      return result;
+      return;
     }
-  }
 
-  result.ok = true;
+    try {
+      const [qualificationName, diagnosticTopics, qualificationOptions] =
+        await Promise.all([
+          getQualificationName(verificationDb, qualificationVersionId),
+          getDiagnosticTopics(verificationDb, qualificationVersionId),
+          loadQualificationOptions(verificationDb),
+        ]);
+
+      const expectedQualificationName = `${prepared.seedData.level} ${prepared.seedData.subject.name}`;
+      if (qualificationName !== expectedQualificationName) {
+        throw new Error(
+          `Expected qualification name ${expectedQualificationName}, got ${qualificationName ?? "<missing>"}`
+        );
+      }
+
+      if (diagnosticTopics.length !== expectedStats.rootTopics) {
+        throw new Error(
+          `Expected ${expectedStats.rootTopics} diagnostic topic(s), got ${diagnosticTopics.length}`
+        );
+      }
+
+      const seededOption = qualificationOptions.find(
+        (option) => option.qualificationVersionId === qualificationVersionId
+      );
+      if (!seededOption) {
+        throw new Error(
+          "Seeded qualification did not appear in loadQualificationOptions"
+        );
+      }
+
+      if (
+        seededOption.subjectName !== prepared.seedData.subject.name ||
+        seededOption.examBoardCode !== prepared.seedData.examBoard.code ||
+        seededOption.versionCode !== prepared.seedData.versionCode
+      ) {
+        throw new Error(
+          `Seeded qualification option did not match expected metadata: subject=${seededOption.subjectName} board=${seededOption.examBoardCode} version=${seededOption.versionCode}`
+        );
+      }
+
+      checks.push({
+        name: "curriculum queries cohere",
+        ok: true,
+        detail: `qualificationName=${qualificationName} diagnosticTopics=${diagnosticTopics.length}`,
+      });
+    } catch (error) {
+      checks.push({
+        name: "curriculum queries cohere",
+        ok: false,
+        detail: asErrorMessage(error),
+      });
+      return;
+    }
+
+    try {
+      const repeatSeed = await seedPreparedCurriculum(prepared, {
+        db: verificationDb,
+      });
+      const repeatedCounts = await loadSeededCounts(
+        verificationDb,
+        qualificationVersionId
+      );
+
+      if (
+        repeatSeed.qualificationVersionId !== qualificationVersionId ||
+        repeatSeed.componentsCreated !== 0 ||
+        repeatSeed.topicsCreated !== 0 ||
+        repeatSeed.edgesCreated !== 0
+      ) {
+        throw new Error(
+          `Repeat seed was not idempotent: qualificationVersionId=${repeatSeed.qualificationVersionId} components=${repeatSeed.componentsCreated} topics=${repeatSeed.topicsCreated} edges=${repeatSeed.edgesCreated}`
+        );
+      }
+
+      if (
+        repeatedCounts.components !== prepared.seedData.components.length ||
+        repeatedCounts.topics !== expectedStats.topics ||
+        repeatedCounts.edges !== expectedStats.edges ||
+        repeatedCounts.commandWords !== expectedStats.commandWords ||
+        repeatedCounts.questionTypes !== expectedStats.questionTypes ||
+        repeatedCounts.misconceptionRules !== expectedStats.misconceptionRules
+      ) {
+        throw new Error("Repeat seed changed seeded row counts");
+      }
+
+      checks.push({
+        name: "repeat seed is idempotent",
+        ok: true,
+        detail: "second run created no additional rows",
+      });
+    } catch (error) {
+      checks.push({
+        name: "repeat seed is idempotent",
+        ok: false,
+        detail: asErrorMessage(error),
+      });
+      return;
+    }
+
+    if (
+      prepared.normalizedFrom === "package" &&
+      prepared.curriculumPackage.taskRules.length > 0
+    ) {
+      try {
+        const detail = await verifySchedulerAssumptions(
+          verificationDb,
+          qualificationVersionId
+        );
+        checks.push({
+          name: "scheduler assumptions cohere",
+          ok: true,
+          detail,
+        });
+      } catch (error) {
+        checks.push({
+          name: "scheduler assumptions cohere",
+          ok: false,
+          detail: asErrorMessage(error),
+        });
+        return;
+      }
+    }
+
+    if (
+      prepared.normalizedFrom === "package" &&
+      prepared.curriculumPackage.sourceMappings.length > 0
+    ) {
+      try {
+        const expectedMappedTopicIds = await loadSyntheticSourceMappingTopicIds(
+          verificationDb,
+          qualificationVersionId
+        );
+        const detail = await verifySourceCoverageAssumptions(
+          verificationDb,
+          qualificationVersionId,
+          expectedMappedTopicIds as TopicId[]
+        );
+        checks.push({
+          name: "synthetic source coverage query sees mapped topics",
+          ok: true,
+          detail,
+        });
+      } catch (error) {
+        checks.push({
+          name: "synthetic source coverage query sees mapped topics",
+          ok: false,
+          detail: asErrorMessage(error),
+        });
+        return;
+      }
+    }
+
+    result.ok = true;
+  });
+
   return result;
 }
 
@@ -524,6 +590,7 @@ export function formatVerificationResult(
 ): string {
   const lines = [
     `Verify: ${result.ok ? "PASS" : "FAILED"}`,
+    "Mode: dry-run (seed rolled back after checks)",
   ];
 
   if (result.packageId) {
@@ -551,6 +618,13 @@ export function formatVerificationResult(
     lines.push("Notes:");
     for (const note of result.adapterNotes) {
       lines.push(`- ${note.message}`);
+    }
+  }
+
+  if (result.limitations.length > 0) {
+    lines.push("Limitations:");
+    for (const limitation of result.limitations) {
+      lines.push(`- ${limitation}`);
     }
   }
 
