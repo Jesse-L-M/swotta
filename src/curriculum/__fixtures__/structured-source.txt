@@ -1,0 +1,93 @@
+[metadata]
+packageId: aqa-gcse-biology-8461
+packageVersion: 0.1.0-candidate
+title: AQA GCSE Biology
+summary: Candidate package extracted from structured specification notes.
+generatedAt: 2026-03-28T12:00:00.000Z
+
+[qualification]
+name: GCSE Biology
+slug: gcse-biology
+level: GCSE
+versionCode: 8461
+firstExamYear: 2018
+specUrl: https://example.com/specification
+subjectName: Biology
+subjectSlug: biology
+examBoardName: AQA
+examBoardCode: AQA
+
+[component]
+locator: Assessment overview
+name: Paper 1
+code: 8461-1h
+weightPercent: 50
+durationMinutes: 105
+totalMarks: 100
+isExam: true
+
+[component]
+locator: Assessment overview
+name: Paper 2
+code: 8461-2h
+weightPercent: 50
+durationMinutes: 105
+totalMarks: 100
+isExam: true
+
+[topic]
+locator: Section 4.1
+name: Cell Biology
+code: 4.1
+sortOrder: 1
+
+[topic]
+locator: Section 4.1.1
+name: Cell Structure
+code: 4.1.1
+parentRef: 4.1
+sortOrder: 1
+
+[topic]
+locator: Section 4.1.2
+name: Cell Division
+code: 4.1.2
+parentRef: 4.1
+sortOrder: 2
+
+[edge]
+locator: Section 4.1.2
+fromTopicRef: 4.1.2
+toTopicRef: 4.1.1
+type: prerequisite
+rationale: Learners need cell structure before cell division.
+
+[command-word]
+locator: Command word glossary
+word: Explain
+definition: Give reasons using scientific detail.
+expectedDepth: 3
+guidance: Expect linked scientific cause and effect.
+
+[question-type]
+locator: Assessment overview
+name: Extended response
+description: Multi-mark written explanation question.
+typicalMarks: 6
+
+[misconception]
+locator: Section 4.1.2
+topicRef: 4.1.2
+description: Confuses mitosis with meiosis.
+triggerPatterns: mitosis makes gametes || meiosis repairs tissue
+correctionGuidance: Mitosis makes genetically identical cells for growth and repair.
+severity: 2
+
+[task-rule]
+locator: Section 4.1.2
+taskType: worked_example
+topicRef: 4.1.2
+title: Sequence mitosis before free response
+guidance: Use a worked example before any timed response on mitosis stages.
+conditions: confidence below 0.6 || first exposure
+priority: high

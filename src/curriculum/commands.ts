@@ -1,5 +1,13 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import {
+  extractCurriculumDraft,
+  formatExtractionIssues,
+} from "./extract";
+import {
+  formatNormalizationIssues,
+  normalizeCurriculumDraft,
+} from "./normalize";
 import { renderCurriculumReviewReport } from "./review-report";
 import { formatSeedResult, seedCurriculumFile } from "./seed";
 import {
@@ -54,11 +62,12 @@ export const curriculumCommandDefinitions: CurriculumCommandDefinition[] = [
   },
   {
     name: "extract",
-    description: "Reserved command surface for source extraction",
+    description: "Extract a structured draft from supported curriculum source text",
   },
   {
     name: "normalize",
-    description: "Reserved command surface for canonical package normalization",
+    description:
+      "Normalize an extracted draft into the canonical curriculum package shape",
   },
 ];
 
@@ -78,32 +87,29 @@ function formatHelpText(): string {
     "Validate options:",
     "  --format=json    Print the validation report as JSON",
     "  --strict         Fail when warnings are present",
+    "",
+    "Normalize options:",
+    "  --package-only   Print only the canonical package JSON",
   ];
 
   return lines.join("\n");
 }
 
-function notImplementedCommand(
-  commandName: Exclude<
-    CurriculumCommandName,
-    "validate" | "review-report" | "seed" | "verify"
-  >
-): CurriculumCommandResult {
-  return {
-    exitCode: 2,
-    stdout: "",
-    stderr: `${commandName} is not implemented yet. The command surface is reserved and stable.`,
-  };
-}
-
-async function readCurriculumInputFile(
-  filePath: string
-): Promise<{ input: unknown } | { error: string }> {
+async function readJsonInput(filePath: string): Promise<
+  | {
+      absolutePath: string;
+      input: unknown;
+    }
+  | {
+      error: string;
+    }
+> {
   const absolutePath = path.resolve(process.cwd(), filePath);
 
   try {
     const fileContents = await readFile(absolutePath, "utf8");
     return {
+      absolutePath,
       input: JSON.parse(fileContents) as unknown,
     };
   } catch (error) {
@@ -129,16 +135,16 @@ async function runValidateCommand(
     };
   }
 
-  const result = await readCurriculumInputFile(filePath);
-  if ("error" in result) {
+  const jsonInput = await readJsonInput(filePath);
+  if ("error" in jsonInput) {
     return {
       exitCode: 1,
       stdout: "",
-      stderr: result.error,
+      stderr: jsonInput.error,
     };
   }
 
-  const report = validateCurriculumPackage(result.input);
+  const report = validateCurriculumPackage(jsonInput.input);
   const warningsMakeCommandFail = strict && report.warnings.length > 0;
   const exitCode = report.ok && !warningsMakeCommandFail ? 0 : 1;
 
@@ -164,16 +170,16 @@ async function runReviewReportCommand(
     };
   }
 
-  const result = await readCurriculumInputFile(filePath);
-  if ("error" in result) {
+  const jsonInput = await readJsonInput(filePath);
+  if ("error" in jsonInput) {
     return {
       exitCode: 1,
       stdout: "",
-      stderr: result.error,
+      stderr: jsonInput.error,
     };
   }
 
-  const renderedReport = renderCurriculumReviewReport(result.input);
+  const renderedReport = renderCurriculumReviewReport(jsonInput.input);
 
   return {
     exitCode: renderedReport.report.ok ? 0 : 1,
@@ -225,17 +231,17 @@ async function runVerifyCommand(
     };
   }
 
-  const result = await readCurriculumInputFile(filePath);
-  if ("error" in result) {
+  const jsonInput = await readJsonInput(filePath);
+  if ("error" in jsonInput) {
     return {
       exitCode: 1,
       stdout: "",
-      stderr: result.error,
+      stderr: jsonInput.error,
     };
   }
 
   try {
-    const verificationResult = await verifyCurriculumInput(result.input);
+    const verificationResult = await verifyCurriculumInput(jsonInput.input);
     return {
       exitCode: verificationResult.ok ? 0 : 1,
       stdout: `${formatVerificationResult(verificationResult)}\n`,
@@ -249,6 +255,86 @@ async function runVerifyCommand(
       stderr: message,
     };
   }
+}
+
+async function runExtractCommand(
+  args: string[]
+): Promise<CurriculumCommandResult> {
+  const filePath = args.find((arg) => !arg.startsWith("--"));
+
+  if (!filePath) {
+    return {
+      exitCode: 1,
+      stdout: "",
+      stderr: "extract requires a path to a JSON request file",
+    };
+  }
+
+  const jsonInput = await readJsonInput(filePath);
+  if ("error" in jsonInput) {
+    return {
+      exitCode: 1,
+      stdout: "",
+      stderr: jsonInput.error,
+    };
+  }
+
+  const result = await extractCurriculumDraft(jsonInput.input, {
+    baseDirectory: path.dirname(jsonInput.absolutePath),
+  });
+
+  if (!result.draft) {
+    return {
+      exitCode: 1,
+      stdout: "",
+      stderr: formatExtractionIssues(result.errors, result.warnings),
+    };
+  }
+
+  return {
+    exitCode: 0,
+    stdout: `${JSON.stringify(result.draft, null, 2)}\n`,
+    stderr:
+      result.warnings.length > 0
+        ? formatExtractionIssues([], result.warnings)
+        : "",
+  };
+}
+
+async function runNormalizeCommand(
+  args: string[]
+): Promise<CurriculumCommandResult> {
+  const filePath = args.find((arg) => !arg.startsWith("--"));
+  const packageOnly = args.includes("--package-only");
+
+  if (!filePath) {
+    return {
+      exitCode: 1,
+      stdout: "",
+      stderr: "normalize requires a path to an extracted draft JSON file",
+    };
+  }
+
+  const jsonInput = await readJsonInput(filePath);
+  if ("error" in jsonInput) {
+    return {
+      exitCode: 1,
+      stdout: "",
+      stderr: jsonInput.error,
+    };
+  }
+
+  const result = normalizeCurriculumDraft(jsonInput.input);
+
+  return {
+    exitCode: result.ok ? 0 : 1,
+    stdout: packageOnly
+      ? result.package
+        ? `${JSON.stringify(result.package, null, 2)}\n`
+        : ""
+      : `${JSON.stringify(result, null, 2)}\n`,
+    stderr: formatNormalizationIssues(result),
+  };
 }
 
 export async function runCurriculumCommand(
@@ -274,8 +360,9 @@ export async function runCurriculumCommand(
     case "verify":
       return runVerifyCommand(args);
     case "extract":
+      return runExtractCommand(args);
     case "normalize":
-      return notImplementedCommand(command);
+      return runNormalizeCommand(args);
     default:
       return {
         exitCode: 1,

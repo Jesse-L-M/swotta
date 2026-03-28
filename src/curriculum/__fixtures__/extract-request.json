@@ -1,0 +1,22 @@
+{
+  "generatedBy": {
+    "tool": "curriculum.extract",
+    "version": "0.1.0",
+    "runId": "fixture-run"
+  },
+  "sources": [
+    {
+      "source": {
+        "id": "aqa-biology-spec",
+        "kind": "specification",
+        "authority": "primary",
+        "title": "AQA GCSE Biology structured notes",
+        "uri": "https://example.com/specification"
+      },
+      "content": {
+        "format": "record_text",
+        "path": "./structured-source.txt"
+      }
+    }
+  ]
+}
