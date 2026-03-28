@@ -1,0 +1,3907 @@
+{
+  "schemaVersion": "1.0",
+  "lifecycle": "candidate",
+  "metadata": {
+    "packageId": "aqa-gcse-chemistry-8462",
+    "packageVersion": "0.1.0-candidate.1",
+    "title": "AQA GCSE Chemistry (8462)",
+    "summary": "Candidate package rebuilt from the official AQA Chemistry specification, the official AQA science command words guidance, and June 2023 higher-tier examiner reports.",
+    "generatedAt": "2026-03-28T21:15:00.000Z"
+  },
+  "qualification": {
+    "name": "GCSE Chemistry",
+    "slug": "gcse-chemistry",
+    "level": "GCSE",
+    "versionCode": "8462",
+    "firstExamYear": 2018,
+    "specUrl": "https://www.aqa.org.uk/subjects/chemistry/gcse/chemistry-8462",
+    "subject": {
+      "name": "Chemistry",
+      "slug": "chemistry"
+    },
+    "examBoard": {
+      "name": "AQA",
+      "code": "AQA"
+    }
+  },
+  "provenance": {
+    "sources": [
+      {
+        "id": "aqa-chemistry-8462-spec",
+        "kind": "specification",
+        "authority": "primary",
+        "title": "AQA GCSE Chemistry 8462 specification",
+        "uri": "https://www.aqa.org.uk/subjects/chemistry/gcse/chemistry-8462"
+      },
+      {
+        "id": "aqa-science-command-words",
+        "kind": "support_material",
+        "authority": "secondary",
+        "title": "AQA GCSE Science command words",
+        "uri": "https://www.aqa.org.uk/resources/science/gcse/teach/command-words"
+      },
+      {
+        "id": "aqa-84621h-jun23-report",
+        "kind": "examiner_report",
+        "authority": "secondary",
+        "title": "AQA GCSE Chemistry 8462/1H Report on the Examination June 2023",
+        "uri": "https://filestore.aqa.org.uk/sample-papers-and-mark-schemes/2023/june/AQA-84621H-WRE-JUN23.PDF"
+      },
+      {
+        "id": "aqa-84622h-jun23-report",
+        "kind": "examiner_report",
+        "authority": "secondary",
+        "title": "AQA GCSE Chemistry 8462/2H Report on the Examination June 2023",
+        "uri": "https://filestore.aqa.org.uk/sample-papers-and-mark-schemes/2023/june/AQA-84622H-WRE-JUN23.PDF"
+      }
+    ],
+    "derivedFrom": [],
+    "generatedBy": {
+      "tool": "curriculum.extract",
+      "version": "0.1.0",
+      "runId": "aqa-gcse-chemistry-20260328"
+    }
+  },
+  "review": {
+    "status": "unreviewed",
+    "reviewers": []
+  },
+  "components": [
+    {
+      "id": "component-paper-1",
+      "name": "Paper 1: Atomic structure and the periodic table; Bonding, structure, and the properties of matter; Quantitative chemistry; Chemical changes; Energy changes",
+      "code": "paper-1",
+      "weightPercent": 50,
+      "durationMinutes": 105,
+      "totalMarks": 100,
+      "isExam": true
+    },
+    {
+      "id": "component-paper-2",
+      "name": "Paper 2: The rate and extent of chemical change; Organic chemistry; Chemical analysis; Chemistry of the atmosphere; Using resources",
+      "code": "paper-2",
+      "weightPercent": 50,
+      "durationMinutes": 105,
+      "totalMarks": 100,
+      "isExam": true
+    }
+  ],
+  "topics": [
+    {
+      "id": "topic-4-1",
+      "name": "Atomic structure and the periodic table",
+      "code": "4.1",
+      "parentId": null,
+      "depth": 0,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-1-1",
+      "name": "A simple model of the atom, symbols, relative atomic mass, electronic charge and isotopes",
+      "code": "4.1.1",
+      "parentId": "topic-4-1",
+      "depth": 1,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-1-1-1",
+      "name": "Atoms, elements and compounds",
+      "code": "4.1.1.1",
+      "parentId": "topic-4-1-1",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-1-1-2",
+      "name": "Mixtures",
+      "code": "4.1.1.2",
+      "parentId": "topic-4-1-1",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-1-1-3",
+      "name": "The development of the model of the atom (common content with physics)",
+      "code": "4.1.1.3",
+      "parentId": "topic-4-1-1",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-1-1-4",
+      "name": "Relative electrical charges of subatomic particles",
+      "code": "4.1.1.4",
+      "parentId": "topic-4-1-1",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-1-1-5",
+      "name": "Size and mass of atoms",
+      "code": "4.1.1.5",
+      "parentId": "topic-4-1-1",
+      "depth": 2,
+      "sortOrder": 5
+    },
+    {
+      "id": "topic-4-1-1-6",
+      "name": "Relative atomic mass",
+      "code": "4.1.1.6",
+      "parentId": "topic-4-1-1",
+      "depth": 2,
+      "sortOrder": 6
+    },
+    {
+      "id": "topic-4-1-1-7",
+      "name": "Electronic structure",
+      "code": "4.1.1.7",
+      "parentId": "topic-4-1-1",
+      "depth": 2,
+      "sortOrder": 7
+    },
+    {
+      "id": "topic-4-1-2",
+      "name": "The periodic table",
+      "code": "4.1.2",
+      "parentId": "topic-4-1",
+      "depth": 1,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-1-2-1",
+      "name": "The periodic table",
+      "code": "4.1.2.1",
+      "parentId": "topic-4-1-2",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-1-2-2",
+      "name": "Development of the periodic table",
+      "code": "4.1.2.2",
+      "parentId": "topic-4-1-2",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-1-2-3",
+      "name": "Metals and non-metals",
+      "code": "4.1.2.3",
+      "parentId": "topic-4-1-2",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-1-2-4",
+      "name": "Group 0",
+      "code": "4.1.2.4",
+      "parentId": "topic-4-1-2",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-1-2-5",
+      "name": "Group 1",
+      "code": "4.1.2.5",
+      "parentId": "topic-4-1-2",
+      "depth": 2,
+      "sortOrder": 5
+    },
+    {
+      "id": "topic-4-1-2-6",
+      "name": "Group 7",
+      "code": "4.1.2.6",
+      "parentId": "topic-4-1-2",
+      "depth": 2,
+      "sortOrder": 6
+    },
+    {
+      "id": "topic-4-1-3",
+      "name": "Properties of transition metals (chemistry only)",
+      "code": "4.1.3",
+      "parentId": "topic-4-1",
+      "depth": 1,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-1-3-1",
+      "name": "Comparison with Group 1 elements",
+      "code": "4.1.3.1",
+      "parentId": "topic-4-1-3",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-1-3-2",
+      "name": "Typical properties",
+      "code": "4.1.3.2",
+      "parentId": "topic-4-1-3",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-2",
+      "name": "Bonding, structure, and the properties of matter",
+      "code": "4.2",
+      "parentId": null,
+      "depth": 0,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-2-1",
+      "name": "Chemical bonds, ionic, covalent and metallic",
+      "code": "4.2.1",
+      "parentId": "topic-4-2",
+      "depth": 1,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-2-1-1",
+      "name": "Chemical bonds",
+      "code": "4.2.1.1",
+      "parentId": "topic-4-2-1",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-2-1-2",
+      "name": "Ionic bonding",
+      "code": "4.2.1.2",
+      "parentId": "topic-4-2-1",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-2-1-3",
+      "name": "Ionic compounds",
+      "code": "4.2.1.3",
+      "parentId": "topic-4-2-1",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-2-1-4",
+      "name": "Covalent bonding",
+      "code": "4.2.1.4",
+      "parentId": "topic-4-2-1",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-2-1-5",
+      "name": "Metallic bonding",
+      "code": "4.2.1.5",
+      "parentId": "topic-4-2-1",
+      "depth": 2,
+      "sortOrder": 5
+    },
+    {
+      "id": "topic-4-2-2",
+      "name": "How bonding and structure are related to the properties of substances",
+      "code": "4.2.2",
+      "parentId": "topic-4-2",
+      "depth": 1,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-2-2-1",
+      "name": "The three states of matter",
+      "code": "4.2.2.1",
+      "parentId": "topic-4-2-2",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-2-2-2",
+      "name": "State symbols",
+      "code": "4.2.2.2",
+      "parentId": "topic-4-2-2",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-2-2-3",
+      "name": "Properties of ionic compounds",
+      "code": "4.2.2.3",
+      "parentId": "topic-4-2-2",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-2-2-4",
+      "name": "Properties of small molecules",
+      "code": "4.2.2.4",
+      "parentId": "topic-4-2-2",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-2-2-5",
+      "name": "Polymers",
+      "code": "4.2.2.5",
+      "parentId": "topic-4-2-2",
+      "depth": 2,
+      "sortOrder": 5
+    },
+    {
+      "id": "topic-4-2-2-6",
+      "name": "Giant covalent structures",
+      "code": "4.2.2.6",
+      "parentId": "topic-4-2-2",
+      "depth": 2,
+      "sortOrder": 6
+    },
+    {
+      "id": "topic-4-2-2-7",
+      "name": "Properties of metals and alloys",
+      "code": "4.2.2.7",
+      "parentId": "topic-4-2-2",
+      "depth": 2,
+      "sortOrder": 7
+    },
+    {
+      "id": "topic-4-2-2-8",
+      "name": "Metals as conductors",
+      "code": "4.2.2.8",
+      "parentId": "topic-4-2-2",
+      "depth": 2,
+      "sortOrder": 8
+    },
+    {
+      "id": "topic-4-2-3",
+      "name": "Structure and bonding of carbon",
+      "code": "4.2.3",
+      "parentId": "topic-4-2",
+      "depth": 1,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-2-3-1",
+      "name": "Diamond",
+      "code": "4.2.3.1",
+      "parentId": "topic-4-2-3",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-2-3-2",
+      "name": "Graphite",
+      "code": "4.2.3.2",
+      "parentId": "topic-4-2-3",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-2-3-3",
+      "name": "Graphene and fullerenes",
+      "code": "4.2.3.3",
+      "parentId": "topic-4-2-3",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-2-4",
+      "name": "Bulk and surface properties of matter including nanoparticles (chemistry only)",
+      "code": "4.2.4",
+      "parentId": "topic-4-2",
+      "depth": 1,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-2-4-1",
+      "name": "Sizes of particles and their properties",
+      "code": "4.2.4.1",
+      "parentId": "topic-4-2-4",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-2-4-2",
+      "name": "Uses of nanoparticles",
+      "code": "4.2.4.2",
+      "parentId": "topic-4-2-4",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-3",
+      "name": "Quantitative chemistry",
+      "code": "4.3",
+      "parentId": null,
+      "depth": 0,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-3-1",
+      "name": "Chemical measurements, conservation of mass and the quantitative interpretation of chemical equations",
+      "code": "4.3.1",
+      "parentId": "topic-4-3",
+      "depth": 1,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-3-1-1",
+      "name": "Conservation of mass and balanced chemical equations",
+      "code": "4.3.1.1",
+      "parentId": "topic-4-3-1",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-3-1-2",
+      "name": "Relative formula mass",
+      "code": "4.3.1.2",
+      "parentId": "topic-4-3-1",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-3-1-3",
+      "name": "Mass changes when a reactant or product is a gas",
+      "code": "4.3.1.3",
+      "parentId": "topic-4-3-1",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-3-1-4",
+      "name": "Chemical measurements",
+      "code": "4.3.1.4",
+      "parentId": "topic-4-3-1",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-3-2",
+      "name": "Use of amount of substance in relation to masses of pure substances",
+      "code": "4.3.2",
+      "parentId": "topic-4-3",
+      "depth": 1,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-3-2-1",
+      "name": "Moles (HT only)",
+      "code": "4.3.2.1",
+      "parentId": "topic-4-3-2",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-3-2-2",
+      "name": "Amounts of substances in equations (HT only)",
+      "code": "4.3.2.2",
+      "parentId": "topic-4-3-2",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-3-2-3",
+      "name": "Using moles to balance equations (HT only)",
+      "code": "4.3.2.3",
+      "parentId": "topic-4-3-2",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-3-2-4",
+      "name": "Limiting reactants (HT only)",
+      "code": "4.3.2.4",
+      "parentId": "topic-4-3-2",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-3-2-5",
+      "name": "Concentration of solutions",
+      "code": "4.3.2.5",
+      "parentId": "topic-4-3-2",
+      "depth": 2,
+      "sortOrder": 5
+    },
+    {
+      "id": "topic-4-3-3",
+      "name": "Yield and atom economy of chemical reactions (chemistry only)",
+      "code": "4.3.3",
+      "parentId": "topic-4-3",
+      "depth": 1,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-3-3-1",
+      "name": "Percentage yield",
+      "code": "4.3.3.1",
+      "parentId": "topic-4-3-3",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-3-3-2",
+      "name": "Atom economy",
+      "code": "4.3.3.2",
+      "parentId": "topic-4-3-3",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-3-4",
+      "name": "Using concentrations of solutions in mol/dm3 (chemistry only) (HT only)",
+      "code": "4.3.4",
+      "parentId": "topic-4-3",
+      "depth": 1,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-3-5",
+      "name": "Use of amount of substance in relation to volumes of gases (chemistry only) (HT only)",
+      "code": "4.3.5",
+      "parentId": "topic-4-3",
+      "depth": 1,
+      "sortOrder": 5
+    },
+    {
+      "id": "topic-4-4",
+      "name": "Chemical changes",
+      "code": "4.4",
+      "parentId": null,
+      "depth": 0,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-4-1",
+      "name": "Reactivity of metals",
+      "code": "4.4.1",
+      "parentId": "topic-4-4",
+      "depth": 1,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-4-1-1",
+      "name": "Metal oxides",
+      "code": "4.4.1.1",
+      "parentId": "topic-4-4-1",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-4-1-2",
+      "name": "The reactivity series",
+      "code": "4.4.1.2",
+      "parentId": "topic-4-4-1",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-4-1-3",
+      "name": "Extraction of metals and reduction",
+      "code": "4.4.1.3",
+      "parentId": "topic-4-4-1",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-4-1-4",
+      "name": "Oxidation and reduction in terms of electrons (HT only)",
+      "code": "4.4.1.4",
+      "parentId": "topic-4-4-1",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-4-2",
+      "name": "Reactions of acids",
+      "code": "4.4.2",
+      "parentId": "topic-4-4",
+      "depth": 1,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-4-2-1",
+      "name": "Reactions of acids with metals",
+      "code": "4.4.2.1",
+      "parentId": "topic-4-4-2",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-4-2-2",
+      "name": "Neutralisation of acids and salt production",
+      "code": "4.4.2.2",
+      "parentId": "topic-4-4-2",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-4-2-3",
+      "name": "Soluble salts",
+      "code": "4.4.2.3",
+      "parentId": "topic-4-4-2",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-4-2-4",
+      "name": "The pH scale and neutralisation",
+      "code": "4.4.2.4",
+      "parentId": "topic-4-4-2",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-4-2-5",
+      "name": "Titrations (chemistry only)",
+      "code": "4.4.2.5",
+      "parentId": "topic-4-4-2",
+      "depth": 2,
+      "sortOrder": 5
+    },
+    {
+      "id": "topic-4-4-2-6",
+      "name": "Strong and weak acids (HT only)",
+      "code": "4.4.2.6",
+      "parentId": "topic-4-4-2",
+      "depth": 2,
+      "sortOrder": 6
+    },
+    {
+      "id": "topic-4-4-3",
+      "name": "Electrolysis",
+      "code": "4.4.3",
+      "parentId": "topic-4-4",
+      "depth": 1,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-4-3-1",
+      "name": "The process of electrolysis",
+      "code": "4.4.3.1",
+      "parentId": "topic-4-4-3",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-4-3-2",
+      "name": "Electrolysis of molten ionic compounds",
+      "code": "4.4.3.2",
+      "parentId": "topic-4-4-3",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-4-3-3",
+      "name": "Using electrolysis to extract metals",
+      "code": "4.4.3.3",
+      "parentId": "topic-4-4-3",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-4-3-4",
+      "name": "Electrolysis of aqueous solutions",
+      "code": "4.4.3.4",
+      "parentId": "topic-4-4-3",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-4-3-5",
+      "name": "Representation of reactions at electrodes as half equations (HT only)",
+      "code": "4.4.3.5",
+      "parentId": "topic-4-4-3",
+      "depth": 2,
+      "sortOrder": 5
+    },
+    {
+      "id": "topic-4-5",
+      "name": "Energy changes",
+      "code": "4.5",
+      "parentId": null,
+      "depth": 0,
+      "sortOrder": 5
+    },
+    {
+      "id": "topic-4-5-1",
+      "name": "Exothermic and endothermic reactions",
+      "code": "4.5.1",
+      "parentId": "topic-4-5",
+      "depth": 1,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-5-1-1",
+      "name": "Energy transfer during exothermic and endothermic reactions",
+      "code": "4.5.1.1",
+      "parentId": "topic-4-5-1",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-5-1-2",
+      "name": "Reaction profiles",
+      "code": "4.5.1.2",
+      "parentId": "topic-4-5-1",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-5-1-3",
+      "name": "The energy change of reactions (HT only)",
+      "code": "4.5.1.3",
+      "parentId": "topic-4-5-1",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-5-2",
+      "name": "Chemical cells and fuel cells (chemistry only)",
+      "code": "4.5.2",
+      "parentId": "topic-4-5",
+      "depth": 1,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-5-2-1",
+      "name": "Cells and batteries",
+      "code": "4.5.2.1",
+      "parentId": "topic-4-5-2",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-5-2-2",
+      "name": "Fuel cells",
+      "code": "4.5.2.2",
+      "parentId": "topic-4-5-2",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-6",
+      "name": "The rate and extent of chemical change",
+      "code": "4.6",
+      "parentId": null,
+      "depth": 0,
+      "sortOrder": 6
+    },
+    {
+      "id": "topic-4-6-1",
+      "name": "Rate of reaction",
+      "code": "4.6.1",
+      "parentId": "topic-4-6",
+      "depth": 1,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-6-1-1",
+      "name": "Calculating rates of reactions",
+      "code": "4.6.1.1",
+      "parentId": "topic-4-6-1",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-6-1-2",
+      "name": "Factors which affect the rates of chemical reactions",
+      "code": "4.6.1.2",
+      "parentId": "topic-4-6-1",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-6-1-3",
+      "name": "Collision theory and activation energy",
+      "code": "4.6.1.3",
+      "parentId": "topic-4-6-1",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-6-1-4",
+      "name": "Catalysts",
+      "code": "4.6.1.4",
+      "parentId": "topic-4-6-1",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-6-2",
+      "name": "Reversible reactions and dynamic equilibrium",
+      "code": "4.6.2",
+      "parentId": "topic-4-6",
+      "depth": 1,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-6-2-1",
+      "name": "Reversible reactions",
+      "code": "4.6.2.1",
+      "parentId": "topic-4-6-2",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-6-2-2",
+      "name": "Energy changes and reversible reactions",
+      "code": "4.6.2.2",
+      "parentId": "topic-4-6-2",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-6-2-3",
+      "name": "Equilibrium",
+      "code": "4.6.2.3",
+      "parentId": "topic-4-6-2",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-6-2-4",
+      "name": "The effect of changing conditions on equilibrium (HT only)",
+      "code": "4.6.2.4",
+      "parentId": "topic-4-6-2",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-6-2-5",
+      "name": "The effect of changing concentration (HT only)",
+      "code": "4.6.2.5",
+      "parentId": "topic-4-6-2",
+      "depth": 2,
+      "sortOrder": 5
+    },
+    {
+      "id": "topic-4-6-2-6",
+      "name": "The effect of temperature changes on equilibrium (HT only)",
+      "code": "4.6.2.6",
+      "parentId": "topic-4-6-2",
+      "depth": 2,
+      "sortOrder": 6
+    },
+    {
+      "id": "topic-4-6-2-7",
+      "name": "The effect of pressure changes on equilibrium (HT only)",
+      "code": "4.6.2.7",
+      "parentId": "topic-4-6-2",
+      "depth": 2,
+      "sortOrder": 7
+    },
+    {
+      "id": "topic-4-7",
+      "name": "Organic chemistry",
+      "code": "4.7",
+      "parentId": null,
+      "depth": 0,
+      "sortOrder": 7
+    },
+    {
+      "id": "topic-4-7-1",
+      "name": "Carbon compounds as fuels and feedstock",
+      "code": "4.7.1",
+      "parentId": "topic-4-7",
+      "depth": 1,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-7-1-1",
+      "name": "Crude oil, hydrocarbons and alkanes",
+      "code": "4.7.1.1",
+      "parentId": "topic-4-7-1",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-7-1-2",
+      "name": "Fractional distillation and petrochemicals",
+      "code": "4.7.1.2",
+      "parentId": "topic-4-7-1",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-7-1-3",
+      "name": "Properties of hydrocarbons",
+      "code": "4.7.1.3",
+      "parentId": "topic-4-7-1",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-7-1-4",
+      "name": "Cracking and alkenes",
+      "code": "4.7.1.4",
+      "parentId": "topic-4-7-1",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-7-2",
+      "name": "Reactions of alkenes and alcohols (chemistry only)",
+      "code": "4.7.2",
+      "parentId": "topic-4-7",
+      "depth": 1,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-7-2-1",
+      "name": "Structure and formulae of alkenes",
+      "code": "4.7.2.1",
+      "parentId": "topic-4-7-2",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-7-2-2",
+      "name": "Reactions of alkenes",
+      "code": "4.7.2.2",
+      "parentId": "topic-4-7-2",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-7-2-3",
+      "name": "Alcohols",
+      "code": "4.7.2.3",
+      "parentId": "topic-4-7-2",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-7-2-4",
+      "name": "Carboxylic acids",
+      "code": "4.7.2.4",
+      "parentId": "topic-4-7-2",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-7-3",
+      "name": "Synthetic and naturally occurring polymers (chemistry only)",
+      "code": "4.7.3",
+      "parentId": "topic-4-7",
+      "depth": 1,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-7-3-1",
+      "name": "Addition polymerisation",
+      "code": "4.7.3.1",
+      "parentId": "topic-4-7-3",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-7-3-2",
+      "name": "Condensation polymerisation (HT only)",
+      "code": "4.7.3.2",
+      "parentId": "topic-4-7-3",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-7-3-3",
+      "name": "Amino acids (HT only)",
+      "code": "4.7.3.3",
+      "parentId": "topic-4-7-3",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-7-3-4",
+      "name": "DNA (deoxyribonucleic acid) and other naturally occurring polymers",
+      "code": "4.7.3.4",
+      "parentId": "topic-4-7-3",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-8",
+      "name": "Chemical analysis",
+      "code": "4.8",
+      "parentId": null,
+      "depth": 0,
+      "sortOrder": 8
+    },
+    {
+      "id": "topic-4-8-1",
+      "name": "Purity, formulations and chromatography",
+      "code": "4.8.1",
+      "parentId": "topic-4-8",
+      "depth": 1,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-8-1-1",
+      "name": "Pure substances",
+      "code": "4.8.1.1",
+      "parentId": "topic-4-8-1",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-8-1-2",
+      "name": "Formulations",
+      "code": "4.8.1.2",
+      "parentId": "topic-4-8-1",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-8-1-3",
+      "name": "Chromatography",
+      "code": "4.8.1.3",
+      "parentId": "topic-4-8-1",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-8-2",
+      "name": "Identification of common gases",
+      "code": "4.8.2",
+      "parentId": "topic-4-8",
+      "depth": 1,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-8-2-1",
+      "name": "Test for hydrogen",
+      "code": "4.8.2.1",
+      "parentId": "topic-4-8-2",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-8-2-2",
+      "name": "Test for oxygen",
+      "code": "4.8.2.2",
+      "parentId": "topic-4-8-2",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-8-2-3",
+      "name": "Test for carbon dioxide",
+      "code": "4.8.2.3",
+      "parentId": "topic-4-8-2",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-8-2-4",
+      "name": "Test for chlorine",
+      "code": "4.8.2.4",
+      "parentId": "topic-4-8-2",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-8-3",
+      "name": "Identification of ions by chemical and spectroscopic means (chemistry only)",
+      "code": "4.8.3",
+      "parentId": "topic-4-8",
+      "depth": 1,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-8-3-1",
+      "name": "Flame tests",
+      "code": "4.8.3.1",
+      "parentId": "topic-4-8-3",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-8-3-2",
+      "name": "Metal hydroxides",
+      "code": "4.8.3.2",
+      "parentId": "topic-4-8-3",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-8-3-3",
+      "name": "Carbonates",
+      "code": "4.8.3.3",
+      "parentId": "topic-4-8-3",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-8-3-4",
+      "name": "Halides",
+      "code": "4.8.3.4",
+      "parentId": "topic-4-8-3",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-8-3-5",
+      "name": "Sulfates",
+      "code": "4.8.3.5",
+      "parentId": "topic-4-8-3",
+      "depth": 2,
+      "sortOrder": 5
+    },
+    {
+      "id": "topic-4-8-3-6",
+      "name": "Instrumental methods",
+      "code": "4.8.3.6",
+      "parentId": "topic-4-8-3",
+      "depth": 2,
+      "sortOrder": 6
+    },
+    {
+      "id": "topic-4-8-3-7",
+      "name": "Flame emission spectroscopy",
+      "code": "4.8.3.7",
+      "parentId": "topic-4-8-3",
+      "depth": 2,
+      "sortOrder": 7
+    },
+    {
+      "id": "topic-4-9",
+      "name": "Chemistry of the atmosphere",
+      "code": "4.9",
+      "parentId": null,
+      "depth": 0,
+      "sortOrder": 9
+    },
+    {
+      "id": "topic-4-9-1",
+      "name": "The composition and evolution of the Earth's atmosphere",
+      "code": "4.9.1",
+      "parentId": "topic-4-9",
+      "depth": 1,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-9-1-1",
+      "name": "The proportions of different gases in the atmosphere",
+      "code": "4.9.1.1",
+      "parentId": "topic-4-9-1",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-9-1-2",
+      "name": "The Earth's early atmosphere",
+      "code": "4.9.1.2",
+      "parentId": "topic-4-9-1",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-9-1-3",
+      "name": "How oxygen increased",
+      "code": "4.9.1.3",
+      "parentId": "topic-4-9-1",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-9-1-4",
+      "name": "How carbon dioxide decreased",
+      "code": "4.9.1.4",
+      "parentId": "topic-4-9-1",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-9-2",
+      "name": "Carbon dioxide and methane as greenhouse gases",
+      "code": "4.9.2",
+      "parentId": "topic-4-9",
+      "depth": 1,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-9-2-1",
+      "name": "Greenhouse gases",
+      "code": "4.9.2.1",
+      "parentId": "topic-4-9-2",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-9-2-2",
+      "name": "Human activities which contribute to an increase in greenhouse gases in the atmosphere",
+      "code": "4.9.2.2",
+      "parentId": "topic-4-9-2",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-9-2-3",
+      "name": "Global climate change",
+      "code": "4.9.2.3",
+      "parentId": "topic-4-9-2",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-9-2-4",
+      "name": "The carbon footprint and its reduction",
+      "code": "4.9.2.4",
+      "parentId": "topic-4-9-2",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-9-3",
+      "name": "Common atmospheric pollutants and their sources",
+      "code": "4.9.3",
+      "parentId": "topic-4-9",
+      "depth": 1,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-9-3-1",
+      "name": "Atmospheric pollutants from fuels",
+      "code": "4.9.3.1",
+      "parentId": "topic-4-9-3",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-9-3-2",
+      "name": "Properties and effects of atmospheric pollutants",
+      "code": "4.9.3.2",
+      "parentId": "topic-4-9-3",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-10",
+      "name": "Using resources",
+      "code": "4.10",
+      "parentId": null,
+      "depth": 0,
+      "sortOrder": 10
+    },
+    {
+      "id": "topic-4-10-1",
+      "name": "Using the Earth's resources and obtaining potable water",
+      "code": "4.10.1",
+      "parentId": "topic-4-10",
+      "depth": 1,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-10-1-1",
+      "name": "Using the Earth's resources and sustainable development",
+      "code": "4.10.1.1",
+      "parentId": "topic-4-10-1",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-10-1-2",
+      "name": "Potable water",
+      "code": "4.10.1.2",
+      "parentId": "topic-4-10-1",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-10-1-3",
+      "name": "Waste water treatment",
+      "code": "4.10.1.3",
+      "parentId": "topic-4-10-1",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-10-1-4",
+      "name": "Alternative methods of extracting metals (HT only)",
+      "code": "4.10.1.4",
+      "parentId": "topic-4-10-1",
+      "depth": 2,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-10-2",
+      "name": "Life cycle assessment and recycling",
+      "code": "4.10.2",
+      "parentId": "topic-4-10",
+      "depth": 1,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-10-2-1",
+      "name": "Life cycle assessment",
+      "code": "4.10.2.1",
+      "parentId": "topic-4-10-2",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-10-2-2",
+      "name": "Ways of reducing the use of resources",
+      "code": "4.10.2.2",
+      "parentId": "topic-4-10-2",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-10-3",
+      "name": "Using materials (chemistry only)",
+      "code": "4.10.3",
+      "parentId": "topic-4-10",
+      "depth": 1,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-10-3-1",
+      "name": "Corrosion and its prevention",
+      "code": "4.10.3.1",
+      "parentId": "topic-4-10-3",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-10-3-2",
+      "name": "Alloys as useful materials",
+      "code": "4.10.3.2",
+      "parentId": "topic-4-10-3",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-10-3-3",
+      "name": "Ceramics, polymers and composites",
+      "code": "4.10.3.3",
+      "parentId": "topic-4-10-3",
+      "depth": 2,
+      "sortOrder": 3
+    },
+    {
+      "id": "topic-4-10-4",
+      "name": "The Haber process and the use of NPK fertilisers (chemistry only)",
+      "code": "4.10.4",
+      "parentId": "topic-4-10",
+      "depth": 1,
+      "sortOrder": 4
+    },
+    {
+      "id": "topic-4-10-4-1",
+      "name": "The Haber process",
+      "code": "4.10.4.1",
+      "parentId": "topic-4-10-4",
+      "depth": 2,
+      "sortOrder": 1
+    },
+    {
+      "id": "topic-4-10-4-2",
+      "name": "Production and uses of NPK fertilisers",
+      "code": "4.10.4.2",
+      "parentId": "topic-4-10-4",
+      "depth": 2,
+      "sortOrder": 2
+    },
+    {
+      "id": "topic-4-11",
+      "name": "Key ideas",
+      "code": "4.11",
+      "parentId": null,
+      "depth": 0,
+      "sortOrder": 11
+    }
+  ],
+  "edges": [
+    {
+      "fromTopicId": "topic-4-1-2",
+      "toTopicId": "topic-4-1-1",
+      "type": "builds_on",
+      "rationale": "Periodic trends are explained through atomic structure and electronic arrangement."
+    },
+    {
+      "fromTopicId": "topic-4-1-3",
+      "toTopicId": "topic-4-1-2",
+      "type": "builds_on",
+      "rationale": "Transition-metal behaviour extends periodic-table ideas beyond Groups 1, 7 and 0."
+    },
+    {
+      "fromTopicId": "topic-4-2-1",
+      "toTopicId": "topic-4-1-1-7",
+      "type": "builds_on",
+      "rationale": "Bonding explanations depend on secure electronic-structure knowledge."
+    },
+    {
+      "fromTopicId": "topic-4-2-2",
+      "toTopicId": "topic-4-2-1",
+      "type": "builds_on",
+      "rationale": "Macroscopic properties are explained from bonding and structure models."
+    },
+    {
+      "fromTopicId": "topic-4-2-3",
+      "toTopicId": "topic-4-2-1-4",
+      "type": "builds_on",
+      "rationale": "Carbon allotropes revisit covalent bonding in giant structures."
+    },
+    {
+      "fromTopicId": "topic-4-3-1",
+      "toTopicId": "topic-4-1-1-6",
+      "type": "builds_on",
+      "rationale": "Quantitative chemistry relies on relative atomic and formula mass."
+    },
+    {
+      "fromTopicId": "topic-4-3-2",
+      "toTopicId": "topic-4-3-1",
+      "type": "builds_on",
+      "rationale": "Amount-of-substance methods extend balanced-equation and measurement work."
+    },
+    {
+      "fromTopicId": "topic-4-4-1",
+      "toTopicId": "topic-4-1-2",
+      "type": "builds_on",
+      "rationale": "Metal reactivity is taught through periodic patterns and group behaviour."
+    },
+    {
+      "fromTopicId": "topic-4-4-2-5",
+      "toTopicId": "topic-4-3-2-5",
+      "type": "prerequisite",
+      "rationale": "Titration calculations depend on a secure concentration-of-solutions model."
+    },
+    {
+      "fromTopicId": "topic-4-4-3",
+      "toTopicId": "topic-4-2-1-2",
+      "type": "builds_on",
+      "rationale": "Electrolysis depends on ions, charge, and ionic bonding."
+    },
+    {
+      "fromTopicId": "topic-4-5-2",
+      "toTopicId": "topic-4-5-1",
+      "type": "builds_on",
+      "rationale": "Chemical cells and fuel cells extend the core idea of energy transfer in reactions."
+    },
+    {
+      "fromTopicId": "topic-4-6-1-3",
+      "toTopicId": "topic-4-5-1-2",
+      "type": "builds_on",
+      "rationale": "Activation energy reasoning depends on reading and explaining reaction profiles."
+    },
+    {
+      "fromTopicId": "topic-4-6-2",
+      "toTopicId": "topic-4-6-1",
+      "type": "builds_on",
+      "rationale": "Equilibrium reasoning builds on prior rate-of-reaction ideas."
+    },
+    {
+      "fromTopicId": "topic-4-7-2",
+      "toTopicId": "topic-4-7-1",
+      "type": "builds_on",
+      "rationale": "Alkene and alcohol reactions extend the hydrocarbon foundation."
+    },
+    {
+      "fromTopicId": "topic-4-7-3",
+      "toTopicId": "topic-4-7-2",
+      "type": "builds_on",
+      "rationale": "Polymer chemistry builds on organic structure and functional-group ideas."
+    },
+    {
+      "fromTopicId": "topic-4-9-2",
+      "toTopicId": "topic-4-7-1-1",
+      "type": "related",
+      "rationale": "Greenhouse-gas discussions repeatedly revisit hydrocarbon fuels and combustion."
+    },
+    {
+      "fromTopicId": "topic-4-10-1-4",
+      "toTopicId": "topic-4-4-1-3",
+      "type": "builds_on",
+      "rationale": "Alternative extraction methods extend the earlier treatment of metal extraction and reduction."
+    },
+    {
+      "fromTopicId": "topic-4-10-4",
+      "toTopicId": "topic-4-6-2-7",
+      "type": "builds_on",
+      "rationale": "The Haber process depends on pressure-and-equilibrium reasoning."
+    }
+  ],
+  "commandWords": [
+    {
+      "id": "command-word-balance",
+      "word": "Balance",
+      "definition": "Students need to balance a chemical equation.",
+      "expectedDepth": 2
+    },
+    {
+      "id": "command-word-calculate",
+      "word": "Calculate",
+      "definition": "Students should use numbers given in the question to work out the answer.",
+      "expectedDepth": 2
+    },
+    {
+      "id": "command-word-choose",
+      "word": "Choose",
+      "definition": "Select from a range of alternatives.",
+      "expectedDepth": 1
+    },
+    {
+      "id": "command-word-compare",
+      "word": "Compare",
+      "definition": "This requires the student to describe the similarities and/or differences between things, not just write about one.",
+      "expectedDepth": 3,
+      "guidance": "Write paired similarities or differences rather than isolated facts about one side."
+    },
+    {
+      "id": "command-word-complete",
+      "word": "Complete",
+      "definition": "Answers should be written in the space provided, for example, on a diagram, in spaces in a sentence or in a table.",
+      "expectedDepth": 1
+    },
+    {
+      "id": "command-word-define",
+      "word": "Define",
+      "definition": "Specify the meaning of something.",
+      "expectedDepth": 1
+    },
+    {
+      "id": "command-word-describe",
+      "word": "Describe",
+      "definition": "Students may be asked to recall some facts, events or process in an accurate way.",
+      "expectedDepth": 3
+    },
+    {
+      "id": "command-word-design",
+      "word": "Design",
+      "definition": "Set out how something will be done.",
+      "expectedDepth": 3
+    },
+    {
+      "id": "command-word-determine",
+      "word": "Determine",
+      "definition": "Use given data or information to obtain and answer.",
+      "expectedDepth": 2
+    },
+    {
+      "id": "command-word-draw",
+      "word": "Draw",
+      "definition": "To produce, or add to, a diagram.",
+      "expectedDepth": 1
+    },
+    {
+      "id": "command-word-estimate",
+      "word": "Estimate",
+      "definition": "Assign an approximate value.",
+      "expectedDepth": 2
+    },
+    {
+      "id": "command-word-evaluate",
+      "word": "Evaluate",
+      "definition": "Students should use the information supplied, as well as their knowledge and understanding, to consider evidence for and against when making a judgement.",
+      "expectedDepth": 4,
+      "guidance": "Use the evidence provided, weigh both sides, then reach a justified judgement."
+    },
+    {
+      "id": "command-word-explain",
+      "word": "Explain",
+      "definition": "Students should make something clear, or state the reasons for something happening.",
+      "expectedDepth": 3,
+      "guidance": "State the chemical mechanism or causal chain and link it to the resulting outcome."
+    },
+    {
+      "id": "command-word-give",
+      "word": "Give",
+      "definition": "Only a short answer is required, not an explanation or a description.",
+      "expectedDepth": 1
+    },
+    {
+      "id": "command-word-how-what-when-where-which-who-why",
+      "word": "How/What/When/Where/Which/Who/Why",
+      "definition": "These can be used for more direct questions.",
+      "expectedDepth": 1
+    },
+    {
+      "id": "command-word-identify",
+      "word": "Identify",
+      "definition": "Name or otherwise characterise.",
+      "expectedDepth": 1
+    },
+    {
+      "id": "command-word-justify",
+      "word": "Justify",
+      "definition": "Use evidence from the information supplied to support an answer.",
+      "expectedDepth": 4,
+      "guidance": "Support the choice or conclusion with evidence from the question or data provided."
+    },
+    {
+      "id": "command-word-label",
+      "word": "Label",
+      "definition": "Provide appropriate names on a diagram.",
+      "expectedDepth": 1
+    },
+    {
+      "id": "command-word-measure",
+      "word": "Measure",
+      "definition": "Find an item of data for a given quantity.",
+      "expectedDepth": 1
+    },
+    {
+      "id": "command-word-name",
+      "word": "Name",
+      "definition": "Only a short answer is required, not an explanation or a description. Often it can be answered with a single word, phrase or sentence.",
+      "expectedDepth": 1
+    },
+    {
+      "id": "command-word-plan",
+      "word": "Plan",
+      "definition": "Write a method.",
+      "expectedDepth": 3
+    },
+    {
+      "id": "command-word-plot",
+      "word": "Plot",
+      "definition": "Mark on a graph using data given.",
+      "expectedDepth": 2
+    },
+    {
+      "id": "command-word-predict",
+      "word": "Predict",
+      "definition": "Give a plausible outcome.",
+      "expectedDepth": 2
+    },
+    {
+      "id": "command-word-show",
+      "word": "Show",
+      "definition": "Provide structured evidence to reach a conclusion.",
+      "expectedDepth": 3
+    },
+    {
+      "id": "command-word-sketch",
+      "word": "Sketch",
+      "definition": "Draw approximately.",
+      "expectedDepth": 1
+    },
+    {
+      "id": "command-word-suggest",
+      "word": "Suggest",
+      "definition": "This term is used in questions where students need to apply their knowledge and understanding to a new situation.",
+      "expectedDepth": 3,
+      "guidance": "Apply existing knowledge to the unfamiliar context instead of recalling a memorised sentence."
+    },
+    {
+      "id": "command-word-use",
+      "word": "Use",
+      "definition": "The answer must be based on the information given in the question. Unless the information given in the question is used, no marks can be given. In some cases students might be asked to use their own knowledge and understanding.",
+      "expectedDepth": 2,
+      "guidance": "Reference the given data or information explicitly or the answer will not secure credit."
+    },
+    {
+      "id": "command-word-write",
+      "word": "Write",
+      "definition": "Only a short answer is required, not an explanation or a description.",
+      "expectedDepth": 1
+    }
+  ],
+  "questionTypes": [
+    {
+      "id": "question-type-multiple-choice",
+      "name": "Multiple choice",
+      "description": "Single-best-answer items used across the written papers for rapid checks of core chemical knowledge and application.",
+      "typicalMarks": 1
+    },
+    {
+      "id": "question-type-structured",
+      "name": "Structured",
+      "description": "Multi-step questions that combine recall, application, practical reasoning, data handling, and calculation.",
+      "typicalMarks": 4
+    },
+    {
+      "id": "question-type-closed-short-answer",
+      "name": "Closed short answer",
+      "description": "Short-response items with a tightly delimited chemical fact, term, or numerical answer.",
+      "typicalMarks": 2
+    },
+    {
+      "id": "question-type-open-response",
+      "name": "Open response",
+      "description": "Extended responses that reward linked chemical reasoning, practical method detail, or evaluative judgement.",
+      "typicalMarks": 6
+    }
+  ],
+  "misconceptionRules": [
+    {
+      "id": "misconception-topic-4-1-1-3-aqa-84621h-jun23-report-question-01-1",
+      "topicId": "topic-4-1-1-3",
+      "description": "Treats the plum pudding model as a ball of positive energy or places electrons outside the positive sphere instead of embedded within it.",
+      "triggerPatterns": [
+        "plum pudding model is a ball of positive energy",
+        "electrons orbit outside the positive ball",
+        "positive sphere with no electrons named"
+      ],
+      "correctionGuidance": "In the plum pudding model the atom is a sphere of positive charge with electrons embedded within it; it is an early model, not the modern nuclear atom.",
+      "severity": 2
+    },
+    {
+      "id": "misconception-topic-4-10-1-4-aqa-84622h-jun23-report-question-05-4",
+      "topicId": "topic-4-10-1-4",
+      "description": "Treats bioleaching as the same process as phytomining or omits that bacteria produce leachate solutions containing dissolved copper compounds or ions.",
+      "triggerPatterns": [
+        "bioleaching uses plants",
+        "bioleaching is the same as phytomining",
+        "bacteria directly make pure copper"
+      ],
+      "correctionGuidance": "Bioleaching uses bacteria to produce leachate solutions containing dissolved copper compounds or ions; phytomining uses plants to take up metal compounds from the soil.",
+      "severity": 3
+    },
+    {
+      "id": "misconception-topic-4-2-2-5-aqa-84621h-jun23-report-question-04-5",
+      "topicId": "topic-4-2-2-5",
+      "description": "Treats poly(ethene) as a giant structure that melts by breaking covalent bonds rather than by overcoming intermolecular forces between molecules.",
+      "triggerPatterns": [
+        "polymer is a giant covalent structure so covalent bonds must break to melt",
+        "boiling point depends on breaking the carbon chain bonds",
+        "intermolecular forces and covalent bonds are the same thing"
+      ],
+      "correctionGuidance": "For simple hydrocarbons and polymers, boiling and melting depend on the strength of intermolecular forces between molecules, not on breaking the covalent bonds within each molecule.",
+      "severity": 3
+    },
+    {
+      "id": "misconception-topic-4-4-2-3-aqa-84621h-jun23-report-question-03-1",
+      "topicId": "topic-4-4-2-3",
+      "description": "Describes salt preparation as evaporating the acid away or skips the excess-solid and filtration steps needed before crystallisation.",
+      "triggerPatterns": [
+        "evaporate the acid",
+        "heat to dryness to get crystals",
+        "crystallise without filtering excess solid"
+      ],
+      "correctionGuidance": "For a soluble salt from an insoluble base or carbonate, add the solid in excess to the acid, filter off the excess solid, then gently evaporate water so crystals form on cooling.",
+      "severity": 3
+    },
+    {
+      "id": "misconception-topic-4-4-2-5-aqa-84621h-jun23-report-question-05-3",
+      "topicId": "topic-4-4-2-5",
+      "description": "Gets the titration endpoint direction wrong when acid is added to alkali or describes the endpoint as clear instead of colourless.",
+      "triggerPatterns": [
+        "phenolphthalein turns pink at the end when acid is added",
+        "solution goes clear",
+        "add alkali until the indicator changes"
+      ],
+      "correctionGuidance": "When acid is added from the burette to an alkali with phenolphthalein, the endpoint is the change from pink to colourless; the colourless endpoint still depends on using the correct direction of addition.",
+      "severity": 2
+    },
+    {
+      "id": "misconception-topic-4-4-2-6-aqa-84621h-jun23-report-question-05-1",
+      "topicId": "topic-4-4-2-6",
+      "description": "Defines a weak acid by a low pH instead of by partial ionisation or dissociation in aqueous solution.",
+      "triggerPatterns": [
+        "weak acid means low pH",
+        "weak acid has few hydrogen ions because it is dilute",
+        "weak acid partially ionises other substances"
+      ],
+      "correctionGuidance": "A weak acid is one that only partially ionises in water. Strength is about extent of ionisation, not simply the pH number or whether the solution is dilute.",
+      "severity": 3
+    },
+    {
+      "id": "misconception-topic-4-4-3-4-aqa-84621h-jun23-report-question-07-3",
+      "topicId": "topic-4-4-3-4",
+      "description": "Explains oxygen production in aqueous electrolysis using oxide or oxygen ions rather than hydroxide ions and misuses the idea of discharge.",
+      "triggerPatterns": [
+        "oxide ions make oxygen in water electrolysis",
+        "oxygen is discharged at the electrode",
+        "oxygen ions move to the positive electrode"
+      ],
+      "correctionGuidance": "In aqueous electrolysis, hydroxide ions are formed from water and are oxidised at the positive electrode to produce oxygen; it is the ions that are discharged, not the oxygen gas.",
+      "severity": 3
+    },
+    {
+      "id": "misconception-topic-4-5-1-1-aqa-84621h-jun23-report-question-04-2",
+      "topicId": "topic-4-5-1-1",
+      "description": "Explains exothermic change by saying matter or gas is lost, or mentions only bond making or only bond breaking.",
+      "triggerPatterns": [
+        "exothermic means matter is lost",
+        "gas takes the energy away",
+        "energy only released when bonds are made with no bond-breaking comparison"
+      ],
+      "correctionGuidance": "Exothermic reactions release more energy when new bonds form than they require to break existing bonds; the change is about energy transfer, not loss of matter.",
+      "severity": 3
+    },
+    {
+      "id": "misconception-topic-4-6-2-3-aqa-84622h-jun23-report-question-09-5-and-09-6",
+      "topicId": "topic-4-6-2-3",
+      "description": "Claims that a catalyst shifts equilibrium to the products or ignores that equal total moles on both sides mean pressure does not change the equilibrium position.",
+      "triggerPatterns": [
+        "catalyst shifts equilibrium to the right",
+        "pressure always moves equilibrium to the side with fewer moles even when the totals are equal",
+        "faster rate means higher equilibrium yield"
+      ],
+      "correctionGuidance": "A catalyst speeds up both forward and reverse reactions equally and does not change equilibrium position. Pressure only changes equilibrium when the total gaseous moles differ between sides.",
+      "severity": 3
+    },
+    {
+      "id": "misconception-topic-4-7-3-4-aqa-84622h-jun23-report-question-08-8",
+      "topicId": "topic-4-7-3-4",
+      "description": "Answers DNA-building-unit questions with bases or the names of bases instead of nucleotides.",
+      "triggerPatterns": [
+        "dna is made of bases",
+        "adenine thymine cytosine guanine are the repeating units",
+        "dna is made from amino acids"
+      ],
+      "correctionGuidance": "DNA is a polymer of nucleotides. Each nucleotide includes a sugar, a phosphate group, and one base, so bases alone are not the repeating unit.",
+      "severity": 2
+    },
+    {
+      "id": "misconception-topic-4-8-3-7-aqa-84622h-jun23-report-question-03-2-and-03-3",
+      "topicId": "topic-4-8-3-7",
+      "description": "Uses the abbreviation FES or describes flame emission spectroscopy as more precise rather than naming it fully and explaining its greater accuracy.",
+      "triggerPatterns": [
+        "use fes",
+        "flame emission is more precise",
+        "instrumental method gives more ions at once so that is the main advantage"
+      ],
+      "correctionGuidance": "The full method name is flame emission spectroscopy. Its key advantage over a flame test is greater accuracy and more reliable measurement of the ions present.",
+      "severity": 2
+    },
+    {
+      "id": "misconception-topic-4-9-2-2-aqa-84622h-jun23-report-question-04-2-and-04-3",
+      "topicId": "topic-4-9-2-2",
+      "description": "Explains rising atmospheric carbon dioxide or methane by human respiration alone or omits the causal link from demand to fuel burning or cattle farming.",
+      "triggerPatterns": [
+        "more people respire so carbon dioxide rises",
+        "more cattle means more methane with no food-demand link",
+        "population increase causes greenhouse gases without any activity named"
+      ],
+      "correctionGuidance": "Population growth raises demand for transport, electricity, heating, and food, so more fossil fuels are burned and more cattle farming occurs, increasing carbon dioxide and methane emissions.",
+      "severity": 3
+    }
+  ],
+  "taskRules": [
+    {
+      "id": "task-rule-worked-example-topic-4-1-1-3-pair-early-atom-models-with-labelled-sketches",
+      "taskType": "worked_example",
+      "topicId": "topic-4-1-1-3",
+      "title": "Pair early atom models with labelled sketches",
+      "guidance": "Before prose answers, make the learner sketch Dalton, plum pudding, Rutherford, and Bohr-style models with one explicit label that distinguishes each model from the next.",
+      "conditions": [
+        "atomic-model history",
+        "command word describe",
+        "diagram-free explanation"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "task-rule-worked-example-topic-4-4-2-3-sequence-insoluble-base-salt-preparations-exactly",
+      "taskType": "worked_example",
+      "topicId": "topic-4-4-2-3",
+      "title": "Sequence insoluble-base salt preparations exactly",
+      "guidance": "Rehearse the ordered chain acid -> add excess insoluble solid -> filter -> gently evaporate water -> crystallise, and force the learner to name what is removed at each step.",
+      "conditions": [
+        "required practical",
+        "salt preparation",
+        "method-writing question"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "task-rule-explanation-topic-4-5-1-1-compare-bonds-broken-with-bonds-made-before-naming-exo-or-endo",
+      "taskType": "explanation",
+      "topicId": "topic-4-5-1-1",
+      "title": "Compare bonds broken with bonds made before naming exo or endo",
+      "guidance": "Require a two-column comparison of energy needed to break bonds and energy released when new bonds form before the learner writes the final exothermic or endothermic conclusion.",
+      "conditions": [
+        "energy-change explanation",
+        "bond-energy reasoning",
+        "reaction profile question"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "task-rule-mistake-review-topic-4-2-2-5-separate-covalent-bonds-from-intermolecular-forces-explicitly",
+      "taskType": "mistake_review",
+      "topicId": "topic-4-2-2-5",
+      "title": "Separate covalent bonds from intermolecular forces explicitly",
+      "guidance": "Use error-correction tasks that force learners to label which force is broken when methane boils and which forces are compared when poly(ethene) has a higher melting or boiling point.",
+      "conditions": [
+        "bonding-properties question",
+        "polymer topic",
+        "contradictory-force language"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "task-rule-retrieval-drill-topic-4-4-2-6-separate-strength-concentration-and-ph-in-quick-drills",
+      "taskType": "retrieval_drill",
+      "topicId": "topic-4-4-2-6",
+      "title": "Separate strength, concentration and pH in quick drills",
+      "guidance": "Use short prompts that make the learner classify statements as about strength, concentration, or pH and then explain why a change of one pH unit is a tenfold concentration change.",
+      "conditions": [
+        "acids topic",
+        "low-confidence response history",
+        "numerical pH reasoning"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "task-rule-worked-example-topic-4-4-2-5-anchor-titration-endpoints-to-the-direction-of-addition",
+      "taskType": "worked_example",
+      "topicId": "topic-4-4-2-5",
+      "title": "Anchor titration endpoints to the direction of addition",
+      "guidance": "Force learners to state what is in the flask, what is in the burette, and the start and end colour of the indicator before they write any titration method answer.",
+      "conditions": [
+        "titration practical",
+        "indicator question",
+        "method-writing question"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "task-rule-worked-example-topic-4-4-3-4-build-aqueous-electrolysis-answers-from-ion-movement-to-half-equations",
+      "taskType": "worked_example",
+      "topicId": "topic-4-4-3-4",
+      "title": "Build aqueous-electrolysis answers from ion movement to half equations",
+      "guidance": "Have the learner name the ions present, send them to the correct electrode, and then write the oxidation or reduction half equation before naming the final product.",
+      "conditions": [
+        "electrolysis topic",
+        "half-equation question",
+        "ion-movement explanation"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "task-rule-worked-example-topic-4-8-3-7-run-ion-test-methods-before-naming-the-instrumental-follow-up",
+      "taskType": "worked_example",
+      "topicId": "topic-4-8-3-7",
+      "title": "Run ion-test methods before naming the instrumental follow-up",
+      "guidance": "After the learner states sample, reagent, and expected observation for the flame and halide tests, require them to name flame emission spectroscopy in full and state that it is more accurate than a flame test.",
+      "conditions": [
+        "analysis topic",
+        "method-planning question",
+        "instrumental-method comparison"
+      ],
+      "priority": "medium"
+    },
+    {
+      "id": "task-rule-explanation-topic-4-9-2-2-write-greenhouse-gas-explanations-as-a-driver-to-emission-chain",
+      "taskType": "explanation",
+      "topicId": "topic-4-9-2-2",
+      "title": "Write greenhouse-gas explanations as a driver-to-emission chain",
+      "guidance": "Force responses into the pattern change in population or demand -> named human activity -> named greenhouse gas -> atmospheric increase, so the causal link is never skipped.",
+      "conditions": [
+        "atmosphere topic",
+        "command word explain",
+        "human-activity question"
+      ],
+      "priority": "high"
+    },
+    {
+      "id": "task-rule-mistake-review-topic-4-6-2-3-separate-rate-effects-from-equilibrium-position-effects",
+      "taskType": "mistake_review",
+      "topicId": "topic-4-6-2-3",
+      "title": "Separate rate effects from equilibrium-position effects",
+      "guidance": "Use review prompts that make the learner sort catalyst, temperature, pressure, and concentration changes into whether they change rate only, equilibrium position, or both, and justify each choice from the equation.",
+      "conditions": [
+        "equilibrium topic",
+        "stoichiometry on both sides",
+        "low-confidence response history"
+      ],
+      "priority": "high"
+    }
+  ],
+  "sourceMappings": [
+    {
+      "id": "source-mapping-aqa-84621h-jun23-report-topic-topic-4-1-1-3-question-01-1",
+      "sourceId": "aqa-84621h-jun23-report",
+      "topicId": "topic-4-1-1-3",
+      "locator": "Question 01.1",
+      "excerptHint": "locator: Question 01.1 topicRef: 4.1.1.3 description: Treats the plum pudding model as a ball of positive energy or places electrons outside the positive sph...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-84621h-jun23-report-topic-topic-4-2-2-5-question-04-5",
+      "sourceId": "aqa-84621h-jun23-report",
+      "topicId": "topic-4-2-2-5",
+      "locator": "Question 04.5",
+      "excerptHint": "locator: Question 04.5 topicRef: 4.2.2.5 description: Treats poly(ethene) as a giant structure that melts by breaking covalent bonds rather than by overcomin...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-84621h-jun23-report-topic-topic-4-4-2-3-question-03-1",
+      "sourceId": "aqa-84621h-jun23-report",
+      "topicId": "topic-4-4-2-3",
+      "locator": "Question 03.1",
+      "excerptHint": "locator: Question 03.1 topicRef: 4.4.2.3 description: Describes salt preparation as evaporating the acid away or skips the excess-solid and filtration steps ...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-84621h-jun23-report-topic-topic-4-4-2-5-question-05-3",
+      "sourceId": "aqa-84621h-jun23-report",
+      "topicId": "topic-4-4-2-5",
+      "locator": "Question 05.3",
+      "excerptHint": "locator: Question 05.3 topicRef: 4.4.2.5 description: Gets the titration endpoint direction wrong when acid is added to alkali or describes the endpoint as c...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-84621h-jun23-report-topic-topic-4-4-2-6-question-05-1-and-05-6",
+      "sourceId": "aqa-84621h-jun23-report",
+      "topicId": "topic-4-4-2-6",
+      "locator": "Question 05.1 and 05.6",
+      "excerptHint": "locator: Question 05.1 and 05.6 topicRef: 4.4.2.6 taskType: retrieval_drill title: Separate strength, concentration and pH in quick drills guidance: Use shor...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-84621h-jun23-report-topic-topic-4-4-2-6-question-05-1",
+      "sourceId": "aqa-84621h-jun23-report",
+      "topicId": "topic-4-4-2-6",
+      "locator": "Question 05.1",
+      "excerptHint": "locator: Question 05.1 topicRef: 4.4.2.6 description: Defines a weak acid by a low pH instead of by partial ionisation or dissociation in aqueous solution. t...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-84621h-jun23-report-topic-topic-4-4-3-4-question-07-3",
+      "sourceId": "aqa-84621h-jun23-report",
+      "topicId": "topic-4-4-3-4",
+      "locator": "Question 07.3",
+      "excerptHint": "locator: Question 07.3 topicRef: 4.4.3.4 description: Explains oxygen production in aqueous electrolysis using oxide or oxygen ions rather than hydroxide ion...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-84621h-jun23-report-topic-topic-4-5-1-1-question-04-2-and-04-3",
+      "sourceId": "aqa-84621h-jun23-report",
+      "topicId": "topic-4-5-1-1",
+      "locator": "Question 04.2 and 04.3",
+      "excerptHint": "locator: Question 04.2 and 04.3 topicRef: 4.5.1.1 taskType: explanation title: Compare bonds broken with bonds made before naming exo or endo guidance: Requi...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-84621h-jun23-report-topic-topic-4-5-1-1-question-04-2",
+      "sourceId": "aqa-84621h-jun23-report",
+      "topicId": "topic-4-5-1-1",
+      "locator": "Question 04.2",
+      "excerptHint": "locator: Question 04.2 topicRef: 4.5.1.1 description: Explains exothermic change by saying matter or gas is lost, or mentions only bond making or only bond b...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-84622h-jun23-report-topic-topic-4-10-1-4-question-05-4",
+      "sourceId": "aqa-84622h-jun23-report",
+      "topicId": "topic-4-10-1-4",
+      "locator": "Question 05.4",
+      "excerptHint": "locator: Question 05.4 topicRef: 4.10.1.4 description: Treats bioleaching as the same process as phytomining or omits that bacteria produce leachate solution...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-84622h-jun23-report-topic-topic-4-6-2-3-question-09-5-and-09-6",
+      "sourceId": "aqa-84622h-jun23-report",
+      "topicId": "topic-4-6-2-3",
+      "locator": "Question 09.5 and 09.6",
+      "excerptHint": "locator: Question 09.5 and 09.6 topicRef: 4.6.2.3 description: Claims that a catalyst shifts equilibrium to the products or ignores that equal total moles on...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-84622h-jun23-report-topic-topic-4-7-3-4-question-08-8",
+      "sourceId": "aqa-84622h-jun23-report",
+      "topicId": "topic-4-7-3-4",
+      "locator": "Question 08.8",
+      "excerptHint": "locator: Question 08.8 topicRef: 4.7.3.4 description: Answers DNA-building-unit questions with bases or the names of bases instead of nucleotides. triggerPat...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-84622h-jun23-report-topic-topic-4-8-3-7-question-03-1-to-03-3",
+      "sourceId": "aqa-84622h-jun23-report",
+      "topicId": "topic-4-8-3-7",
+      "locator": "Question 03.1 to 03.3",
+      "excerptHint": "locator: Question 03.1 to 03.3 topicRef: 4.8.3.7 taskType: worked_example title: Run ion-test methods before naming the instrumental follow-up guidance: Afte...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-84622h-jun23-report-topic-topic-4-8-3-7-question-03-2-and-03-3",
+      "sourceId": "aqa-84622h-jun23-report",
+      "topicId": "topic-4-8-3-7",
+      "locator": "Question 03.2 and 03.3",
+      "excerptHint": "locator: Question 03.2 and 03.3 topicRef: 4.8.3.7 description: Uses the abbreviation FES or describes flame emission spectroscopy as more precise rather than...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-84622h-jun23-report-topic-topic-4-9-2-2-question-04-2-and-04-3",
+      "sourceId": "aqa-84622h-jun23-report",
+      "topicId": "topic-4-9-2-2",
+      "locator": "Question 04.2 and 04.3",
+      "excerptHint": "locator: Question 04.2 and 04.3 topicRef: 4.9.2.2 description: Explains rising atmospheric carbon dioxide or methane by human respiration alone or omits the ...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-component-component-paper-1-specification-at-a-glance-paper-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "componentId": "component-paper-1",
+      "locator": "Specification at a glance / Paper 1",
+      "excerptHint": "locator: Specification at a glance / Paper 1 name: Paper 1: Atomic structure and the periodic table; Bonding, structure, and the properties of matter; Quanti...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-component-component-paper-2-specification-at-a-glance-paper-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "componentId": "component-paper-2",
+      "locator": "Specification at a glance / Paper 2",
+      "excerptHint": "locator: Specification at a glance / Paper 2 name: Paper 2: The rate and extent of chemical change; Organic chemistry; Chemical analysis; Chemistry of the at...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-1-1-1-section-4-1-1-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-1-1-1",
+      "locator": "Section 4.1.1.1",
+      "excerptHint": "locator: Section 4.1.1.1 name: Atoms, elements and compounds code: 4.1.1.1 parentRef: 4.1.1 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-1-1-2-section-4-1-1-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-1-1-2",
+      "locator": "Section 4.1.1.2",
+      "excerptHint": "locator: Section 4.1.1.2 name: Mixtures code: 4.1.1.2 parentRef: 4.1.1 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-1-1-3-section-4-1-1-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-1-1-3",
+      "locator": "Section 4.1.1.3",
+      "excerptHint": "locator: Section 4.1.1.3 name: The development of the model of the atom (common content with physics) code: 4.1.1.3 parentRef: 4.1.1 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-1-1-4-section-4-1-1-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-1-1-4",
+      "locator": "Section 4.1.1.4",
+      "excerptHint": "locator: Section 4.1.1.4 name: Relative electrical charges of subatomic particles code: 4.1.1.4 parentRef: 4.1.1 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-1-1-5-section-4-1-1-5",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-1-1-5",
+      "locator": "Section 4.1.1.5",
+      "excerptHint": "locator: Section 4.1.1.5 name: Size and mass of atoms code: 4.1.1.5 parentRef: 4.1.1 sortOrder: 5",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-1-1-6-section-4-1-1-6",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-1-1-6",
+      "locator": "Section 4.1.1.6",
+      "excerptHint": "locator: Section 4.1.1.6 name: Relative atomic mass code: 4.1.1.6 parentRef: 4.1.1 sortOrder: 6",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-1-1-7-section-4-1-1-7",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-1-1-7",
+      "locator": "Section 4.1.1.7",
+      "excerptHint": "locator: Section 4.1.1.7 name: Electronic structure code: 4.1.1.7 parentRef: 4.1.1 sortOrder: 7",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-1-1-section-4-1-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-1-1",
+      "locator": "Section 4.1.1",
+      "excerptHint": "locator: Section 4.1.1 name: A simple model of the atom, symbols, relative atomic mass, electronic charge and isotopes code: 4.1.1 parentRef: 4.1 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-1-2-1-section-4-1-2-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-1-2-1",
+      "locator": "Section 4.1.2.1",
+      "excerptHint": "locator: Section 4.1.2.1 name: The periodic table code: 4.1.2.1 parentRef: 4.1.2 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-1-2-2-section-4-1-2-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-1-2-2",
+      "locator": "Section 4.1.2.2",
+      "excerptHint": "locator: Section 4.1.2.2 name: Development of the periodic table code: 4.1.2.2 parentRef: 4.1.2 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-1-2-3-section-4-1-2-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-1-2-3",
+      "locator": "Section 4.1.2.3",
+      "excerptHint": "locator: Section 4.1.2.3 name: Metals and non-metals code: 4.1.2.3 parentRef: 4.1.2 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-1-2-4-section-4-1-2-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-1-2-4",
+      "locator": "Section 4.1.2.4",
+      "excerptHint": "locator: Section 4.1.2.4 name: Group 0 code: 4.1.2.4 parentRef: 4.1.2 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-1-2-5-section-4-1-2-5",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-1-2-5",
+      "locator": "Section 4.1.2.5",
+      "excerptHint": "locator: Section 4.1.2.5 name: Group 1 code: 4.1.2.5 parentRef: 4.1.2 sortOrder: 5",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-1-2-6-section-4-1-2-6",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-1-2-6",
+      "locator": "Section 4.1.2.6",
+      "excerptHint": "locator: Section 4.1.2.6 name: Group 7 code: 4.1.2.6 parentRef: 4.1.2 sortOrder: 6",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-1-2-section-4-1-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-1-2",
+      "locator": "Section 4.1.2",
+      "excerptHint": "locator: Section 4.1.2 name: The periodic table code: 4.1.2 parentRef: 4.1 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-1-3-1-section-4-1-3-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-1-3-1",
+      "locator": "Section 4.1.3.1",
+      "excerptHint": "locator: Section 4.1.3.1 name: Comparison with Group 1 elements code: 4.1.3.1 parentRef: 4.1.3 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-1-3-2-section-4-1-3-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-1-3-2",
+      "locator": "Section 4.1.3.2",
+      "excerptHint": "locator: Section 4.1.3.2 name: Typical properties code: 4.1.3.2 parentRef: 4.1.3 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-1-3-section-4-1-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-1-3",
+      "locator": "Section 4.1.3",
+      "excerptHint": "locator: Section 4.1.3 name: Properties of transition metals (chemistry only) code: 4.1.3 parentRef: 4.1 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-1-section-4-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-1",
+      "locator": "Section 4.1",
+      "excerptHint": "locator: Section 4.1 name: Atomic structure and the periodic table code: 4.1 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-10-1-1-section-4-10-1-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-10-1-1",
+      "locator": "Section 4.10.1.1",
+      "excerptHint": "locator: Section 4.10.1.1 name: Using the Earth's resources and sustainable development code: 4.10.1.1 parentRef: 4.10.1 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-10-1-2-section-4-10-1-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-10-1-2",
+      "locator": "Section 4.10.1.2",
+      "excerptHint": "locator: Section 4.10.1.2 name: Potable water code: 4.10.1.2 parentRef: 4.10.1 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-10-1-3-section-4-10-1-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-10-1-3",
+      "locator": "Section 4.10.1.3",
+      "excerptHint": "locator: Section 4.10.1.3 name: Waste water treatment code: 4.10.1.3 parentRef: 4.10.1 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-10-1-4-section-4-10-1-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-10-1-4",
+      "locator": "Section 4.10.1.4",
+      "excerptHint": "locator: Section 4.10.1.4 name: Alternative methods of extracting metals (HT only) code: 4.10.1.4 parentRef: 4.10.1 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-10-1-section-4-10-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-10-1",
+      "locator": "Section 4.10.1",
+      "excerptHint": "locator: Section 4.10.1 name: Using the Earth's resources and obtaining potable water code: 4.10.1 parentRef: 4.10 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-10-2-1-section-4-10-2-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-10-2-1",
+      "locator": "Section 4.10.2.1",
+      "excerptHint": "locator: Section 4.10.2.1 name: Life cycle assessment code: 4.10.2.1 parentRef: 4.10.2 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-10-2-2-section-4-10-2-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-10-2-2",
+      "locator": "Section 4.10.2.2",
+      "excerptHint": "locator: Section 4.10.2.2 name: Ways of reducing the use of resources code: 4.10.2.2 parentRef: 4.10.2 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-10-2-section-4-10-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-10-2",
+      "locator": "Section 4.10.2",
+      "excerptHint": "locator: Section 4.10.2 name: Life cycle assessment and recycling code: 4.10.2 parentRef: 4.10 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-10-3-1-section-4-10-3-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-10-3-1",
+      "locator": "Section 4.10.3.1",
+      "excerptHint": "locator: Section 4.10.3.1 name: Corrosion and its prevention code: 4.10.3.1 parentRef: 4.10.3 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-10-3-2-section-4-10-3-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-10-3-2",
+      "locator": "Section 4.10.3.2",
+      "excerptHint": "locator: Section 4.10.3.2 name: Alloys as useful materials code: 4.10.3.2 parentRef: 4.10.3 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-10-3-3-section-4-10-3-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-10-3-3",
+      "locator": "Section 4.10.3.3",
+      "excerptHint": "locator: Section 4.10.3.3 name: Ceramics, polymers and composites code: 4.10.3.3 parentRef: 4.10.3 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-10-3-section-4-10-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-10-3",
+      "locator": "Section 4.10.3",
+      "excerptHint": "locator: Section 4.10.3 name: Using materials (chemistry only) code: 4.10.3 parentRef: 4.10 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-10-4-1-section-4-10-4-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-10-4-1",
+      "locator": "Section 4.10.4.1",
+      "excerptHint": "locator: Section 4.10.4.1 name: The Haber process code: 4.10.4.1 parentRef: 4.10.4 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-10-4-2-section-4-10-4-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-10-4-2",
+      "locator": "Section 4.10.4.2",
+      "excerptHint": "locator: Section 4.10.4.2 name: Production and uses of NPK fertilisers code: 4.10.4.2 parentRef: 4.10.4 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-10-4-section-4-10-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-10-4",
+      "locator": "Section 4.10.4",
+      "excerptHint": "locator: Section 4.10.4 name: The Haber process and the use of NPK fertilisers (chemistry only) code: 4.10.4 parentRef: 4.10 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-10-section-4-10",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-10",
+      "locator": "Section 4.10",
+      "excerptHint": "locator: Section 4.10 name: Using resources code: 4.10 sortOrder: 10",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-11-section-4-11",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-11",
+      "locator": "Section 4.11",
+      "excerptHint": "locator: Section 4.11 name: Key ideas code: 4.11 sortOrder: 11",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-1-1-section-4-2-1-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2-1-1",
+      "locator": "Section 4.2.1.1",
+      "excerptHint": "locator: Section 4.2.1.1 name: Chemical bonds code: 4.2.1.1 parentRef: 4.2.1 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-1-2-section-4-2-1-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2-1-2",
+      "locator": "Section 4.2.1.2",
+      "excerptHint": "locator: Section 4.2.1.2 name: Ionic bonding code: 4.2.1.2 parentRef: 4.2.1 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-1-3-section-4-2-1-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2-1-3",
+      "locator": "Section 4.2.1.3",
+      "excerptHint": "locator: Section 4.2.1.3 name: Ionic compounds code: 4.2.1.3 parentRef: 4.2.1 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-1-4-section-4-2-1-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2-1-4",
+      "locator": "Section 4.2.1.4",
+      "excerptHint": "locator: Section 4.2.1.4 name: Covalent bonding code: 4.2.1.4 parentRef: 4.2.1 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-1-5-section-4-2-1-5",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2-1-5",
+      "locator": "Section 4.2.1.5",
+      "excerptHint": "locator: Section 4.2.1.5 name: Metallic bonding code: 4.2.1.5 parentRef: 4.2.1 sortOrder: 5",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-1-section-4-2-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2-1",
+      "locator": "Section 4.2.1",
+      "excerptHint": "locator: Section 4.2.1 name: Chemical bonds, ionic, covalent and metallic code: 4.2.1 parentRef: 4.2 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-2-1-section-4-2-2-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2-2-1",
+      "locator": "Section 4.2.2.1",
+      "excerptHint": "locator: Section 4.2.2.1 name: The three states of matter code: 4.2.2.1 parentRef: 4.2.2 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-2-2-section-4-2-2-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2-2-2",
+      "locator": "Section 4.2.2.2",
+      "excerptHint": "locator: Section 4.2.2.2 name: State symbols code: 4.2.2.2 parentRef: 4.2.2 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-2-3-section-4-2-2-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2-2-3",
+      "locator": "Section 4.2.2.3",
+      "excerptHint": "locator: Section 4.2.2.3 name: Properties of ionic compounds code: 4.2.2.3 parentRef: 4.2.2 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-2-4-section-4-2-2-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2-2-4",
+      "locator": "Section 4.2.2.4",
+      "excerptHint": "locator: Section 4.2.2.4 name: Properties of small molecules code: 4.2.2.4 parentRef: 4.2.2 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-2-5-section-4-2-2-5",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2-2-5",
+      "locator": "Section 4.2.2.5",
+      "excerptHint": "locator: Section 4.2.2.5 name: Polymers code: 4.2.2.5 parentRef: 4.2.2 sortOrder: 5",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-2-6-section-4-2-2-6",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2-2-6",
+      "locator": "Section 4.2.2.6",
+      "excerptHint": "locator: Section 4.2.2.6 name: Giant covalent structures code: 4.2.2.6 parentRef: 4.2.2 sortOrder: 6",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-2-7-section-4-2-2-7",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2-2-7",
+      "locator": "Section 4.2.2.7",
+      "excerptHint": "locator: Section 4.2.2.7 name: Properties of metals and alloys code: 4.2.2.7 parentRef: 4.2.2 sortOrder: 7",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-2-8-section-4-2-2-8",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2-2-8",
+      "locator": "Section 4.2.2.8",
+      "excerptHint": "locator: Section 4.2.2.8 name: Metals as conductors code: 4.2.2.8 parentRef: 4.2.2 sortOrder: 8",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-2-section-4-2-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2-2",
+      "locator": "Section 4.2.2",
+      "excerptHint": "locator: Section 4.2.2 name: How bonding and structure are related to the properties of substances code: 4.2.2 parentRef: 4.2 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-3-1-section-4-2-3-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2-3-1",
+      "locator": "Section 4.2.3.1",
+      "excerptHint": "locator: Section 4.2.3.1 name: Diamond code: 4.2.3.1 parentRef: 4.2.3 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-3-2-section-4-2-3-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2-3-2",
+      "locator": "Section 4.2.3.2",
+      "excerptHint": "locator: Section 4.2.3.2 name: Graphite code: 4.2.3.2 parentRef: 4.2.3 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-3-3-section-4-2-3-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2-3-3",
+      "locator": "Section 4.2.3.3",
+      "excerptHint": "locator: Section 4.2.3.3 name: Graphene and fullerenes code: 4.2.3.3 parentRef: 4.2.3 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-3-section-4-2-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2-3",
+      "locator": "Section 4.2.3",
+      "excerptHint": "locator: Section 4.2.3 name: Structure and bonding of carbon code: 4.2.3 parentRef: 4.2 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-4-1-section-4-2-4-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2-4-1",
+      "locator": "Section 4.2.4.1",
+      "excerptHint": "locator: Section 4.2.4.1 name: Sizes of particles and their properties code: 4.2.4.1 parentRef: 4.2.4 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-4-2-section-4-2-4-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2-4-2",
+      "locator": "Section 4.2.4.2",
+      "excerptHint": "locator: Section 4.2.4.2 name: Uses of nanoparticles code: 4.2.4.2 parentRef: 4.2.4 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-4-section-4-2-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2-4",
+      "locator": "Section 4.2.4",
+      "excerptHint": "locator: Section 4.2.4 name: Bulk and surface properties of matter including nanoparticles (chemistry only) code: 4.2.4 parentRef: 4.2 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-2-section-4-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-2",
+      "locator": "Section 4.2",
+      "excerptHint": "locator: Section 4.2 name: Bonding, structure, and the properties of matter code: 4.2 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-3-1-1-section-4-3-1-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-3-1-1",
+      "locator": "Section 4.3.1.1",
+      "excerptHint": "locator: Section 4.3.1.1 name: Conservation of mass and balanced chemical equations code: 4.3.1.1 parentRef: 4.3.1 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-3-1-2-section-4-3-1-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-3-1-2",
+      "locator": "Section 4.3.1.2",
+      "excerptHint": "locator: Section 4.3.1.2 name: Relative formula mass code: 4.3.1.2 parentRef: 4.3.1 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-3-1-3-section-4-3-1-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-3-1-3",
+      "locator": "Section 4.3.1.3",
+      "excerptHint": "locator: Section 4.3.1.3 name: Mass changes when a reactant or product is a gas code: 4.3.1.3 parentRef: 4.3.1 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-3-1-4-section-4-3-1-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-3-1-4",
+      "locator": "Section 4.3.1.4",
+      "excerptHint": "locator: Section 4.3.1.4 name: Chemical measurements code: 4.3.1.4 parentRef: 4.3.1 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-3-1-section-4-3-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-3-1",
+      "locator": "Section 4.3.1",
+      "excerptHint": "locator: Section 4.3.1 name: Chemical measurements, conservation of mass and the quantitative interpretation of chemical equations code: 4.3.1 parentRef: 4.3...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-3-2-1-section-4-3-2-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-3-2-1",
+      "locator": "Section 4.3.2.1",
+      "excerptHint": "locator: Section 4.3.2.1 name: Moles (HT only) code: 4.3.2.1 parentRef: 4.3.2 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-3-2-2-section-4-3-2-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-3-2-2",
+      "locator": "Section 4.3.2.2",
+      "excerptHint": "locator: Section 4.3.2.2 name: Amounts of substances in equations (HT only) code: 4.3.2.2 parentRef: 4.3.2 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-3-2-3-section-4-3-2-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-3-2-3",
+      "locator": "Section 4.3.2.3",
+      "excerptHint": "locator: Section 4.3.2.3 name: Using moles to balance equations (HT only) code: 4.3.2.3 parentRef: 4.3.2 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-3-2-4-section-4-3-2-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-3-2-4",
+      "locator": "Section 4.3.2.4",
+      "excerptHint": "locator: Section 4.3.2.4 name: Limiting reactants (HT only) code: 4.3.2.4 parentRef: 4.3.2 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-3-2-5-section-4-3-2-5",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-3-2-5",
+      "locator": "Section 4.3.2.5",
+      "excerptHint": "locator: Section 4.3.2.5 name: Concentration of solutions code: 4.3.2.5 parentRef: 4.3.2 sortOrder: 5",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-3-2-section-4-3-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-3-2",
+      "locator": "Section 4.3.2",
+      "excerptHint": "locator: Section 4.3.2 name: Use of amount of substance in relation to masses of pure substances code: 4.3.2 parentRef: 4.3 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-3-3-1-section-4-3-3-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-3-3-1",
+      "locator": "Section 4.3.3.1",
+      "excerptHint": "locator: Section 4.3.3.1 name: Percentage yield code: 4.3.3.1 parentRef: 4.3.3 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-3-3-2-section-4-3-3-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-3-3-2",
+      "locator": "Section 4.3.3.2",
+      "excerptHint": "locator: Section 4.3.3.2 name: Atom economy code: 4.3.3.2 parentRef: 4.3.3 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-3-3-section-4-3-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-3-3",
+      "locator": "Section 4.3.3",
+      "excerptHint": "locator: Section 4.3.3 name: Yield and atom economy of chemical reactions (chemistry only) code: 4.3.3 parentRef: 4.3 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-3-4-section-4-3-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-3-4",
+      "locator": "Section 4.3.4",
+      "excerptHint": "locator: Section 4.3.4 name: Using concentrations of solutions in mol/dm3 (chemistry only) (HT only) code: 4.3.4 parentRef: 4.3 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-3-5-section-4-3-5",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-3-5",
+      "locator": "Section 4.3.5",
+      "excerptHint": "locator: Section 4.3.5 name: Use of amount of substance in relation to volumes of gases (chemistry only) (HT only) code: 4.3.5 parentRef: 4.3 sortOrder: 5",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-3-section-4-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-3",
+      "locator": "Section 4.3",
+      "excerptHint": "locator: Section 4.3 name: Quantitative chemistry code: 4.3 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-4-1-1-section-4-4-1-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-4-1-1",
+      "locator": "Section 4.4.1.1",
+      "excerptHint": "locator: Section 4.4.1.1 name: Metal oxides code: 4.4.1.1 parentRef: 4.4.1 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-4-1-2-section-4-4-1-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-4-1-2",
+      "locator": "Section 4.4.1.2",
+      "excerptHint": "locator: Section 4.4.1.2 name: The reactivity series code: 4.4.1.2 parentRef: 4.4.1 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-4-1-3-section-4-4-1-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-4-1-3",
+      "locator": "Section 4.4.1.3",
+      "excerptHint": "locator: Section 4.4.1.3 name: Extraction of metals and reduction code: 4.4.1.3 parentRef: 4.4.1 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-4-1-4-section-4-4-1-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-4-1-4",
+      "locator": "Section 4.4.1.4",
+      "excerptHint": "locator: Section 4.4.1.4 name: Oxidation and reduction in terms of electrons (HT only) code: 4.4.1.4 parentRef: 4.4.1 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-4-1-section-4-4-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-4-1",
+      "locator": "Section 4.4.1",
+      "excerptHint": "locator: Section 4.4.1 name: Reactivity of metals code: 4.4.1 parentRef: 4.4 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-4-2-1-section-4-4-2-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-4-2-1",
+      "locator": "Section 4.4.2.1",
+      "excerptHint": "locator: Section 4.4.2.1 name: Reactions of acids with metals code: 4.4.2.1 parentRef: 4.4.2 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-4-2-2-section-4-4-2-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-4-2-2",
+      "locator": "Section 4.4.2.2",
+      "excerptHint": "locator: Section 4.4.2.2 name: Neutralisation of acids and salt production code: 4.4.2.2 parentRef: 4.4.2 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-4-2-3-section-4-4-2-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-4-2-3",
+      "locator": "Section 4.4.2.3",
+      "excerptHint": "locator: Section 4.4.2.3 name: Soluble salts code: 4.4.2.3 parentRef: 4.4.2 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-4-2-4-section-4-4-2-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-4-2-4",
+      "locator": "Section 4.4.2.4",
+      "excerptHint": "locator: Section 4.4.2.4 name: The pH scale and neutralisation code: 4.4.2.4 parentRef: 4.4.2 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-4-2-5-section-4-4-2-5",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-4-2-5",
+      "locator": "Section 4.4.2.5",
+      "excerptHint": "locator: Section 4.4.2.5 name: Titrations (chemistry only) code: 4.4.2.5 parentRef: 4.4.2 sortOrder: 5",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-4-2-6-section-4-4-2-6",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-4-2-6",
+      "locator": "Section 4.4.2.6",
+      "excerptHint": "locator: Section 4.4.2.6 name: Strong and weak acids (HT only) code: 4.4.2.6 parentRef: 4.4.2 sortOrder: 6",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-4-2-section-4-4-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-4-2",
+      "locator": "Section 4.4.2",
+      "excerptHint": "locator: Section 4.4.2 name: Reactions of acids code: 4.4.2 parentRef: 4.4 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-4-3-1-section-4-4-3-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-4-3-1",
+      "locator": "Section 4.4.3.1",
+      "excerptHint": "locator: Section 4.4.3.1 name: The process of electrolysis code: 4.4.3.1 parentRef: 4.4.3 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-4-3-2-section-4-4-3-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-4-3-2",
+      "locator": "Section 4.4.3.2",
+      "excerptHint": "locator: Section 4.4.3.2 name: Electrolysis of molten ionic compounds code: 4.4.3.2 parentRef: 4.4.3 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-4-3-3-section-4-4-3-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-4-3-3",
+      "locator": "Section 4.4.3.3",
+      "excerptHint": "locator: Section 4.4.3.3 name: Using electrolysis to extract metals code: 4.4.3.3 parentRef: 4.4.3 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-4-3-4-section-4-4-3-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-4-3-4",
+      "locator": "Section 4.4.3.4",
+      "excerptHint": "locator: Section 4.4.3.4 name: Electrolysis of aqueous solutions code: 4.4.3.4 parentRef: 4.4.3 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-4-3-5-section-4-4-3-5",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-4-3-5",
+      "locator": "Section 4.4.3.5",
+      "excerptHint": "locator: Section 4.4.3.5 name: Representation of reactions at electrodes as half equations (HT only) code: 4.4.3.5 parentRef: 4.4.3 sortOrder: 5",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-4-3-section-4-4-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-4-3",
+      "locator": "Section 4.4.3",
+      "excerptHint": "locator: Section 4.4.3 name: Electrolysis code: 4.4.3 parentRef: 4.4 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-4-section-4-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-4",
+      "locator": "Section 4.4",
+      "excerptHint": "locator: Section 4.4 name: Chemical changes code: 4.4 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-5-1-1-section-4-5-1-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-5-1-1",
+      "locator": "Section 4.5.1.1",
+      "excerptHint": "locator: Section 4.5.1.1 name: Energy transfer during exothermic and endothermic reactions code: 4.5.1.1 parentRef: 4.5.1 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-5-1-2-section-4-5-1-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-5-1-2",
+      "locator": "Section 4.5.1.2",
+      "excerptHint": "locator: Section 4.5.1.2 name: Reaction profiles code: 4.5.1.2 parentRef: 4.5.1 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-5-1-3-section-4-5-1-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-5-1-3",
+      "locator": "Section 4.5.1.3",
+      "excerptHint": "locator: Section 4.5.1.3 name: The energy change of reactions (HT only) code: 4.5.1.3 parentRef: 4.5.1 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-5-1-section-4-5-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-5-1",
+      "locator": "Section 4.5.1",
+      "excerptHint": "locator: Section 4.5.1 name: Exothermic and endothermic reactions code: 4.5.1 parentRef: 4.5 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-5-2-1-section-4-5-2-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-5-2-1",
+      "locator": "Section 4.5.2.1",
+      "excerptHint": "locator: Section 4.5.2.1 name: Cells and batteries code: 4.5.2.1 parentRef: 4.5.2 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-5-2-2-section-4-5-2-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-5-2-2",
+      "locator": "Section 4.5.2.2",
+      "excerptHint": "locator: Section 4.5.2.2 name: Fuel cells code: 4.5.2.2 parentRef: 4.5.2 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-5-2-section-4-5-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-5-2",
+      "locator": "Section 4.5.2",
+      "excerptHint": "locator: Section 4.5.2 name: Chemical cells and fuel cells (chemistry only) code: 4.5.2 parentRef: 4.5 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-5-section-4-5",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-5",
+      "locator": "Section 4.5",
+      "excerptHint": "locator: Section 4.5 name: Energy changes code: 4.5 sortOrder: 5",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-6-1-1-section-4-6-1-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-6-1-1",
+      "locator": "Section 4.6.1.1",
+      "excerptHint": "locator: Section 4.6.1.1 name: Calculating rates of reactions code: 4.6.1.1 parentRef: 4.6.1 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-6-1-2-section-4-6-1-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-6-1-2",
+      "locator": "Section 4.6.1.2",
+      "excerptHint": "locator: Section 4.6.1.2 name: Factors which affect the rates of chemical reactions code: 4.6.1.2 parentRef: 4.6.1 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-6-1-3-section-4-6-1-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-6-1-3",
+      "locator": "Section 4.6.1.3",
+      "excerptHint": "locator: Section 4.6.1.3 name: Collision theory and activation energy code: 4.6.1.3 parentRef: 4.6.1 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-6-1-4-section-4-6-1-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-6-1-4",
+      "locator": "Section 4.6.1.4",
+      "excerptHint": "locator: Section 4.6.1.4 name: Catalysts code: 4.6.1.4 parentRef: 4.6.1 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-6-1-section-4-6-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-6-1",
+      "locator": "Section 4.6.1",
+      "excerptHint": "locator: Section 4.6.1 name: Rate of reaction code: 4.6.1 parentRef: 4.6 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-6-2-1-section-4-6-2-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-6-2-1",
+      "locator": "Section 4.6.2.1",
+      "excerptHint": "locator: Section 4.6.2.1 name: Reversible reactions code: 4.6.2.1 parentRef: 4.6.2 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-6-2-2-section-4-6-2-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-6-2-2",
+      "locator": "Section 4.6.2.2",
+      "excerptHint": "locator: Section 4.6.2.2 name: Energy changes and reversible reactions code: 4.6.2.2 parentRef: 4.6.2 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-6-2-3-section-4-6-2-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-6-2-3",
+      "locator": "Section 4.6.2.3",
+      "excerptHint": "locator: Section 4.6.2.3 name: Equilibrium code: 4.6.2.3 parentRef: 4.6.2 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-6-2-4-section-4-6-2-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-6-2-4",
+      "locator": "Section 4.6.2.4",
+      "excerptHint": "locator: Section 4.6.2.4 name: The effect of changing conditions on equilibrium (HT only) code: 4.6.2.4 parentRef: 4.6.2 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-6-2-5-section-4-6-2-5",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-6-2-5",
+      "locator": "Section 4.6.2.5",
+      "excerptHint": "locator: Section 4.6.2.5 name: The effect of changing concentration (HT only) code: 4.6.2.5 parentRef: 4.6.2 sortOrder: 5",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-6-2-6-section-4-6-2-6",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-6-2-6",
+      "locator": "Section 4.6.2.6",
+      "excerptHint": "locator: Section 4.6.2.6 name: The effect of temperature changes on equilibrium (HT only) code: 4.6.2.6 parentRef: 4.6.2 sortOrder: 6",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-6-2-7-section-4-6-2-7",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-6-2-7",
+      "locator": "Section 4.6.2.7",
+      "excerptHint": "locator: Section 4.6.2.7 name: The effect of pressure changes on equilibrium (HT only) code: 4.6.2.7 parentRef: 4.6.2 sortOrder: 7",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-6-2-section-4-6-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-6-2",
+      "locator": "Section 4.6.2",
+      "excerptHint": "locator: Section 4.6.2 name: Reversible reactions and dynamic equilibrium code: 4.6.2 parentRef: 4.6 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-6-section-4-6",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-6",
+      "locator": "Section 4.6",
+      "excerptHint": "locator: Section 4.6 name: The rate and extent of chemical change code: 4.6 sortOrder: 6",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-7-1-1-section-4-7-1-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-7-1-1",
+      "locator": "Section 4.7.1.1",
+      "excerptHint": "locator: Section 4.7.1.1 name: Crude oil, hydrocarbons and alkanes code: 4.7.1.1 parentRef: 4.7.1 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-7-1-2-section-4-7-1-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-7-1-2",
+      "locator": "Section 4.7.1.2",
+      "excerptHint": "locator: Section 4.7.1.2 name: Fractional distillation and petrochemicals code: 4.7.1.2 parentRef: 4.7.1 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-7-1-3-section-4-7-1-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-7-1-3",
+      "locator": "Section 4.7.1.3",
+      "excerptHint": "locator: Section 4.7.1.3 name: Properties of hydrocarbons code: 4.7.1.3 parentRef: 4.7.1 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-7-1-4-section-4-7-1-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-7-1-4",
+      "locator": "Section 4.7.1.4",
+      "excerptHint": "locator: Section 4.7.1.4 name: Cracking and alkenes code: 4.7.1.4 parentRef: 4.7.1 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-7-1-section-4-7-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-7-1",
+      "locator": "Section 4.7.1",
+      "excerptHint": "locator: Section 4.7.1 name: Carbon compounds as fuels and feedstock code: 4.7.1 parentRef: 4.7 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-7-2-1-section-4-7-2-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-7-2-1",
+      "locator": "Section 4.7.2.1",
+      "excerptHint": "locator: Section 4.7.2.1 name: Structure and formulae of alkenes code: 4.7.2.1 parentRef: 4.7.2 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-7-2-2-section-4-7-2-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-7-2-2",
+      "locator": "Section 4.7.2.2",
+      "excerptHint": "locator: Section 4.7.2.2 name: Reactions of alkenes code: 4.7.2.2 parentRef: 4.7.2 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-7-2-3-section-4-7-2-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-7-2-3",
+      "locator": "Section 4.7.2.3",
+      "excerptHint": "locator: Section 4.7.2.3 name: Alcohols code: 4.7.2.3 parentRef: 4.7.2 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-7-2-4-section-4-7-2-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-7-2-4",
+      "locator": "Section 4.7.2.4",
+      "excerptHint": "locator: Section 4.7.2.4 name: Carboxylic acids code: 4.7.2.4 parentRef: 4.7.2 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-7-2-section-4-7-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-7-2",
+      "locator": "Section 4.7.2",
+      "excerptHint": "locator: Section 4.7.2 name: Reactions of alkenes and alcohols (chemistry only) code: 4.7.2 parentRef: 4.7 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-7-3-1-section-4-7-3-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-7-3-1",
+      "locator": "Section 4.7.3.1",
+      "excerptHint": "locator: Section 4.7.3.1 name: Addition polymerisation code: 4.7.3.1 parentRef: 4.7.3 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-7-3-2-section-4-7-3-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-7-3-2",
+      "locator": "Section 4.7.3.2",
+      "excerptHint": "locator: Section 4.7.3.2 name: Condensation polymerisation (HT only) code: 4.7.3.2 parentRef: 4.7.3 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-7-3-3-section-4-7-3-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-7-3-3",
+      "locator": "Section 4.7.3.3",
+      "excerptHint": "locator: Section 4.7.3.3 name: Amino acids (HT only) code: 4.7.3.3 parentRef: 4.7.3 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-7-3-4-section-4-7-3-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-7-3-4",
+      "locator": "Section 4.7.3.4",
+      "excerptHint": "locator: Section 4.7.3.4 name: DNA (deoxyribonucleic acid) and other naturally occurring polymers code: 4.7.3.4 parentRef: 4.7.3 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-7-3-section-4-7-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-7-3",
+      "locator": "Section 4.7.3",
+      "excerptHint": "locator: Section 4.7.3 name: Synthetic and naturally occurring polymers (chemistry only) code: 4.7.3 parentRef: 4.7 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-7-section-4-7",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-7",
+      "locator": "Section 4.7",
+      "excerptHint": "locator: Section 4.7 name: Organic chemistry code: 4.7 sortOrder: 7",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-8-1-1-section-4-8-1-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-8-1-1",
+      "locator": "Section 4.8.1.1",
+      "excerptHint": "locator: Section 4.8.1.1 name: Pure substances code: 4.8.1.1 parentRef: 4.8.1 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-8-1-2-section-4-8-1-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-8-1-2",
+      "locator": "Section 4.8.1.2",
+      "excerptHint": "locator: Section 4.8.1.2 name: Formulations code: 4.8.1.2 parentRef: 4.8.1 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-8-1-3-section-4-8-1-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-8-1-3",
+      "locator": "Section 4.8.1.3",
+      "excerptHint": "locator: Section 4.8.1.3 name: Chromatography code: 4.8.1.3 parentRef: 4.8.1 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-8-1-section-4-8-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-8-1",
+      "locator": "Section 4.8.1",
+      "excerptHint": "locator: Section 4.8.1 name: Purity, formulations and chromatography code: 4.8.1 parentRef: 4.8 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-8-2-1-section-4-8-2-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-8-2-1",
+      "locator": "Section 4.8.2.1",
+      "excerptHint": "locator: Section 4.8.2.1 name: Test for hydrogen code: 4.8.2.1 parentRef: 4.8.2 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-8-2-2-section-4-8-2-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-8-2-2",
+      "locator": "Section 4.8.2.2",
+      "excerptHint": "locator: Section 4.8.2.2 name: Test for oxygen code: 4.8.2.2 parentRef: 4.8.2 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-8-2-3-section-4-8-2-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-8-2-3",
+      "locator": "Section 4.8.2.3",
+      "excerptHint": "locator: Section 4.8.2.3 name: Test for carbon dioxide code: 4.8.2.3 parentRef: 4.8.2 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-8-2-4-section-4-8-2-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-8-2-4",
+      "locator": "Section 4.8.2.4",
+      "excerptHint": "locator: Section 4.8.2.4 name: Test for chlorine code: 4.8.2.4 parentRef: 4.8.2 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-8-2-section-4-8-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-8-2",
+      "locator": "Section 4.8.2",
+      "excerptHint": "locator: Section 4.8.2 name: Identification of common gases code: 4.8.2 parentRef: 4.8 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-8-3-1-section-4-8-3-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-8-3-1",
+      "locator": "Section 4.8.3.1",
+      "excerptHint": "locator: Section 4.8.3.1 name: Flame tests code: 4.8.3.1 parentRef: 4.8.3 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-8-3-2-section-4-8-3-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-8-3-2",
+      "locator": "Section 4.8.3.2",
+      "excerptHint": "locator: Section 4.8.3.2 name: Metal hydroxides code: 4.8.3.2 parentRef: 4.8.3 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-8-3-3-section-4-8-3-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-8-3-3",
+      "locator": "Section 4.8.3.3",
+      "excerptHint": "locator: Section 4.8.3.3 name: Carbonates code: 4.8.3.3 parentRef: 4.8.3 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-8-3-4-section-4-8-3-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-8-3-4",
+      "locator": "Section 4.8.3.4",
+      "excerptHint": "locator: Section 4.8.3.4 name: Halides code: 4.8.3.4 parentRef: 4.8.3 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-8-3-5-section-4-8-3-5",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-8-3-5",
+      "locator": "Section 4.8.3.5",
+      "excerptHint": "locator: Section 4.8.3.5 name: Sulfates code: 4.8.3.5 parentRef: 4.8.3 sortOrder: 5",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-8-3-6-section-4-8-3-6",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-8-3-6",
+      "locator": "Section 4.8.3.6",
+      "excerptHint": "locator: Section 4.8.3.6 name: Instrumental methods code: 4.8.3.6 parentRef: 4.8.3 sortOrder: 6",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-8-3-7-section-4-8-3-7",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-8-3-7",
+      "locator": "Section 4.8.3.7",
+      "excerptHint": "locator: Section 4.8.3.7 name: Flame emission spectroscopy code: 4.8.3.7 parentRef: 4.8.3 sortOrder: 7",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-8-3-section-4-8-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-8-3",
+      "locator": "Section 4.8.3",
+      "excerptHint": "locator: Section 4.8.3 name: Identification of ions by chemical and spectroscopic means (chemistry only) code: 4.8.3 parentRef: 4.8 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-8-section-4-8",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-8",
+      "locator": "Section 4.8",
+      "excerptHint": "locator: Section 4.8 name: Chemical analysis code: 4.8 sortOrder: 8",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-9-1-1-section-4-9-1-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-9-1-1",
+      "locator": "Section 4.9.1.1",
+      "excerptHint": "locator: Section 4.9.1.1 name: The proportions of different gases in the atmosphere code: 4.9.1.1 parentRef: 4.9.1 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-9-1-2-section-4-9-1-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-9-1-2",
+      "locator": "Section 4.9.1.2",
+      "excerptHint": "locator: Section 4.9.1.2 name: The Earth's early atmosphere code: 4.9.1.2 parentRef: 4.9.1 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-9-1-3-section-4-9-1-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-9-1-3",
+      "locator": "Section 4.9.1.3",
+      "excerptHint": "locator: Section 4.9.1.3 name: How oxygen increased code: 4.9.1.3 parentRef: 4.9.1 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-9-1-4-section-4-9-1-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-9-1-4",
+      "locator": "Section 4.9.1.4",
+      "excerptHint": "locator: Section 4.9.1.4 name: How carbon dioxide decreased code: 4.9.1.4 parentRef: 4.9.1 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-9-1-section-4-9-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-9-1",
+      "locator": "Section 4.9.1",
+      "excerptHint": "locator: Section 4.9.1 name: The composition and evolution of the Earth's atmosphere code: 4.9.1 parentRef: 4.9 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-9-2-1-section-4-9-2-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-9-2-1",
+      "locator": "Section 4.9.2.1",
+      "excerptHint": "locator: Section 4.9.2.1 name: Greenhouse gases code: 4.9.2.1 parentRef: 4.9.2 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-9-2-2-section-4-9-2-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-9-2-2",
+      "locator": "Section 4.9.2.2",
+      "excerptHint": "locator: Section 4.9.2.2 name: Human activities which contribute to an increase in greenhouse gases in the atmosphere code: 4.9.2.2 parentRef: 4.9.2 sortOrde...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-9-2-3-section-4-9-2-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-9-2-3",
+      "locator": "Section 4.9.2.3",
+      "excerptHint": "locator: Section 4.9.2.3 name: Global climate change code: 4.9.2.3 parentRef: 4.9.2 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-9-2-4-section-4-9-2-4",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-9-2-4",
+      "locator": "Section 4.9.2.4",
+      "excerptHint": "locator: Section 4.9.2.4 name: The carbon footprint and its reduction code: 4.9.2.4 parentRef: 4.9.2 sortOrder: 4",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-9-2-section-4-9-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-9-2",
+      "locator": "Section 4.9.2",
+      "excerptHint": "locator: Section 4.9.2 name: Carbon dioxide and methane as greenhouse gases code: 4.9.2 parentRef: 4.9 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-9-3-1-section-4-9-3-1",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-9-3-1",
+      "locator": "Section 4.9.3.1",
+      "excerptHint": "locator: Section 4.9.3.1 name: Atmospheric pollutants from fuels code: 4.9.3.1 parentRef: 4.9.3 sortOrder: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-9-3-2-section-4-9-3-2",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-9-3-2",
+      "locator": "Section 4.9.3.2",
+      "excerptHint": "locator: Section 4.9.3.2 name: Properties and effects of atmospheric pollutants code: 4.9.3.2 parentRef: 4.9.3 sortOrder: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-9-3-section-4-9-3",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-9-3",
+      "locator": "Section 4.9.3",
+      "excerptHint": "locator: Section 4.9.3 name: Common atmospheric pollutants and their sources code: 4.9.3 parentRef: 4.9 sortOrder: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-chemistry-8462-spec-topic-topic-4-9-section-4-9",
+      "sourceId": "aqa-chemistry-8462-spec",
+      "topicId": "topic-4-9",
+      "locator": "Section 4.9",
+      "excerptHint": "locator: Section 4.9 name: Chemistry of the atmosphere code: 4.9 sortOrder: 9",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-balance",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Balance",
+      "excerptHint": "locator: Command words / Balance word: Balance definition: Students need to balance a chemical equation. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-calculate",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Calculate",
+      "excerptHint": "locator: Command words / Calculate word: Calculate definition: Students should use numbers given in the question to work out the answer. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-choose",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Choose",
+      "excerptHint": "locator: Command words / Choose word: Choose definition: Select from a range of alternatives. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-compare",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Compare",
+      "excerptHint": "locator: Command words / Compare word: Compare definition: This requires the student to describe the similarities and/or differences between things, not just...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-complete",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Complete",
+      "excerptHint": "locator: Command words / Complete word: Complete definition: Answers should be written in the space provided, for example, on a diagram, in spaces in a sente...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-define",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Define",
+      "excerptHint": "locator: Command words / Define word: Define definition: Specify the meaning of something. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-describe",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Describe",
+      "excerptHint": "locator: Command words / Describe word: Describe definition: Students may be asked to recall some facts, events or process in an accurate way. expectedDepth: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-design",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Design",
+      "excerptHint": "locator: Command words / Design word: Design definition: Set out how something will be done. expectedDepth: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-determine",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Determine",
+      "excerptHint": "locator: Command words / Determine word: Determine definition: Use given data or information to obtain and answer. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-draw",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Draw",
+      "excerptHint": "locator: Command words / Draw word: Draw definition: To produce, or add to, a diagram. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-estimate",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Estimate",
+      "excerptHint": "locator: Command words / Estimate word: Estimate definition: Assign an approximate value. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-evaluate",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Evaluate",
+      "excerptHint": "locator: Command words / Evaluate word: Evaluate definition: Students should use the information supplied, as well as their knowledge and understanding, to c...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-explain",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Explain",
+      "excerptHint": "locator: Command words / Explain word: Explain definition: Students should make something clear, or state the reasons for something happening. expectedDepth:...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-give",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Give",
+      "excerptHint": "locator: Command words / Give word: Give definition: Only a short answer is required, not an explanation or a description. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-how-what-when-where-which-who-why",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / How/What/When/Where/Which/Who/Why",
+      "excerptHint": "locator: Command words / How/What/When/Where/Which/Who/Why word: How/What/When/Where/Which/Who/Why definition: These can be used for more direct questions. e...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-identify",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Identify",
+      "excerptHint": "locator: Command words / Identify word: Identify definition: Name or otherwise characterise. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-justify",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Justify",
+      "excerptHint": "locator: Command words / Justify word: Justify definition: Use evidence from the information supplied to support an answer. expectedDepth: 4 guidance: Suppor...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-label",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Label",
+      "excerptHint": "locator: Command words / Label word: Label definition: Provide appropriate names on a diagram. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-measure",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Measure",
+      "excerptHint": "locator: Command words / Measure word: Measure definition: Find an item of data for a given quantity. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-name",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Name",
+      "excerptHint": "locator: Command words / Name word: Name definition: Only a short answer is required, not an explanation or a description. Often it can be answered with a si...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-plan",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Plan",
+      "excerptHint": "locator: Command words / Plan word: Plan definition: Write a method. expectedDepth: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-plot",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Plot",
+      "excerptHint": "locator: Command words / Plot word: Plot definition: Mark on a graph using data given. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-predict",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Predict",
+      "excerptHint": "locator: Command words / Predict word: Predict definition: Give a plausible outcome. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-show",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Show",
+      "excerptHint": "locator: Command words / Show word: Show definition: Provide structured evidence to reach a conclusion. expectedDepth: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-sketch",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Sketch",
+      "excerptHint": "locator: Command words / Sketch word: Sketch definition: Draw approximately. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-suggest",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Suggest",
+      "excerptHint": "locator: Command words / Suggest word: Suggest definition: This term is used in questions where students need to apply their knowledge and understanding to a...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-use",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Use",
+      "excerptHint": "locator: Command words / Use word: Use definition: The answer must be based on the information given in the question. Unless the information given in the que...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-1-command-words-write",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-1",
+      "locator": "Command words / Write",
+      "excerptHint": "locator: Command words / Write word: Write definition: Only a short answer is required, not an explanation or a description. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-balance",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Balance",
+      "excerptHint": "locator: Command words / Balance word: Balance definition: Students need to balance a chemical equation. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-calculate",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Calculate",
+      "excerptHint": "locator: Command words / Calculate word: Calculate definition: Students should use numbers given in the question to work out the answer. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-choose",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Choose",
+      "excerptHint": "locator: Command words / Choose word: Choose definition: Select from a range of alternatives. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-compare",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Compare",
+      "excerptHint": "locator: Command words / Compare word: Compare definition: This requires the student to describe the similarities and/or differences between things, not just...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-complete",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Complete",
+      "excerptHint": "locator: Command words / Complete word: Complete definition: Answers should be written in the space provided, for example, on a diagram, in spaces in a sente...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-define",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Define",
+      "excerptHint": "locator: Command words / Define word: Define definition: Specify the meaning of something. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-describe",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Describe",
+      "excerptHint": "locator: Command words / Describe word: Describe definition: Students may be asked to recall some facts, events or process in an accurate way. expectedDepth: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-design",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Design",
+      "excerptHint": "locator: Command words / Design word: Design definition: Set out how something will be done. expectedDepth: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-determine",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Determine",
+      "excerptHint": "locator: Command words / Determine word: Determine definition: Use given data or information to obtain and answer. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-draw",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Draw",
+      "excerptHint": "locator: Command words / Draw word: Draw definition: To produce, or add to, a diagram. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-estimate",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Estimate",
+      "excerptHint": "locator: Command words / Estimate word: Estimate definition: Assign an approximate value. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-evaluate",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Evaluate",
+      "excerptHint": "locator: Command words / Evaluate word: Evaluate definition: Students should use the information supplied, as well as their knowledge and understanding, to c...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-explain",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Explain",
+      "excerptHint": "locator: Command words / Explain word: Explain definition: Students should make something clear, or state the reasons for something happening. expectedDepth:...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-give",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Give",
+      "excerptHint": "locator: Command words / Give word: Give definition: Only a short answer is required, not an explanation or a description. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-how-what-when-where-which-who-why",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / How/What/When/Where/Which/Who/Why",
+      "excerptHint": "locator: Command words / How/What/When/Where/Which/Who/Why word: How/What/When/Where/Which/Who/Why definition: These can be used for more direct questions. e...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-identify",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Identify",
+      "excerptHint": "locator: Command words / Identify word: Identify definition: Name or otherwise characterise. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-justify",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Justify",
+      "excerptHint": "locator: Command words / Justify word: Justify definition: Use evidence from the information supplied to support an answer. expectedDepth: 4 guidance: Suppor...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-label",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Label",
+      "excerptHint": "locator: Command words / Label word: Label definition: Provide appropriate names on a diagram. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-measure",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Measure",
+      "excerptHint": "locator: Command words / Measure word: Measure definition: Find an item of data for a given quantity. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-name",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Name",
+      "excerptHint": "locator: Command words / Name word: Name definition: Only a short answer is required, not an explanation or a description. Often it can be answered with a si...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-plan",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Plan",
+      "excerptHint": "locator: Command words / Plan word: Plan definition: Write a method. expectedDepth: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-plot",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Plot",
+      "excerptHint": "locator: Command words / Plot word: Plot definition: Mark on a graph using data given. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-predict",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Predict",
+      "excerptHint": "locator: Command words / Predict word: Predict definition: Give a plausible outcome. expectedDepth: 2",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-show",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Show",
+      "excerptHint": "locator: Command words / Show word: Show definition: Provide structured evidence to reach a conclusion. expectedDepth: 3",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-sketch",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Sketch",
+      "excerptHint": "locator: Command words / Sketch word: Sketch definition: Draw approximately. expectedDepth: 1",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-suggest",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Suggest",
+      "excerptHint": "locator: Command words / Suggest word: Suggest definition: This term is used in questions where students need to apply their knowledge and understanding to a...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-use",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Use",
+      "excerptHint": "locator: Command words / Use word: Use definition: The answer must be based on the information given in the question. Unless the information given in the que...",
+      "confidence": "high"
+    },
+    {
+      "id": "source-mapping-aqa-science-command-words-component-component-paper-2-command-words-write",
+      "sourceId": "aqa-science-command-words",
+      "componentId": "component-paper-2",
+      "locator": "Command words / Write",
+      "excerptHint": "locator: Command words / Write word: Write definition: Only a short answer is required, not an explanation or a description. expectedDepth: 1",
+      "confidence": "high"
+    }
+  ]
+}
