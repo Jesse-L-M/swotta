@@ -11,6 +11,7 @@
     "test:run": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "curriculum": "tsx ./src/curriculum/cli.ts",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit migrate",
@@ -55,6 +56,7 @@
     "eslint": "^9.39.4",
     "jsdom": "^29.0.0",
     "tailwindcss": "^4.0.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.57.1",
     "vitest": "^3.0.0"

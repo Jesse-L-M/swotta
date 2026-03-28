@@ -1,6 +1,6 @@
 import { eq, sql, and } from "drizzle-orm";
-import { z } from "zod";
 import { type Database } from "@/lib/db";
+import { legacyQualificationSeedSchema } from "@/curriculum/legacy";
 import {
   examBoards,
   subjects,
@@ -21,82 +21,7 @@ import type {
   TopicTreeNode,
 } from "@/lib/types";
 
-// Zod schema for runtime validation of seed data
-const topicSeedNodeSchema: z.ZodType<TopicSeedNode> = z.lazy(() =>
-  z.object({
-    name: z.string().min(1),
-    code: z.string().optional(),
-    estimatedHours: z.number().positive().optional(),
-    description: z.string().optional(),
-    children: z.array(topicSeedNodeSchema).optional(),
-    edges: z
-      .array(
-        z.object({
-          toCode: z.string().min(1),
-          type: z.enum(["prerequisite", "builds_on", "related"]),
-        })
-      )
-      .optional(),
-  })
-);
-
-export const qualificationSeedSchema: z.ZodType<QualificationSeed> = z.object({
-  subject: z.object({
-    name: z.string().min(1),
-    slug: z.string().min(1),
-  }),
-  examBoard: z.object({
-    name: z.string().min(1),
-    code: z.string().min(1),
-  }),
-  level: z.string().min(1),
-  versionCode: z.string().min(1),
-  firstExamYear: z.number().int().positive(),
-  specUrl: z.string().url().optional(),
-  components: z
-    .array(
-      z.object({
-        name: z.string().min(1),
-        code: z.string().min(1),
-        weightPercent: z.number().int().min(0).max(100),
-        durationMinutes: z.number().int().positive().optional(),
-        totalMarks: z.number().int().positive().optional(),
-        isExam: z.boolean(),
-      })
-    )
-    .min(1),
-  topics: z.array(topicSeedNodeSchema).min(1),
-  commandWords: z
-    .array(
-      z.object({
-        word: z.string().min(1),
-        definition: z.string().min(1),
-        expectedDepth: z.number().int().min(1).max(4),
-      })
-    )
-    .min(1),
-  questionTypes: z
-    .array(
-      z.object({
-        name: z.string().min(1),
-        description: z.string().optional(),
-        typicalMarks: z.number().int().positive().optional(),
-        markSchemePattern: z.string().optional(),
-      })
-    )
-    .min(1),
-  misconceptionRules: z
-    .array(
-      z.object({
-        topicCode: z.string().min(1),
-        description: z.string().min(1),
-        triggerPatterns: z.array(z.string().min(1)).min(1),
-        correctionGuidance: z.string().min(1),
-        severity: z.number().int().min(1).max(3).optional(),
-      })
-    )
-    .optional(),
-});
+export const qualificationSeedSchema = legacyQualificationSeedSchema;
 
 export interface LoadQualificationResult {
   qualificationVersionId: string;
