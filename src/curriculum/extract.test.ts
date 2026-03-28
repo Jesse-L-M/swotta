@@ -34,4 +34,40 @@ describe("curriculum extraction", () => {
       }),
     ]);
   });
+
+  it("fails when a block contains unsupported fields", async () => {
+    const request = {
+      sources: [
+        {
+          source: {
+            id: "aqa-biology-spec",
+            kind: "specification" as const,
+            authority: "primary" as const,
+            title: "AQA GCSE Biology specification",
+          },
+          content: {
+            format: "record_text" as const,
+            text: [
+              "[metadata]",
+              "packageId: aqa-gcse-biology-8461",
+              "packageVersoin: typo",
+            ].join("\n"),
+          },
+        },
+      ],
+    };
+
+    const result = await extractCurriculumDraft(request);
+
+    expect(result.ok).toBe(false);
+    expect(result.draft).toBeNull();
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "extract.unknown_field",
+          message: expect.stringContaining("packageVersoin"),
+        }),
+      ])
+    );
+  });
 });

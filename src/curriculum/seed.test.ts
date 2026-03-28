@@ -13,7 +13,7 @@ import {
   topics,
 } from "@/db/schema";
 import { getTopicTree } from "@/engine/curriculum";
-import { seedCurriculumInput } from "./seed";
+import { buildLegacySeedFromCurriculumPackage, seedCurriculumInput } from "./seed";
 import {
   buildApprovedCurriculumPackage,
   buildLegacyQualificationSeed,
@@ -149,6 +149,18 @@ describe("curriculum seed bridge", () => {
     );
   });
 
+  it("fails early when a package targets an incompatible existing qualification version", async () => {
+    const db = getTestDb();
+
+    await seedCurriculumInput(buildLegacyQualificationSeed(), { db });
+
+    await expect(
+      seedCurriculumInput(buildApprovedCurriculumPackage(), { db })
+    ).rejects.toThrow(
+      "cannot replace an incompatible existing version in place"
+    );
+  });
+
   it("rejects runtime artifact drift instead of overwriting it", async () => {
     const db = getTestDb();
     const original = buildApprovedCurriculumPackage();
@@ -201,5 +213,28 @@ describe("curriculum seed bridge", () => {
       "global_task_rules_not_seeded",
     ]);
     expect(seededTaskRules).toHaveLength(1);
+  });
+
+  it("clears package-only runtime artifacts when reseeding the same version from legacy input", async () => {
+    const db = getTestDb();
+    const packageInput = buildApprovedCurriculumPackage();
+    const legacyInput = buildLegacySeedFromCurriculumPackage(packageInput);
+
+    const seededPackage = await seedCurriculumInput(packageInput, { db });
+    expect(seededPackage.normalizedFrom).toBe("package");
+    expect(await db.select().from(taskRules)).toHaveLength(1);
+    expect(await db.select().from(sourceCollections)).toHaveLength(1);
+    expect(await db.select().from(sourceFiles)).toHaveLength(1);
+    expect(await db.select().from(sourceChunks)).toHaveLength(1);
+    expect(await db.select().from(sourceMappings)).toHaveLength(1);
+
+    const seededLegacy = await seedCurriculumInput(legacyInput, { db });
+
+    expect(seededLegacy.normalizedFrom).toBe("legacy_seed");
+    expect(await db.select().from(taskRules)).toHaveLength(0);
+    expect(await db.select().from(sourceCollections)).toHaveLength(0);
+    expect(await db.select().from(sourceFiles)).toHaveLength(0);
+    expect(await db.select().from(sourceChunks)).toHaveLength(0);
+    expect(await db.select().from(sourceMappings)).toHaveLength(0);
   });
 });

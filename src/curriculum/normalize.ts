@@ -1385,7 +1385,7 @@ function parseDraftInput(input: unknown): {
     };
   }
 
-  const sourceError = directResult.error;
+  const sourceError = wrappedDraft !== undefined ? wrappedResult.error : directResult.error;
   return {
     draft: null,
     errors: sourceError.issues.map((issue) =>
@@ -1397,6 +1397,14 @@ function parseDraftInput(input: unknown): {
       )
     ),
   };
+}
+
+function mapValidationIssues(
+  issues: NonNullable<CurriculumNormalizationResult["validation"]>["errors"]
+): CurriculumNormalizationIssue[] {
+  return issues.map((issue) =>
+    createIssue(issue.severity, issue.code, issue.path, issue.message)
+  );
 }
 
 export function normalizeCurriculumDraft(
@@ -1517,6 +1525,11 @@ export function normalizeCurriculumDraft(
   };
 
   const validation = validateCurriculumPackage(curriculumPackage);
+  if (!validation.ok) {
+    errors.push(...mapValidationIssues(validation.errors));
+  }
+  warnings.push(...mapValidationIssues(validation.warnings));
+
   const normalizedPackage =
     errors.length === 0 && validation.ok ? validation.package : null;
 

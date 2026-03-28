@@ -230,6 +230,69 @@ interface ParsedRecordBlock {
   rawLines: string[];
 }
 
+const allowedFieldsByBlockKind: Record<RecordBlockKind, Set<string>> = {
+  metadata: new Set([
+    "packageId",
+    "packageVersion",
+    "title",
+    "summary",
+    "generatedAt",
+    "updatedAt",
+  ]),
+  qualification: new Set([
+    "name",
+    "slug",
+    "level",
+    "versionCode",
+    "firstAssessmentYear",
+    "firstExamYear",
+    "specUrl",
+    "subjectName",
+    "subjectSlug",
+    "examBoardName",
+    "examBoardCode",
+  ]),
+  component: new Set([
+    "name",
+    "code",
+    "weightPercent",
+    "durationMinutes",
+    "totalMarks",
+    "isExam",
+  ]),
+  topic: new Set([
+    "name",
+    "code",
+    "parentRef",
+    "sortOrder",
+    "description",
+    "estimatedHours",
+  ]),
+  edge: new Set(["fromTopicRef", "toTopicRef", "type", "rationale"]),
+  "command-word": new Set(["word", "definition", "expectedDepth", "guidance"]),
+  "question-type": new Set([
+    "name",
+    "description",
+    "typicalMarks",
+    "markSchemePattern",
+  ]),
+  misconception: new Set([
+    "topicRef",
+    "description",
+    "triggerPatterns",
+    "correctionGuidance",
+    "severity",
+  ]),
+  "task-rule": new Set([
+    "taskType",
+    "topicRef",
+    "title",
+    "guidance",
+    "conditions",
+    "priority",
+  ]),
+};
+
 export type CurriculumExtractionRequest = z.infer<
   typeof curriculumExtractionRequestSchema
 >;
@@ -400,6 +463,33 @@ function buildCitation(
     endLine: block.endLine,
     excerpt: block.rawLines.join("\n").trim(),
   };
+}
+
+function pushUnknownFieldIssues(
+  issues: CurriculumExtractionIssue[],
+  sourceId: string,
+  locator: string,
+  kind: RecordBlockKind,
+  fields: Record<string, string>
+): boolean {
+  const allowedFields = allowedFieldsByBlockKind[kind];
+  const unknownFields = Object.keys(fields).filter(
+    (field) => !allowedFields.has(field)
+  );
+
+  unknownFields.forEach((field) => {
+    issues.push(
+      createIssue(
+        "error",
+        "extract.unknown_field",
+        sourceId,
+        locator,
+        `Unsupported field ${field} in [${kind}] block`
+      )
+    );
+  });
+
+  return unknownFields.length > 0;
 }
 
 function parseRecordBlocks(
@@ -636,6 +726,18 @@ export async function extractCurriculumDraft(
 
       switch (block.kind) {
         case "metadata": {
+          if (
+            pushUnknownFieldIssues(
+              errors,
+              source.id,
+              locator,
+              block.kind,
+              blockFields
+            )
+          ) {
+            return;
+          }
+
           const metadataResult =
             curriculumExtractedMetadataValuesSchema.safeParse(
               compactObject({
@@ -680,6 +782,18 @@ export async function extractCurriculumDraft(
           return;
         }
         case "qualification": {
+          if (
+            pushUnknownFieldIssues(
+              errors,
+              source.id,
+              locator,
+              block.kind,
+              blockFields
+            )
+          ) {
+            return;
+          }
+
           const qualificationResult =
             curriculumExtractedQualificationValuesSchema.safeParse(
               compactObject({
@@ -735,6 +849,18 @@ export async function extractCurriculumDraft(
           return;
         }
         case "component": {
+          if (
+            pushUnknownFieldIssues(
+              errors,
+              source.id,
+              locator,
+              block.kind,
+              blockFields
+            )
+          ) {
+            return;
+          }
+
           const componentResult =
             curriculumExtractedComponentValuesSchema.safeParse({
               name: blockFields.name,
@@ -764,6 +890,18 @@ export async function extractCurriculumDraft(
           return;
         }
         case "topic": {
+          if (
+            pushUnknownFieldIssues(
+              errors,
+              source.id,
+              locator,
+              block.kind,
+              blockFields
+            )
+          ) {
+            return;
+          }
+
           const topicResult = curriculumExtractedTopicValuesSchema.safeParse(
             compactObject({
               name: blockFields.name,
@@ -794,6 +932,18 @@ export async function extractCurriculumDraft(
           return;
         }
         case "edge": {
+          if (
+            pushUnknownFieldIssues(
+              errors,
+              source.id,
+              locator,
+              block.kind,
+              blockFields
+            )
+          ) {
+            return;
+          }
+
           const edgeResult = curriculumExtractedEdgeValuesSchema.safeParse(
             compactObject({
               fromTopicRef: blockFields.fromTopicRef,
@@ -822,6 +972,18 @@ export async function extractCurriculumDraft(
           return;
         }
         case "command-word": {
+          if (
+            pushUnknownFieldIssues(
+              errors,
+              source.id,
+              locator,
+              block.kind,
+              blockFields
+            )
+          ) {
+            return;
+          }
+
           const commandWordResult =
             curriculumExtractedCommandWordValuesSchema.safeParse(
               compactObject({
@@ -851,6 +1013,18 @@ export async function extractCurriculumDraft(
           return;
         }
         case "question-type": {
+          if (
+            pushUnknownFieldIssues(
+              errors,
+              source.id,
+              locator,
+              block.kind,
+              blockFields
+            )
+          ) {
+            return;
+          }
+
           const questionTypeResult =
             curriculumExtractedQuestionTypeValuesSchema.safeParse(
               compactObject({
@@ -880,6 +1054,18 @@ export async function extractCurriculumDraft(
           return;
         }
         case "misconception": {
+          if (
+            pushUnknownFieldIssues(
+              errors,
+              source.id,
+              locator,
+              block.kind,
+              blockFields
+            )
+          ) {
+            return;
+          }
+
           const misconceptionResult =
             curriculumExtractedMisconceptionValuesSchema.safeParse(
               compactObject({
@@ -910,6 +1096,18 @@ export async function extractCurriculumDraft(
           return;
         }
         case "task-rule": {
+          if (
+            pushUnknownFieldIssues(
+              errors,
+              source.id,
+              locator,
+              block.kind,
+              blockFields
+            )
+          ) {
+            return;
+          }
+
           const taskRuleResult = curriculumExtractedTaskRuleValuesSchema.safeParse(
             compactObject({
               taskType: blockFields.taskType,

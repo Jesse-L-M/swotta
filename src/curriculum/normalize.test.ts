@@ -116,6 +116,52 @@ describe("curriculum normalization", () => {
     );
   });
 
+  it("surfaces package validation failures in normalization errors", async () => {
+    const draft = await loadExtractedDraft();
+    for (let index = 0; index < 5; index += 1) {
+      draft.taskRules.push({
+        values: {
+          ...draft.taskRules[0]!.values,
+          title: `Extra rule ${index + 1}`,
+          guidance: `Extra guidance ${index + 1}`,
+          conditions: [`condition-${index + 1}`],
+        },
+        provenance: draft.taskRules[0]!.provenance,
+      });
+    }
+
+    const result = normalizeCurriculumDraft(draft);
+
+    expect(result.ok).toBe(false);
+    expect(result.package).toBeNull();
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "task_rules.topic_rule_limit",
+        }),
+      ])
+    );
+    expect(result.validation?.ok).toBe(false);
+  });
+
+  it("reports wrapped draft validation errors against the wrapped draft payload", () => {
+    const result = normalizeCurriculumDraft({
+      draft: {
+        schemaVersion: "1.0",
+      },
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "normalize.invalid_draft",
+          path: "draftVersion",
+        }),
+      ])
+    );
+  });
+
   it("prefers the later block when the same source corrects metadata", async () => {
     const draft = await loadExtractedDraft();
     draft.metadataBlocks.push({

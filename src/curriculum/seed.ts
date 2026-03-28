@@ -7,12 +7,16 @@ import {
   assessmentComponents,
   chunkEmbeddings,
   commandWords as commandWordsTable,
+  examBoards,
   misconceptionRules as misconceptionRulesTable,
+  qualifications,
+  qualificationVersions,
   questionTypes as questionTypesTable,
   sourceChunks,
   sourceCollections,
   sourceFiles,
   sourceMappings as sourceMappingsTable,
+  subjects,
   taskRules as taskRulesTable,
   topicEdges as topicEdgesTable,
   topics as topicsTable,
@@ -507,6 +511,35 @@ async function loadJsonFile(filePath: string): Promise<unknown> {
   }
 }
 
+async function findExistingQualificationVersionId(
+  db: Database,
+  seedData: LegacyQualificationSeed
+): Promise<string | null> {
+  const [row] = await db
+    .select({ id: qualificationVersions.id })
+    .from(qualificationVersions)
+    .innerJoin(
+      qualifications,
+      eq(qualificationVersions.qualificationId, qualifications.id)
+    )
+    .innerJoin(subjects, eq(qualifications.subjectId, subjects.id))
+    .innerJoin(examBoards, eq(qualificationVersions.examBoardId, examBoards.id))
+    .where(
+      and(
+        eq(subjects.slug, seedData.subject.slug),
+        eq(
+          qualifications.level,
+          seedData.level as typeof qualifications.$inferSelect.level
+        ),
+        eq(examBoards.code, seedData.examBoard.code),
+        eq(qualificationVersions.versionCode, seedData.versionCode)
+      )
+    )
+    .limit(1);
+
+  return row?.id ?? null;
+}
+
 export function prepareCurriculumSeedInput(
   input: unknown
 ): PreparedCurriculumSeed {
@@ -860,6 +893,52 @@ async function loadActualCoreSnapshot(
       ),
     topicRecords,
   };
+}
+
+async function assertExistingQualificationVersionCompatible(
+  prepared: PreparedCurriculumSeed,
+  db: Database
+): Promise<string | null> {
+  const existingQualificationVersionId = await findExistingQualificationVersionId(
+    db,
+    prepared.seedData
+  );
+  if (!existingQualificationVersionId) {
+    return null;
+  }
+
+  const actual = await loadActualCoreSnapshot(db, existingQualificationVersionId);
+  const hasExistingCoreData =
+    actual.components.length > 0 ||
+    actual.topics.length > 0 ||
+    actual.edges.length > 0 ||
+    actual.commandWords.length > 0 ||
+    actual.questionTypes.length > 0 ||
+    actual.misconceptionRules.length > 0;
+  if (!hasExistingCoreData) {
+    return existingQualificationVersionId;
+  }
+
+  const expected = buildExpectedCoreSnapshot(prepared.seedData);
+
+  try {
+    compareCollections("components", actual.components, expected.components);
+    compareCollections("topics", actual.topics, expected.topics);
+    compareCollections("edges", actual.edges, expected.edges);
+    compareCollections("command words", actual.commandWords, expected.commandWords);
+    compareCollections("question types", actual.questionTypes, expected.questionTypes);
+    compareCollections(
+      "misconception rules",
+      actual.misconceptionRules,
+      expected.misconceptionRules
+    );
+  } catch (error) {
+    throw new Error(
+      `Existing qualification version ${existingQualificationVersionId} does not match the incoming ${prepared.normalizedFrom} curriculum data (${asErrorMessage(error)}). The current seed path cannot replace an incompatible existing version in place; migrate or clear the existing qualification version before seeding this input.`
+    );
+  }
+
+  return existingQualificationVersionId;
 }
 
 function buildPackageTopicBindings(
@@ -1261,6 +1340,34 @@ async function clearSyntheticSourceCollectionContents(
   await db.delete(sourceFiles).where(inArray(sourceFiles.id, fileIds));
 }
 
+async function clearPackageRuntimeArtifacts(
+  db: Database,
+  qualificationVersionId: string
+): Promise<void> {
+  const topicRows = await db
+    .select({ id: topicsTable.id })
+    .from(topicsTable)
+    .where(eq(topicsTable.qualificationVersionId, qualificationVersionId));
+  const topicIds = topicRows.map((row) => row.id);
+
+  if (topicIds.length > 0) {
+    await db
+      .delete(taskRulesTable)
+      .where(inArray(taskRulesTable.topicId, topicIds));
+  }
+
+  const collectionId = await findSyntheticSourceCollectionId(
+    db,
+    qualificationVersionId
+  );
+  if (!collectionId) {
+    return;
+  }
+
+  await clearSyntheticSourceCollectionContents(db, collectionId);
+  await db.delete(sourceCollections).where(eq(sourceCollections.id, collectionId));
+}
+
 async function insertSyntheticSourceMappings(
   db: Database,
   collectionId: string,
@@ -1457,6 +1564,33 @@ async function assertPreparedCurriculumMatchesDb(
   );
 
   if (prepared.normalizedFrom !== "package") {
+    const actualTaskRules = await loadActualTaskRuleRecords(
+      db,
+      qualificationVersionId,
+      actual.topicRecords
+    );
+    if (actualTaskRules.length > 0) {
+      throw new Error(
+        `Legacy seed input left ${actualTaskRules.length} package-only task rule(s) attached to qualification version ${qualificationVersionId}`
+      );
+    }
+
+    const sourceCollectionState = await loadSyntheticSourceCollectionState(
+      db,
+      qualificationVersionId,
+      actual.topicRecords
+    );
+    if (
+      sourceCollectionState.collectionId ||
+      sourceCollectionState.fileCount > 0 ||
+      sourceCollectionState.chunkCount > 0 ||
+      sourceCollectionState.mappings.length > 0
+    ) {
+      throw new Error(
+        `Legacy seed input left package-only synthetic source artifacts attached to qualification version ${qualificationVersionId}`
+      );
+    }
+
     return;
   }
 
@@ -1512,13 +1646,21 @@ export async function seedPreparedCurriculum(
   const targetDb = await resolveCurriculumDb(options.db);
   return targetDb.transaction(async (tx) => {
     const transactionalDb = tx as unknown as Database;
+    await assertExistingQualificationVersionCompatible(prepared, transactionalDb);
     const loadResult = await loadQualification(transactionalDb, prepared.seedData);
 
-    await ensurePackageRuntimeArtifacts(
-      prepared,
-      loadResult.qualificationVersionId,
-      transactionalDb
-    );
+    if (prepared.normalizedFrom === "package") {
+      await ensurePackageRuntimeArtifacts(
+        prepared,
+        loadResult.qualificationVersionId,
+        transactionalDb
+      );
+    } else {
+      await clearPackageRuntimeArtifacts(
+        transactionalDb,
+        loadResult.qualificationVersionId
+      );
+    }
     await assertPreparedCurriculumMatchesDb(
       prepared,
       loadResult.qualificationVersionId,

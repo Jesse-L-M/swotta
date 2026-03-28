@@ -148,13 +148,19 @@ async function runValidateCommand(
 
   const report = validateCurriculumPackage(jsonInput.input);
   const warningsMakeCommandFail = strict && report.warnings.length > 0;
+  const effectiveReport = warningsMakeCommandFail
+    ? {
+        ...report,
+        ok: false,
+      }
+    : report;
   const exitCode = report.ok && !warningsMakeCommandFail ? 0 : 1;
 
   return {
     exitCode,
     stdout: jsonFormat
-      ? `${JSON.stringify(report, null, 2)}\n`
-      : `${formatValidationReport(report)}\n`,
+      ? `${JSON.stringify(effectiveReport, null, 2)}\n`
+      : `${formatValidationReport(effectiveReport)}\n`,
     stderr: "",
   };
 }

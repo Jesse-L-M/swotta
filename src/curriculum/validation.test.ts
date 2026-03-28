@@ -138,4 +138,52 @@ describe("curriculum package validation", () => {
       ])
     );
   });
+
+  it("requires annotation ids to stay unique", () => {
+    const curriculumPackage = buildApprovedCurriculumPackage();
+    curriculumPackage.annotations!.markSchemePatterns.push({
+      ...curriculumPackage.annotations!.markSchemePatterns[0]!,
+    });
+    curriculumPackage.annotations!.examTechniquePatterns.push({
+      ...curriculumPackage.annotations!.examTechniquePatterns[0]!,
+    });
+
+    const report = validateCurriculumPackage(curriculumPackage);
+
+    expect(report.ok).toBe(false);
+    expect(report.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "annotations.duplicate_mark_scheme_pattern_id",
+        }),
+        expect.objectContaining({
+          code: "annotations.duplicate_exam_technique_pattern_id",
+        }),
+      ])
+    );
+  });
+
+  it("rejects more than five topic-scoped task rules on a single topic", () => {
+    const curriculumPackage = buildApprovedCurriculumPackage();
+    for (let index = 0; index < 5; index += 1) {
+      curriculumPackage.taskRules.push({
+        ...curriculumPackage.taskRules[0]!,
+        id: `task-rule-extra-${index + 1}`,
+        title: `Extra task rule ${index + 1}`,
+        guidance: `Extra guidance ${index + 1}`,
+        conditions: [`condition-${index + 1}`],
+      });
+    }
+
+    const report = validateCurriculumPackage(curriculumPackage);
+
+    expect(report.ok).toBe(false);
+    expect(report.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "task_rules.topic_rule_limit",
+        }),
+      ])
+    );
+  });
 });
