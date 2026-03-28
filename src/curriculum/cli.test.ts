@@ -124,49 +124,31 @@ describe("curriculum CLI", () => {
     }
   });
 
-  it("suppresses package-only stdout when normalization fails", () => {
+  it("suppresses package output for package-only normalization failures", () => {
     const tempDir = mkdtempSync(path.join(tmpdir(), "curriculum-cli-"));
-    const brokenDraftPath = path.join(tempDir, "broken-draft.json");
-
-    writeFileSync(
-      brokenDraftPath,
-      JSON.stringify(
-        {
-          provenance: {
-            sources: [],
-          },
-          metadataBlocks: [],
-          qualificationBlocks: [],
-          components: [],
-          topics: [],
-          edges: [],
-          commandWords: [],
-          questionTypes: [],
-          misconceptionRules: [],
-          taskRules: [
-            {
-              values: {
-                taskType: "retrieval",
-                topicRef: "missing-topic",
-                title: "Broken rule",
-                guidance: "Will not normalize",
-              },
-              provenance: [],
-            },
-          ],
-        },
-        null,
-        2
-      ),
-      "utf8"
-    );
+    const draftPath = path.join(tempDir, "broken-draft.json");
 
     try {
-      const result = runCli(["normalize", "--package-only", brokenDraftPath]);
+      const extractResult = runCli(["extract", fixtureRequestPath]);
+      expect(extractResult.status).toBe(0);
 
-      expect(result.status).toBe(1);
-      expect(result.stdout).toBe("");
-      expect(result.stderr).toContain("normalize.task_rule_topic_unresolved");
+      const draft = JSON.parse(extractResult.stdout) as {
+        taskRules: Array<{ values: { topicRef?: string } }>;
+      };
+      draft.taskRules[0]!.values.topicRef = "missing-topic";
+      writeFileSync(draftPath, JSON.stringify(draft, null, 2), "utf8");
+
+      const normalizeResult = runCli([
+        "normalize",
+        "--package-only",
+        draftPath,
+      ]);
+
+      expect(normalizeResult.status).toBe(1);
+      expect(normalizeResult.stdout).toBe("");
+      expect(normalizeResult.stderr).toContain(
+        "normalize.task_rule_topic_unresolved"
+      );
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }

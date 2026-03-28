@@ -88,6 +88,7 @@ interface MergeFieldSpec<TValue> {
 interface MergeCandidate {
   value: unknown;
   provenance: CurriculumDraftCitation[];
+  blockOrder: number;
 }
 
 interface TopicResolution {
@@ -275,7 +276,7 @@ function mergeFieldBlocks<TValue>(
   const merged: Record<string, unknown> = {};
 
   fieldSpecs.forEach((fieldSpec) => {
-    const candidates: MergeCandidate[] = blocks.flatMap((block) => {
+    const candidates: MergeCandidate[] = blocks.flatMap((block, blockOrder) => {
       const value = fieldSpec.getValue(block.values);
       return value === undefined
         ? []
@@ -283,6 +284,7 @@ function mergeFieldBlocks<TValue>(
             {
               value,
               provenance: block.provenance,
+              blockOrder,
             },
           ];
     });
@@ -292,7 +294,8 @@ function mergeFieldBlocks<TValue>(
     }
 
     const orderedCandidates = [...candidates].sort((left, right) =>
-      compareSourcePriority(left.provenance, right.provenance, sources)
+      compareSourcePriority(left.provenance, right.provenance, sources) ||
+      right.blockOrder - left.blockOrder
     );
     const chosenCandidate = orderedCandidates[0];
     const supportingCandidates = orderedCandidates.filter((candidate) =>
@@ -1191,10 +1194,12 @@ export function normalizeCurriculumDraft(
   };
 
   const validation = validateCurriculumPackage(curriculumPackage);
+  const normalizedPackage =
+    errors.length === 0 && validation.ok ? validation.package : null;
 
   return {
-    ok: errors.length === 0 && validation.ok,
-    package: validation.package,
+    ok: normalizedPackage !== null,
+    package: normalizedPackage,
     errors,
     warnings,
     traces,

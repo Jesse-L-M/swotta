@@ -77,4 +77,45 @@ describe("curriculum normalization", () => {
       ])
     );
   });
+
+  it("does not expose a package when normalization leaves unresolved refs", async () => {
+    const draft = await loadExtractedDraft();
+    draft.taskRules[0]!.values.topicRef = "missing-topic";
+
+    const result = normalizeCurriculumDraft(draft);
+
+    expect(result.ok).toBe(false);
+    expect(result.package).toBeNull();
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "normalize.task_rule_topic_unresolved",
+          path: "taskRules.0.topicRef",
+        }),
+      ])
+    );
+  });
+
+  it("prefers the later block when the same source corrects metadata", async () => {
+    const draft = await loadExtractedDraft();
+    draft.metadataBlocks.push({
+      values: {
+        packageVersion: "0.2.0-candidate",
+      },
+      provenance: draft.metadataBlocks[0]!.provenance,
+    });
+
+    const result = normalizeCurriculumDraft(draft);
+
+    expect(result.ok).toBe(true);
+    expect(result.package?.metadata.packageVersion).toBe("0.2.0-candidate");
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "normalize.metadata_conflict",
+          path: "metadata.packageVersion",
+        }),
+      ])
+    );
+  });
 });
