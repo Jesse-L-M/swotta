@@ -76,25 +76,24 @@ async function buildCandidatePackage(): Promise<CandidateCurriculumPackage> {
 function buildApprovedEnvelope(
   candidatePackage: CandidateCurriculumPackage
 ): ApprovedCurriculumPackage {
-  const approvedPackage = structuredClone(
-    candidatePackage
-  ) as ApprovedCurriculumPackage;
-
-  approvedPackage.lifecycle = "approved";
-  approvedPackage.review = {
-    status: "approved",
-    approvedAt: "2026-03-28T20:30:00.000Z",
-    reviewers: [
-      ...candidatePackage.review.reviewers,
-      {
+  const approvedPackage: ApprovedCurriculumPackage = {
+    ...structuredClone(candidatePackage),
+    lifecycle: "approved",
+    review: {
+      status: "approved",
+      approvedAt: "2026-03-28T20:30:00.000Z",
+      reviewers: [
+        ...candidatePackage.review.reviewers,
+        {
         name: "Fixture approval wrapper",
         role: "human",
         outcome: "approved",
         reviewedAt: "2026-03-28T20:30:00.000Z",
         notes:
           "Test-only approval wrapper used to exercise seed and verify while the committed fixture remains a candidate pending real human sign-off.",
-      },
-    ],
+        },
+      ],
+    },
   };
 
   return approvedPackage;
