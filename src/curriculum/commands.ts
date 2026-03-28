@@ -58,7 +58,8 @@ export const curriculumCommandDefinitions: CurriculumCommandDefinition[] = [
   },
   {
     name: "verify",
-    description: "Seed and run downstream curriculum verification checks",
+    description:
+      "Dry-run seed and downstream curriculum verification checks",
   },
   {
     name: "extract",
@@ -83,6 +84,7 @@ function formatHelpText(): string {
     "",
     "Seed and verify:",
     "  <path>             Path to an approved/reference package JSON or legacy seed JSON",
+    "  verify             Runs as a dry run and rolls seeded rows back after checks",
     "",
     "Validate options:",
     "  --format=json    Print the validation report as JSON",

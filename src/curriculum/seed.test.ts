@@ -108,6 +108,34 @@ describe("curriculum seed bridge", () => {
     expect(second.edgesCreated).toBe(0);
   });
 
+  it("repairs partial runtime artifacts on reseed", async () => {
+    const db = getTestDb();
+
+    const seeded = await seedCurriculumInput(buildApprovedCurriculumPackage(), {
+      db,
+    });
+    const existingTaskRules = await db.select().from(taskRules);
+    const existingSourceMappings = await db.select().from(sourceMappings);
+
+    await db
+      .delete(taskRules)
+      .where(eq(taskRules.id, existingTaskRules[0]!.id));
+    await db
+      .delete(sourceMappings)
+      .where(eq(sourceMappings.id, existingSourceMappings[0]!.id));
+
+    const repaired = await seedCurriculumInput(buildApprovedCurriculumPackage(), {
+      db,
+    });
+
+    expect(repaired.qualificationVersionId).toBe(seeded.qualificationVersionId);
+    expect(await db.select().from(taskRules)).toHaveLength(1);
+    expect(await db.select().from(sourceCollections)).toHaveLength(1);
+    expect(await db.select().from(sourceFiles)).toHaveLength(1);
+    expect(await db.select().from(sourceChunks)).toHaveLength(1);
+    expect(await db.select().from(sourceMappings)).toHaveLength(1);
+  });
+
   it("rejects a package when existing seeded content for the version differs", async () => {
     const db = getTestDb();
     const original = buildApprovedCurriculumPackage();
@@ -119,5 +147,32 @@ describe("curriculum seed bridge", () => {
     await expect(seedCurriculumInput(changed, { db })).rejects.toThrow(
       "question types"
     );
+  });
+
+  it("rejects runtime artifact drift instead of overwriting it", async () => {
+    const db = getTestDb();
+    const original = buildApprovedCurriculumPackage();
+    const changed = buildApprovedCurriculumPackage();
+    changed.taskRules[0]!.guidance = "Changed after the first seed";
+
+    const seeded = await seedCurriculumInput(original, { db });
+
+    await expect(seedCurriculumInput(changed, { db })).rejects.toThrow(
+      "task rules"
+    );
+
+    const seededTaskRules = await db
+      .select({ instructions: taskRules.instructions })
+      .from(taskRules)
+      .innerJoin(topics, eq(taskRules.topicId, topics.id))
+      .where(eq(topics.qualificationVersionId, seeded.qualificationVersionId));
+
+    expect(seededTaskRules).toEqual([
+      expect.objectContaining({
+        instructions: expect.stringContaining(
+          "Use a worked example before any timed response on mitosis stages."
+        ),
+      }),
+    ]);
   });
 });

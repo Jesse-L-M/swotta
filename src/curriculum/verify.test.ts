@@ -1,18 +1,30 @@
-import { describe, expect, it } from "vitest";
+import { count, eq } from "drizzle-orm";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { qualificationVersions } from "@/db/schema";
 import { getTestDb } from "@/test/setup";
-import { verifyCurriculumInput } from "./verify";
+import { seedCurriculumInput } from "./seed";
 import { buildApprovedCurriculumPackage } from "./test-fixtures";
 
 describe("curriculum verification", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("runs downstream verification against the real seeded data", async () => {
     const db = getTestDb();
+    const { verifyCurriculumInput } = await import("./verify");
 
     const result = await verifyCurriculumInput(buildApprovedCurriculumPackage(), {
       db,
     });
 
     expect(result.ok).toBe(true);
+    expect(result.mode).toBe("dry_run");
     expect(result.normalizedFrom).toBe("package");
+    expect(result.qualificationVersionPersistence).toBe("dry_run_only");
+    expect(result.limitations).toContain(
+      "Source verification uses synthetic source artifacts and the coverage query. It does not re-run extraction, chunking, embeddings, or classifier mapping."
+    );
     expect(result.checks).toEqual([
       expect.objectContaining({ name: "package validates", ok: true }),
       expect.objectContaining({ name: "seed succeeds", ok: true }),
@@ -27,28 +39,61 @@ describe("curriculum verification", () => {
         ok: true,
       }),
       expect.objectContaining({
-        name: "source coverage assumptions cohere",
+        name: "synthetic source coverage query sees mapped topics",
         ok: true,
       }),
     ]);
+
+    const rows = await db
+      .select({ count: count() })
+      .from(qualificationVersions)
+      .where(eq(qualificationVersions.versionCode, "8461"));
+    expect(Number(rows[0]?.count ?? 0)).toBe(0);
   });
 
-  it("fails verification when the requested package no longer matches seeded data", async () => {
+  it("labels an already-seeded qualification version as existing", async () => {
     const db = getTestDb();
-    const original = buildApprovedCurriculumPackage();
-    const changed = buildApprovedCurriculumPackage();
-    changed.questionTypes[0].description = "Changed after the first seed";
+    const seeded = await seedCurriculumInput(buildApprovedCurriculumPackage(), {
+      db,
+    });
+    const { verifyCurriculumInput } = await import("./verify");
 
-    const first = await verifyCurriculumInput(original, { db });
-    expect(first.ok).toBe(true);
+    const result = await verifyCurriculumInput(buildApprovedCurriculumPackage(), {
+      db,
+    });
 
-    const second = await verifyCurriculumInput(changed, { db });
-    expect(second.ok).toBe(false);
-    expect(second.checks).toContainEqual(
+    expect(result.ok).toBe(true);
+    expect(result.qualificationVersionId).toBe(seeded.qualificationVersionId);
+    expect(result.qualificationVersionPersistence).toBe("existing");
+  });
+
+  it("rolls the dry-run seed back when a downstream check fails", async () => {
+    const db = getTestDb();
+    vi.resetModules();
+
+    const diagnostic = await import("@/engine/diagnostic");
+    vi.spyOn(diagnostic, "getQualificationName").mockRejectedValueOnce(
+      new Error("forced downstream failure")
+    );
+
+    const { verifyCurriculumInput } = await import("./verify");
+    const result = await verifyCurriculumInput(buildApprovedCurriculumPackage(), {
+      db,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.checks).toContainEqual(
       expect.objectContaining({
-        name: "seed succeeds",
+        name: "curriculum queries cohere",
         ok: false,
+        detail: "forced downstream failure",
       })
     );
+
+    const rows = await db
+      .select({ count: count() })
+      .from(qualificationVersions)
+      .where(eq(qualificationVersions.versionCode, "8461"));
+    expect(Number(rows[0]?.count ?? 0)).toBe(0);
   });
 });
