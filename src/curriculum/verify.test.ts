@@ -2,6 +2,7 @@ import { count, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { qualificationVersions } from "@/db/schema";
 import { getTestDb } from "@/test/setup";
+import { seedCurriculumInput } from "./seed";
 import { buildApprovedCurriculumPackage } from "./test-fixtures";
 
 describe("curriculum verification", () => {
@@ -20,6 +21,7 @@ describe("curriculum verification", () => {
     expect(result.ok).toBe(true);
     expect(result.mode).toBe("dry_run");
     expect(result.normalizedFrom).toBe("package");
+    expect(result.qualificationVersionPersistence).toBe("dry_run_only");
     expect(result.limitations).toContain(
       "Source verification uses synthetic source artifacts and the coverage query. It does not re-run extraction, chunking, embeddings, or classifier mapping."
     );
@@ -47,6 +49,22 @@ describe("curriculum verification", () => {
       .from(qualificationVersions)
       .where(eq(qualificationVersions.versionCode, "8461"));
     expect(Number(rows[0]?.count ?? 0)).toBe(0);
+  });
+
+  it("labels an already-seeded qualification version as existing", async () => {
+    const db = getTestDb();
+    const seeded = await seedCurriculumInput(buildApprovedCurriculumPackage(), {
+      db,
+    });
+    const { verifyCurriculumInput } = await import("./verify");
+
+    const result = await verifyCurriculumInput(buildApprovedCurriculumPackage(), {
+      db,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.qualificationVersionId).toBe(seeded.qualificationVersionId);
+    expect(result.qualificationVersionPersistence).toBe("existing");
   });
 
   it("rolls the dry-run seed back when a downstream check fails", async () => {

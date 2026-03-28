@@ -200,6 +200,7 @@ describe("curriculum CLI", () => {
       expect(result.status).toBe(0);
       expect(result.stdout).toContain("Verify: PASS");
       expect(result.stdout).toContain("Mode: dry-run");
+      expect(result.stdout).toContain("Qualification version (dry-run only):");
       expect(result.stdout).toContain("Input: legacy_seed");
       expect(result.stdout).toContain("PASS repeat seed is idempotent");
 

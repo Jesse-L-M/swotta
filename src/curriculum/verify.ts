@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { count, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { getDiagnosticTopics, getQualificationName } from "@/engine/diagnostic";
 import { getCoverageReport } from "@/engine/ingestion";
 import { getTopicTree } from "@/engine/curriculum";
@@ -8,10 +8,14 @@ import { selectBlockType } from "@/engine/scheduler";
 import {
   assessmentComponents,
   commandWords,
+  examBoards,
   learners,
   misconceptionRules,
   organizations,
+  qualifications,
+  qualificationVersions,
   questionTypes,
+  subjects,
   taskRules,
   topicEdges,
   topics,
@@ -33,6 +37,7 @@ import {
   seedPreparedCurriculum,
   type CurriculumSeedNote,
 } from "./seed";
+import type { LegacyQualificationSeed } from "./legacy";
 import type { CurriculumPackageLifecycle } from "./schema";
 
 export interface CurriculumVerificationCheck {
@@ -48,6 +53,7 @@ export interface CurriculumVerificationResult {
   lifecycle: CurriculumPackageLifecycle | null;
   normalizedFrom: "package" | "legacy_seed" | null;
   qualificationVersionId: string | null;
+  qualificationVersionPersistence: "existing" | "dry_run_only" | null;
   adapterNotes: CurriculumSeedNote[];
   limitations: string[];
   checks: CurriculumVerificationCheck[];
@@ -127,6 +133,38 @@ async function loadSeededCounts(
     questionTypes: Number(questionTypeRows[0]?.count ?? 0),
     misconceptionRules: Number(misconceptionRuleRows[0]?.count ?? 0),
   };
+}
+
+async function findExistingQualificationVersionId(
+  db: Database,
+  seedData: LegacyQualificationSeed
+): Promise<QualificationVersionId | null> {
+  const [row] = await db
+    .select({ id: qualificationVersions.id })
+    .from(qualificationVersions)
+    .innerJoin(
+      qualifications,
+      eq(qualificationVersions.qualificationId, qualifications.id)
+    )
+    .innerJoin(subjects, eq(qualifications.subjectId, subjects.id))
+    .innerJoin(
+      examBoards,
+      eq(qualificationVersions.examBoardId, examBoards.id)
+    )
+    .where(
+      and(
+        eq(subjects.slug, seedData.subject.slug),
+        eq(
+          qualifications.level,
+          seedData.level as typeof qualifications.$inferSelect.level
+        ),
+        eq(examBoards.code, seedData.examBoard.code),
+        eq(qualificationVersions.versionCode, seedData.versionCode)
+      )
+    )
+    .limit(1);
+
+  return (row?.id as QualificationVersionId | undefined) ?? null;
 }
 
 async function withTemporaryLearner<T>(
@@ -297,6 +335,7 @@ export async function verifyCurriculumInput(
     lifecycle: null,
     normalizedFrom: null,
     qualificationVersionId: null,
+    qualificationVersionPersistence: null,
     adapterNotes: [],
     limitations: [],
     checks,
@@ -304,6 +343,7 @@ export async function verifyCurriculumInput(
 
   let prepared: ReturnType<typeof prepareCurriculumSeedInput>;
   let targetDb: Database;
+  let existingQualificationVersionId: QualificationVersionId | null = null;
   let qualificationVersionId: QualificationVersionId;
   let expectedStats: ReturnType<typeof getLegacySeedStats>;
 
@@ -314,6 +354,10 @@ export async function verifyCurriculumInput(
     result.normalizedFrom = prepared.normalizedFrom;
     result.adapterNotes = prepared.adapterNotes;
     targetDb = await resolveCurriculumDb(options.db);
+    existingQualificationVersionId = await findExistingQualificationVersionId(
+      targetDb,
+      prepared.seedData
+    );
     if (
       prepared.normalizedFrom === "package" &&
       prepared.curriculumPackage.sourceMappings.length > 0
@@ -352,6 +396,9 @@ export async function verifyCurriculumInput(
       qualificationVersionId =
         seedResult.qualificationVersionId as QualificationVersionId;
       result.qualificationVersionId = qualificationVersionId;
+      result.qualificationVersionPersistence = existingQualificationVersionId
+        ? "existing"
+        : "dry_run_only";
 
       expectedStats = getLegacySeedStats(prepared.seedData);
       const actualCounts = await loadSeededCounts(
@@ -606,7 +653,17 @@ export function formatVerificationResult(
   }
 
   if (result.qualificationVersionId) {
-    lines.push(`Qualification version: ${result.qualificationVersionId}`);
+    if (result.qualificationVersionPersistence === "dry_run_only") {
+      lines.push(
+        `Qualification version (dry-run only): ${result.qualificationVersionId}`
+      );
+    } else if (result.qualificationVersionPersistence === "existing") {
+      lines.push(
+        `Qualification version (existing): ${result.qualificationVersionId}`
+      );
+    } else {
+      lines.push(`Qualification version: ${result.qualificationVersionId}`);
+    }
   }
 
   lines.push("Checks:");
