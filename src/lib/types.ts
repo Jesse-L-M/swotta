@@ -139,6 +139,8 @@ export interface TopicTreeNode {
   }>;
 }
 
+// Legacy pre-factory qualification seed shape. New curriculum work should
+// prefer the canonical package contract in src/curriculum.
 export interface QualificationSeed {
   subject: { name: string; slug: string };
   examBoard: { name: string; code: string };
@@ -193,3 +195,44 @@ export interface SchedulerConfig {
   examPressureWeightMultiplier: number;
   decayUrgencyDays: number;
 }
+
+export type {
+  ApprovedCurriculumPackage,
+  CandidateCurriculumPackage,
+  CurriculumAnnotations,
+  CurriculumAssessmentComponent,
+  CurriculumCommandDefinition,
+  CurriculumCommandName,
+  CurriculumCommandResult,
+  CurriculumCommandWord,
+  CurriculumConfidence,
+  CurriculumEdgeType,
+  CurriculumExamTechniquePattern,
+  CurriculumGenerator,
+  CurriculumLineage,
+  CurriculumMarkSchemePattern,
+  CurriculumMisconceptionRule,
+  CurriculumPackage,
+  CurriculumPackageLifecycle,
+  CurriculumPackageMetadata,
+  CurriculumProvenance,
+  CurriculumQualification,
+  CurriculumQuestionType,
+  CurriculumReview,
+  CurriculumReviewEntry,
+  CurriculumReviewStatus,
+  CurriculumReviewerRole,
+  CurriculumSource,
+  CurriculumSourceAuthority,
+  CurriculumSourceKind,
+  CurriculumSourceMappingHint,
+  CurriculumTaskRule,
+  CurriculumTaskType,
+  CurriculumTopic,
+  CurriculumTopicEdge,
+  CurriculumValidationIssue,
+  CurriculumValidationReport,
+  CurriculumValidationStats,
+  LegacyCurriculumPackage,
+  ReferenceCurriculumPackage,
+} from "../curriculum";
