@@ -87,6 +87,91 @@ Actively in progress or next up.
 
 ---
 
+## Path to 100%
+
+This section tracks what still needs to exist for Swotta to match the full product vision: a trusted, commercially usable UK revision platform with broad GCSE and A-Level coverage, strong learning quality, and production-grade operations.
+
+### 1. Curriculum breadth and content ops
+
+This is the largest remaining product gap.
+
+- Support the majority of popular GCSEs and A-Levels across the major exam boards, not just a single seeded qualification.
+- Define the canonical "supported qualification" package: qualification metadata, assessment components, topic tree, prerequisite/builds-on/related edges, command words, misconception rules, task rules, and source-mapping hints.
+- Build a curriculum factory that turns specifications, teacher guides, past papers, and mark schemes into validated seed data.
+- Add normalization, validation, and idempotent seeding so new subjects can be added repeatably.
+- Add human review and QA workflows so curriculum data is AI-assisted but not AI-trusted by default.
+- Add operational tooling for spec/version updates year to year.
+
+### 2. Past paper and mark scheme intelligence
+
+- Finish past paper ingestion and structured analysis.
+- Extract question types, command words, mark allocations, and recurring mark scheme patterns.
+- Link papers and mark schemes back to the topic graph and assessment components.
+- Use this data in scheduling, study sessions, technique coaching, and reporting.
+
+### 3. Diagnostic and learner-model maturity
+
+- Finish the diagnostic conversation flow and ensure it reliably seeds initial mastery state.
+- Add cross-topic misconception clustering and root-cause detection.
+- Improve learner component state and grade prediction by paper/component, not just topic.
+- Improve candidate-to-confirmed memory promotion and contradiction handling.
+
+### 4. Study quality and pedagogy
+
+- Tune study modes subject-by-subject rather than relying on generic prompt behavior.
+- Improve difficulty calibration, hint timing, and corrective explanations.
+- Improve retrieval grounding so sessions reliably use the right learner materials and syllabus context.
+- Add explicit tutoring-quality evals, not just code-level tests.
+
+### 5. Student product completeness
+
+- Finish all student flows to a production-ready standard on desktop and mobile.
+- Improve session resilience, interruption handling, and low-friction reentry after gaps.
+- Polish queue, upload, source review, and progress loops so the next action is always clear.
+- Improve perceived speed, empty states, and "why am I doing this now?" explanations.
+
+### 6. Parent, teacher, and school product
+
+- Build the teacher/admin product into a real workflow, not just an architectural placeholder.
+- Add class setup, roster import, assignments, intervention views, and school-level policy controls.
+- Deepen parent reporting with clearer actionability and trust signals.
+- Add school onboarding flows, auditability, and org-level administration.
+
+### 7. Evaluation and evidence
+
+- Run the evaluation plan in `EVALS.md` with real learner/session data.
+- Measure whether structured context beats blank-context tutoring.
+- Measure scheduler quality against simpler baselines.
+- Measure confidence calibration improvement, misconception resolution, retrieval quality, and policy adherence.
+- Turn results into product dashboards and decision criteria.
+
+### 8. Reliability, security, and compliance
+
+- Harden production operations: deploys, migrations, backups, rollback, observability, and incident handling.
+- Add stronger abuse controls, failure isolation, and rate limiting around AI, uploads, and background jobs.
+- Complete the data-handling and safeguarding work needed for a product serving minors.
+- Make auth, secret management, and production environment setup boring and repeatable.
+
+### 9. Commercial product layer
+
+- Define the initial sellable wedge clearly rather than marketing the entire end-state platform too early.
+- Add pricing, billing, pilot onboarding, and customer support workflows.
+- Build analytics and retention instrumentation around learner outcomes and product usage.
+- Collect pilot evidence, case studies, and proof points that schools and parents can trust.
+
+### 10. Human systems around the code
+
+- Create a curriculum/content QA process.
+- Create a pedagogy review loop for study behavior and intervention quality.
+- Create an operations/support loop for real users, incidents, and feedback.
+- Build the internal systems needed to scale subject coverage without quality collapse.
+
+### Practical sequence
+
+The next highest-leverage move is to prioritize **curriculum breadth and content ops**, specifically the machine that can repeatedly turn one qualification specification into production-ready, validated seed data. Until that exists, broad GCSE/A-Level coverage remains a manual bottleneck.
+
+---
+
 ## Research questions
 
 These are hypotheses the project is designed to test. Not features on a timeline — open questions that the architecture is built to answer.
