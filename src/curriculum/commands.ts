@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { renderCurriculumReviewReport } from "./review-report";
 import { formatSeedResult, seedCurriculumFile } from "./seed";
 import {
   formatValidationReport,
@@ -39,11 +40,13 @@ export const curriculumCommandDefinitions: CurriculumCommandDefinition[] = [
   },
   {
     name: "review-report",
-    description: "Reserved command surface for rendered review artifacts",
+    description:
+      "Render a human-readable review report for a package or legacy seed JSON",
   },
   {
     name: "seed",
-    description: "Seed an approved/reference package or legacy seed via the real loader",
+    description:
+      "Seed an approved/reference package or legacy seed via the real loader",
   },
   {
     name: "verify",
@@ -80,12 +83,35 @@ function formatHelpText(): string {
   return lines.join("\n");
 }
 
-function notImplementedCommand(commandName: Exclude<CurriculumCommandName, "validate">): CurriculumCommandResult {
+function notImplementedCommand(
+  commandName: Exclude<
+    CurriculumCommandName,
+    "validate" | "review-report" | "seed" | "verify"
+  >
+): CurriculumCommandResult {
   return {
     exitCode: 2,
     stdout: "",
     stderr: `${commandName} is not implemented yet. The command surface is reserved and stable.`,
   };
+}
+
+async function readCurriculumInputFile(
+  filePath: string
+): Promise<{ input: unknown } | { error: string }> {
+  const absolutePath = path.resolve(process.cwd(), filePath);
+
+  try {
+    const fileContents = await readFile(absolutePath, "utf8");
+    return {
+      input: JSON.parse(fileContents) as unknown,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      error: `Unable to read ${filePath}: ${message}`,
+    };
+  }
 }
 
 async function runValidateCommand(
@@ -103,22 +129,16 @@ async function runValidateCommand(
     };
   }
 
-  const absolutePath = path.resolve(process.cwd(), filePath);
-  let input: unknown;
-
-  try {
-    const fileContents = await readFile(absolutePath, "utf8");
-    input = JSON.parse(fileContents) as unknown;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+  const result = await readCurriculumInputFile(filePath);
+  if ("error" in result) {
     return {
       exitCode: 1,
       stdout: "",
-      stderr: `Unable to read ${filePath}: ${message}`,
+      stderr: result.error,
     };
   }
 
-  const report = validateCurriculumPackage(input);
+  const report = validateCurriculumPackage(result.input);
   const warningsMakeCommandFail = strict && report.warnings.length > 0;
   const exitCode = report.ok && !warningsMakeCommandFail ? 0 : 1;
 
@@ -127,6 +147,37 @@ async function runValidateCommand(
     stdout: jsonFormat
       ? `${JSON.stringify(report, null, 2)}\n`
       : `${formatValidationReport(report)}\n`,
+    stderr: "",
+  };
+}
+
+async function runReviewReportCommand(
+  args: string[]
+): Promise<CurriculumCommandResult> {
+  const filePath = args.find((arg) => !arg.startsWith("--"));
+
+  if (!filePath) {
+    return {
+      exitCode: 1,
+      stdout: "",
+      stderr: "review-report requires a path to a JSON file",
+    };
+  }
+
+  const result = await readCurriculumInputFile(filePath);
+  if ("error" in result) {
+    return {
+      exitCode: 1,
+      stdout: "",
+      stderr: result.error,
+    };
+  }
+
+  const renderedReport = renderCurriculumReviewReport(result.input);
+
+  return {
+    exitCode: renderedReport.report.ok ? 0 : 1,
+    stdout: `${renderedReport.text}\n`,
     stderr: "",
   };
 }
@@ -174,26 +225,20 @@ async function runVerifyCommand(
     };
   }
 
-  const absolutePath = path.resolve(process.cwd(), filePath);
-  let input: unknown;
-
-  try {
-    const fileContents = await readFile(absolutePath, "utf8");
-    input = JSON.parse(fileContents) as unknown;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+  const result = await readCurriculumInputFile(filePath);
+  if ("error" in result) {
     return {
       exitCode: 1,
       stdout: "",
-      stderr: `Unable to read ${filePath}: ${message}`,
+      stderr: result.error,
     };
   }
 
   try {
-    const result = await verifyCurriculumInput(input);
+    const verificationResult = await verifyCurriculumInput(result.input);
     return {
-      exitCode: result.ok ? 0 : 1,
-      stdout: `${formatVerificationResult(result)}\n`,
+      exitCode: verificationResult.ok ? 0 : 1,
+      stdout: `${formatVerificationResult(verificationResult)}\n`,
       stderr: "",
     };
   } catch (error) {
@@ -222,11 +267,12 @@ export async function runCurriculumCommand(
   switch (command) {
     case "validate":
       return runValidateCommand(args);
+    case "review-report":
+      return runReviewReportCommand(args);
     case "seed":
       return runSeedCommand(args);
     case "verify":
       return runVerifyCommand(args);
-    case "review-report":
     case "extract":
     case "normalize":
       return notImplementedCommand(command);

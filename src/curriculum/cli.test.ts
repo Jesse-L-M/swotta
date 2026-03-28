@@ -2,10 +2,10 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
 import { count, eq } from "drizzle-orm";
-import { getTestDb } from "@/test/setup";
+import { describe, expect, it } from "vitest";
 import { qualificationVersions } from "@/db/schema";
+import { getTestDb } from "@/test/setup";
 import {
   buildApprovedCurriculumPackage,
   buildLegacyQualificationSeed,
@@ -58,6 +58,30 @@ describe("curriculum CLI", () => {
       expect(result.status).toBe(0);
       expect(result.stdout).toContain("Status: OK");
       expect(result.stdout).toContain("Package: aqa-gcse-biology-8461");
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it("renders a review report for a legacy seed file", () => {
+    const tempDir = mkdtempSync(path.join(tmpdir(), "curriculum-cli-"));
+    const packagePath = path.join(tempDir, "legacy-seed.json");
+
+    writeFileSync(
+      packagePath,
+      JSON.stringify(buildLegacyQualificationSeed(), null, 2),
+      "utf8"
+    );
+
+    try {
+      const result = runCli(["review-report", packagePath]);
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain("# Curriculum Review Report");
+      expect(result.stdout).toContain("Input: legacy_seed");
+      expect(result.stdout).toContain("## Topic Tree Summary");
+      expect(result.stdout).toContain("Cell Division");
+      expect(result.stdout).toContain("Warnings:");
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
