@@ -296,7 +296,18 @@ function isSubsetCollection<T>(actual: T[], expected: T[]): boolean {
   return true;
 }
 
-type CoreSnapshot = ReturnType<typeof buildExpectedCoreSnapshot>;
+type CoreSnapshot = Omit<
+  ReturnType<typeof buildExpectedCoreSnapshot>,
+  "misconceptionRules"
+> & {
+  misconceptionRules: Array<{
+    topicCode: string | null;
+    description: string;
+    triggerPatterns: string[];
+    correctionGuidance: string;
+    severity: number;
+  }>;
+};
 
 function hasCoreSnapshotData(snapshot: CoreSnapshot): boolean {
   return (
@@ -313,18 +324,43 @@ function getCoreSnapshotMismatch(
   actual: CoreSnapshot,
   expected: CoreSnapshot
 ): string | null {
-  const comparisons = [
-    ["components", actual.components, expected.components],
-    ["topics", actual.topics, expected.topics],
-    ["edges", actual.edges, expected.edges],
-    ["command words", actual.commandWords, expected.commandWords],
-    ["question types", actual.questionTypes, expected.questionTypes],
-    ["misconception rules", actual.misconceptionRules, expected.misconceptionRules],
-  ] as const;
+  const comparisons: Array<{ label: string; compare: () => void }> = [
+    {
+      label: "components",
+      compare: () => compareCollections("components", actual.components, expected.components),
+    },
+    {
+      label: "topics",
+      compare: () => compareCollections("topics", actual.topics, expected.topics),
+    },
+    {
+      label: "edges",
+      compare: () => compareCollections("edges", actual.edges, expected.edges),
+    },
+    {
+      label: "command words",
+      compare: () =>
+        compareCollections("command words", actual.commandWords, expected.commandWords),
+    },
+    {
+      label: "question types",
+      compare: () =>
+        compareCollections("question types", actual.questionTypes, expected.questionTypes),
+    },
+    {
+      label: "misconception rules",
+      compare: () =>
+        compareCollections(
+          "misconception rules",
+          actual.misconceptionRules,
+          expected.misconceptionRules
+        ),
+    },
+  ];
 
-  for (const [label, actualRows, expectedRows] of comparisons) {
+  for (const comparison of comparisons) {
     try {
-      compareCollections(label, actualRows, expectedRows);
+      comparison.compare();
     } catch (error) {
       return asErrorMessage(error);
     }
