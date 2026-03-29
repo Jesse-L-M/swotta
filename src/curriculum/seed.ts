@@ -6,10 +6,17 @@ import { estimateBlockDuration } from "@/engine/scheduler";
 import biologyLegacySeedJson from "@/data/seeds/gcse-biology-aqa.json";
 import {
   assessmentComponents,
+  assignments,
   chunkEmbeddings,
   commandWords as commandWordsTable,
+  confidenceEvents,
   examBoards,
+  learnerComponentState,
+  learnerTopicState,
+  misconceptionEvents,
   misconceptionRules as misconceptionRulesTable,
+  retentionEvents,
+  reviewQueue,
   qualifications,
   qualificationVersions,
   questionTypes as questionTypesTable,
@@ -17,8 +24,10 @@ import {
   sourceCollections,
   sourceFiles,
   sourceMappings as sourceMappingsTable,
+  studyBlocks,
   subjects,
   taskRules as taskRulesTable,
+  teacherNotes,
   topicEdges as topicEdgesTable,
   topics as topicsTable,
   users,
@@ -54,6 +63,27 @@ const AQA_GCSE_BIOLOGY_8461_LEGACY_SEED = legacyQualificationSeedSchema.parse(
 const AQA_GCSE_BIOLOGY_8461_LEGACY_SNAPSHOT = buildExpectedCoreSnapshot(
   AQA_GCSE_BIOLOGY_8461_LEGACY_SEED
 );
+const AQA_GCSE_BIOLOGY_8461_COMPONENT_CODE_COMPATIBILITY: Record<string, string> =
+  {
+    "8461/1H": "paper-1",
+    "8461/2H": "paper-2",
+  };
+const AQA_GCSE_BIOLOGY_8461_TOPIC_CODE_COMPATIBILITY: Record<string, string> = {
+  "4.2.2.2": "4.2.2.1",
+  "4.2.3": "4.2.2.2",
+  "4.2.4": "4.2.3",
+  "4.2.5": "4.2.2.6",
+  "4.3.2": "4.3.1",
+  "4.3.2.1": "4.3.1.7",
+  "4.3.2.2": "4.3.1.8",
+  "4.3.2.3": "4.3.1.9",
+  "4.3.3": "4.3.2",
+  "4.3.4": "4.3.3",
+  "4.4.2.2": "4.4.2.1",
+  "4.4.2.3": "4.4.2.2",
+  "4.5.2.2": "4.5.2.1",
+  "4.5.3.3": "4.5.3.4",
+};
 
 export interface CurriculumSeedNote {
   code: string;
@@ -1020,30 +1050,899 @@ async function loadActualCoreSnapshot(
   };
 }
 
-async function replaceExistingQualificationVersionCore(
+function resolveBiology8461CompatibleTopicCode(
+  legacyCode: string,
+  packageTopicCodes: Set<string>
+): string | null {
+  const explicitTarget = AQA_GCSE_BIOLOGY_8461_TOPIC_CODE_COMPATIBILITY[legacyCode];
+  if (explicitTarget) {
+    return explicitTarget;
+  }
+
+  return packageTopicCodes.has(legacyCode) ? legacyCode : null;
+}
+
+function resolveBiology8461CompatibleComponentCode(
+  legacyCode: string,
+  packageComponentCodes: Set<string>
+): string | null {
+  const explicitTarget =
+    AQA_GCSE_BIOLOGY_8461_COMPONENT_CODE_COMPATIBILITY[legacyCode];
+  if (explicitTarget) {
+    return explicitTarget;
+  }
+
+  return packageComponentCodes.has(legacyCode) ? legacyCode : null;
+}
+
+function numericValue(value: string | number | null | undefined): number {
+  if (value == null) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  const parsed =
+    typeof value === "number" ? value : Number.parseFloat(String(value));
+  return Number.isNaN(parsed) ? Number.NEGATIVE_INFINITY : parsed;
+}
+
+function pickMaxNumericValue<T extends string | number | null | undefined>(
+  values: T[]
+): T | null {
+  let best: T | null = null;
+  let bestValue = Number.NEGATIVE_INFINITY;
+
+  for (const value of values) {
+    const candidate = numericValue(value);
+    if (candidate > bestValue) {
+      best = value;
+      bestValue = candidate;
+    }
+  }
+
+  return best;
+}
+
+function pickLatestNonNullValue<T>(
+  rows: Array<{ updatedAt?: Date | null; createdAt?: Date | null; value: T | null }>
+): T | null {
+  return [...rows]
+    .sort((left, right) => {
+      const leftTime =
+        left.updatedAt?.getTime() ?? left.createdAt?.getTime() ?? 0;
+      const rightTime =
+        right.updatedAt?.getTime() ?? right.createdAt?.getTime() ?? 0;
+      return rightTime - leftTime;
+    })
+    .find((row) => row.value != null)?.value ?? null;
+}
+
+function pickEarliestDate(
+  values: Array<Date | null | undefined>
+): Date | null {
+  const dates = values.filter((value): value is Date => value instanceof Date);
+  if (dates.length === 0) {
+    return null;
+  }
+
+  return new Date(Math.min(...dates.map((value) => value.getTime())));
+}
+
+function pickLatestDate(
+  values: Array<Date | null | undefined>
+): Date | null {
+  const dates = values.filter((value): value is Date => value instanceof Date);
+  if (dates.length === 0) {
+    return null;
+  }
+
+  return new Date(Math.max(...dates.map((value) => value.getTime())));
+}
+
+async function insertSeedComponentRecords(
+  db: Database,
+  qualificationVersionId: string,
+  seedData: LegacyQualificationSeed
+): Promise<ComponentRecordSet> {
+  const records: NormalizedComponentRecord[] = [];
+
+  for (const component of seedData.components) {
+    const [inserted] = await db
+      .insert(assessmentComponents)
+      .values({
+        qualificationVersionId,
+        name: component.name,
+        code: component.code,
+        weightPercent: component.weightPercent,
+        durationMinutes: component.durationMinutes ?? null,
+        totalMarks: component.totalMarks ?? null,
+        isExam: component.isExam,
+      })
+      .returning({ id: assessmentComponents.id });
+
+    records.push({
+      id: inserted.id,
+      code: component.code,
+      name: component.name,
+      weightPercent: component.weightPercent,
+      durationMinutes: component.durationMinutes ?? null,
+      totalMarks: component.totalMarks ?? null,
+      isExam: component.isExam,
+    });
+  }
+
+  records.sort((left, right) => left.code.localeCompare(right.code));
+
+  return {
+    records,
+    codeToId: new Map(
+      records.flatMap((record) =>
+        record.id ? [[record.code, record.id] as const] : []
+      )
+    ),
+    idToCode: new Map(
+      records.flatMap((record) =>
+        record.id ? [[record.id, record.code] as const] : []
+      )
+    ),
+  };
+}
+
+async function insertSeedTopicRecords(
+  db: Database,
+  qualificationVersionId: string,
+  seedData: LegacyQualificationSeed
+): Promise<TopicRecordSet> {
+  const records: NormalizedTopicRecord[] = [];
+  const keyToId = new Map<string, string>();
+  const idToKey = new Map<string, string>();
+
+  async function insertNodes(
+    nodes: LegacyQualificationTopicSeed[],
+    parentTopicId: string | null,
+    parentPath: string | null,
+    depth: number
+  ): Promise<void> {
+    for (const [index, node] of nodes.entries()) {
+      const sortOrder = index + 1;
+      const pathKey = parentPath ? `${parentPath}.${sortOrder}` : `${sortOrder}`;
+      const topicKey = node.code ?? pathKey;
+      const [inserted] = await db
+        .insert(topicsTable)
+        .values({
+          qualificationVersionId,
+          parentTopicId,
+          name: node.name,
+          code: node.code ?? null,
+          depth,
+          sortOrder,
+          description: node.description ?? null,
+          estimatedHours: node.estimatedHours?.toString() ?? null,
+        })
+        .returning({ id: topicsTable.id });
+
+      records.push({
+        id: inserted.id,
+        key: topicKey,
+        path: pathKey,
+        parentPath,
+        name: node.name,
+        code: node.code ?? null,
+        depth,
+        sortOrder,
+        description: normalizeOptionalText(node.description),
+        estimatedHours: normalizeNumericString(node.estimatedHours),
+      });
+      keyToId.set(topicKey, inserted.id);
+      idToKey.set(inserted.id, topicKey);
+
+      if (node.children && node.children.length > 0) {
+        await insertNodes(node.children, inserted.id, pathKey, depth + 1);
+      }
+    }
+  }
+
+  await insertNodes(seedData.topics, null, null, 0);
+  return { records, keyToId, idToKey };
+}
+
+async function insertSeedTopicEdges(
+  db: Database,
+  topicRecords: TopicRecordSet,
+  seedData: LegacyQualificationSeed
+): Promise<number> {
+  let edgesCreated = 0;
+
+  for (const topic of flattenLegacyTopicSeedNodes(seedData.topics)) {
+    if (!topic.code || !topic.edges) {
+      continue;
+    }
+
+    const fromTopicId = topicRecords.keyToId.get(topic.code);
+    if (!fromTopicId) {
+      continue;
+    }
+
+    for (const edge of topic.edges) {
+      const toTopicId = topicRecords.keyToId.get(edge.toCode);
+      if (!toTopicId) {
+        continue;
+      }
+
+      await db.insert(topicEdgesTable).values({
+        fromTopicId,
+        toTopicId,
+        edgeType: edge.type,
+      });
+      edgesCreated += 1;
+    }
+  }
+
+  return edgesCreated;
+}
+
+async function insertSeedCommandWords(
+  db: Database,
+  qualificationVersionId: string,
+  seedData: LegacyQualificationSeed
+): Promise<void> {
+  for (const commandWord of seedData.commandWords) {
+    await db.insert(commandWordsTable).values({
+      qualificationVersionId,
+      word: commandWord.word,
+      definition: commandWord.definition,
+      expectedDepth: commandWord.expectedDepth,
+    });
+  }
+}
+
+async function insertSeedQuestionTypes(
+  db: Database,
+  qualificationVersionId: string,
+  seedData: LegacyQualificationSeed
+): Promise<void> {
+  for (const questionType of seedData.questionTypes) {
+    await db.insert(questionTypesTable).values({
+      qualificationVersionId,
+      name: questionType.name,
+      description: questionType.description ?? null,
+      typicalMarks: questionType.typicalMarks ?? null,
+      markSchemePattern: questionType.markSchemePattern ?? null,
+    });
+  }
+}
+
+async function insertSeedMisconceptionRules(
+  db: Database,
+  topicRecords: TopicRecordSet,
+  seedData: LegacyQualificationSeed
+): Promise<void> {
+  for (const rule of seedData.misconceptionRules ?? []) {
+    const topicId = topicRecords.keyToId.get(rule.topicCode);
+    if (!topicId) {
+      continue;
+    }
+
+    await db.insert(misconceptionRulesTable).values({
+      topicId,
+      description: rule.description,
+      triggerPatterns: rule.triggerPatterns,
+      correctionGuidance: rule.correctionGuidance,
+      severity: rule.severity ?? 2,
+    });
+  }
+}
+
+function buildBiology8461TopicIdRemap(
+  legacyTopicRecords: TopicRecordSet,
+  packageTopicRecords: TopicRecordSet
+): Map<string, string> {
+  const packageTopicCodes = new Set(
+    packageTopicRecords.records.flatMap((record) =>
+      record.code ? [record.code] : []
+    )
+  );
+  const remap = new Map<string, string>();
+
+  for (const record of legacyTopicRecords.records) {
+    if (!record.id) {
+      continue;
+    }
+
+    if (!record.code) {
+      throw new Error(
+        `Legacy Biology topic ${record.name} has no code, so it cannot be remapped to the rebuilt package`
+      );
+    }
+
+    const targetCode = resolveBiology8461CompatibleTopicCode(
+      record.code,
+      packageTopicCodes
+    );
+    if (!targetCode) {
+      throw new Error(
+        `Legacy Biology topic code ${record.code} has no rebuilt-package compatibility target`
+      );
+    }
+
+    const targetId = packageTopicRecords.keyToId.get(targetCode);
+    if (!targetId) {
+      throw new Error(
+        `Legacy Biology topic code ${record.code} maps to rebuilt topic code ${targetCode}, but that code was not inserted`
+      );
+    }
+
+    remap.set(record.id, targetId);
+  }
+
+  return remap;
+}
+
+function buildBiology8461ComponentIdRemap(
+  legacyComponentRecords: ComponentRecordSet,
+  packageComponentRecords: ComponentRecordSet
+): Map<string, string> {
+  const packageComponentCodes = new Set(
+    packageComponentRecords.records.map((record) => record.code)
+  );
+  const remap = new Map<string, string>();
+
+  for (const record of legacyComponentRecords.records) {
+    if (!record.id) {
+      continue;
+    }
+
+    const targetCode = resolveBiology8461CompatibleComponentCode(
+      record.code,
+      packageComponentCodes
+    );
+    if (!targetCode) {
+      throw new Error(
+        `Legacy Biology component code ${record.code} has no rebuilt-package compatibility target`
+      );
+    }
+
+    const targetId = packageComponentRecords.codeToId.get(targetCode);
+    if (!targetId) {
+      throw new Error(
+        `Legacy Biology component code ${record.code} maps to rebuilt component code ${targetCode}, but that code was not inserted`
+      );
+    }
+
+    remap.set(record.id, targetId);
+  }
+
+  return remap;
+}
+
+async function remapLearnerTopicStateRows(
+  db: Database,
+  topicIdRemap: Map<string, string>,
+  legacyTopicIds: string[]
+): Promise<void> {
+  if (legacyTopicIds.length === 0) {
+    return;
+  }
+
+  const rows = await db
+    .select()
+    .from(learnerTopicState)
+    .where(inArray(learnerTopicState.topicId, legacyTopicIds));
+
+  const groups = new Map<string, typeof rows>();
+  for (const row of rows) {
+    const nextTopicId = topicIdRemap.get(row.topicId);
+    if (!nextTopicId) {
+      throw new Error(
+        `learner_topic_state row ${row.id} references legacy topic ${row.topicId} with no rebuilt-topic remap`
+      );
+    }
+
+    const key = `${row.learnerId}:${nextTopicId}`;
+    const group = groups.get(key) ?? [];
+    group.push(row);
+    groups.set(key, group);
+  }
+
+  for (const [key, groupRows] of groups.entries()) {
+    const nextTopicId = key.split(":")[1]!;
+    const [survivor, ...duplicates] = [...groupRows].sort((left, right) => {
+      const leftTime = left.createdAt.getTime();
+      const rightTime = right.createdAt.getTime();
+      if (leftTime !== rightTime) {
+        return leftTime - rightTime;
+      }
+      return left.id.localeCompare(right.id);
+    });
+
+    await db
+      .update(learnerTopicState)
+      .set({
+        topicId: nextTopicId,
+        masteryLevel:
+          pickMaxNumericValue(groupRows.map((row) => row.masteryLevel)) ??
+          survivor.masteryLevel,
+        confidence:
+          pickMaxNumericValue(groupRows.map((row) => row.confidence)) ??
+          survivor.confidence,
+        easeFactor:
+          pickMaxNumericValue(groupRows.map((row) => row.easeFactor)) ??
+          survivor.easeFactor,
+        intervalDays: Math.max(...groupRows.map((row) => row.intervalDays)),
+        nextReviewAt: pickEarliestDate(
+          groupRows.map((row) => row.nextReviewAt)
+        ),
+        lastReviewedAt: pickLatestDate(
+          groupRows.map((row) => row.lastReviewedAt)
+        ),
+        reviewCount: groupRows.reduce(
+          (total, row) => total + row.reviewCount,
+          0
+        ),
+        streak: Math.max(...groupRows.map((row) => row.streak)),
+        updatedAt:
+          pickLatestDate(groupRows.map((row) => row.updatedAt)) ??
+          survivor.updatedAt,
+      })
+      .where(eq(learnerTopicState.id, survivor.id));
+
+    for (const duplicate of duplicates) {
+      await db
+        .delete(learnerTopicState)
+        .where(eq(learnerTopicState.id, duplicate.id));
+    }
+  }
+}
+
+async function remapLearnerComponentStateRows(
+  db: Database,
+  componentIdRemap: Map<string, string>,
+  legacyComponentIds: string[]
+): Promise<void> {
+  if (legacyComponentIds.length === 0) {
+    return;
+  }
+
+  const rows = await db
+    .select()
+    .from(learnerComponentState)
+    .where(inArray(learnerComponentState.componentId, legacyComponentIds));
+
+  const groups = new Map<string, typeof rows>();
+  for (const row of rows) {
+    const nextComponentId = componentIdRemap.get(row.componentId);
+    if (!nextComponentId) {
+      throw new Error(
+        `learner_component_state row ${row.id} references legacy component ${row.componentId} with no rebuilt-component remap`
+      );
+    }
+
+    const key = `${row.learnerId}:${nextComponentId}`;
+    const group = groups.get(key) ?? [];
+    group.push(row);
+    groups.set(key, group);
+  }
+
+  for (const [key, groupRows] of groups.entries()) {
+    const nextComponentId = key.split(":")[1]!;
+    const [survivor, ...duplicates] = [...groupRows].sort((left, right) => {
+      const leftTime = left.createdAt.getTime();
+      const rightTime = right.createdAt.getTime();
+      if (leftTime !== rightTime) {
+        return leftTime - rightTime;
+      }
+      return left.id.localeCompare(right.id);
+    });
+
+    await db
+      .update(learnerComponentState)
+      .set({
+        componentId: nextComponentId,
+        predictedGrade:
+          pickLatestNonNullValue(
+            groupRows.map((row) => ({
+              updatedAt: row.updatedAt,
+              createdAt: row.createdAt,
+              value: row.predictedGrade,
+            }))
+          ) ?? survivor.predictedGrade,
+        predictedPercent:
+          pickLatestNonNullValue(
+            groupRows.map((row) => ({
+              updatedAt: row.updatedAt,
+              createdAt: row.createdAt,
+              value: row.predictedPercent,
+            }))
+          ) ?? survivor.predictedPercent,
+        confidence:
+          pickMaxNumericValue(groupRows.map((row) => row.confidence)) ??
+          survivor.confidence,
+        lastAssessedAt: pickLatestDate(
+          groupRows.map((row) => row.lastAssessedAt)
+        ),
+        updatedAt:
+          pickLatestDate(groupRows.map((row) => row.updatedAt)) ??
+          survivor.updatedAt,
+      })
+      .where(eq(learnerComponentState.id, survivor.id));
+
+    for (const duplicate of duplicates) {
+      await db
+        .delete(learnerComponentState)
+        .where(eq(learnerComponentState.id, duplicate.id));
+    }
+  }
+}
+
+async function remapMisconceptionEventRows(
+  db: Database,
+  topicIdRemap: Map<string, string>,
+  legacyTopicIds: string[],
+  legacyMisconceptionRuleIds: string[]
+): Promise<void> {
+  if (legacyTopicIds.length === 0) {
+    return;
+  }
+
+  const rows = await db
+    .select({
+      id: misconceptionEvents.id,
+      topicId: misconceptionEvents.topicId,
+      misconceptionRuleId: misconceptionEvents.misconceptionRuleId,
+    })
+    .from(misconceptionEvents)
+    .where(inArray(misconceptionEvents.topicId, legacyTopicIds));
+
+  for (const row of rows) {
+    const nextTopicId = topicIdRemap.get(row.topicId);
+    if (!nextTopicId) {
+      throw new Error(
+        `misconception_events row ${row.id} references legacy topic ${row.topicId} with no rebuilt-topic remap`
+      );
+    }
+
+    await db
+      .update(misconceptionEvents)
+      .set({
+        topicId: nextTopicId,
+        misconceptionRuleId:
+          row.misconceptionRuleId &&
+          legacyMisconceptionRuleIds.includes(row.misconceptionRuleId)
+            ? null
+            : row.misconceptionRuleId,
+      })
+      .where(eq(misconceptionEvents.id, row.id));
+  }
+}
+
+async function remapConfidenceEventRows(
+  db: Database,
+  topicIdRemap: Map<string, string>,
+  legacyTopicIds: string[]
+): Promise<void> {
+  if (legacyTopicIds.length === 0) {
+    return;
+  }
+
+  const rows = await db
+    .select({ id: confidenceEvents.id, topicId: confidenceEvents.topicId })
+    .from(confidenceEvents)
+    .where(inArray(confidenceEvents.topicId, legacyTopicIds));
+
+  for (const row of rows) {
+    await db
+      .update(confidenceEvents)
+      .set({ topicId: topicIdRemap.get(row.topicId) ?? row.topicId })
+      .where(eq(confidenceEvents.id, row.id));
+  }
+}
+
+async function remapRetentionEventRows(
+  db: Database,
+  topicIdRemap: Map<string, string>,
+  legacyTopicIds: string[]
+): Promise<void> {
+  if (legacyTopicIds.length === 0) {
+    return;
+  }
+
+  const rows = await db
+    .select({ id: retentionEvents.id, topicId: retentionEvents.topicId })
+    .from(retentionEvents)
+    .where(inArray(retentionEvents.topicId, legacyTopicIds));
+
+  for (const row of rows) {
+    await db
+      .update(retentionEvents)
+      .set({ topicId: topicIdRemap.get(row.topicId) ?? row.topicId })
+      .where(eq(retentionEvents.id, row.id));
+  }
+}
+
+async function remapStudyBlockRows(
+  db: Database,
+  topicIdRemap: Map<string, string>,
+  legacyTopicIds: string[]
+): Promise<void> {
+  if (legacyTopicIds.length === 0) {
+    return;
+  }
+
+  const rows = await db
+    .select({ id: studyBlocks.id, topicId: studyBlocks.topicId })
+    .from(studyBlocks)
+    .where(inArray(studyBlocks.topicId, legacyTopicIds));
+
+  for (const row of rows) {
+    await db
+      .update(studyBlocks)
+      .set({ topicId: topicIdRemap.get(row.topicId) ?? row.topicId })
+      .where(eq(studyBlocks.id, row.id));
+  }
+}
+
+async function remapReviewQueueRows(
+  db: Database,
+  topicIdRemap: Map<string, string>,
+  legacyTopicIds: string[]
+): Promise<void> {
+  if (legacyTopicIds.length === 0) {
+    return;
+  }
+
+  const rows = await db
+    .select()
+    .from(reviewQueue)
+    .where(inArray(reviewQueue.topicId, legacyTopicIds));
+
+  const activeScheduledGroups = new Map<string, typeof rows>();
+
+  for (const row of rows) {
+    const nextTopicId = topicIdRemap.get(row.topicId);
+    if (!nextTopicId) {
+      throw new Error(
+        `review_queue row ${row.id} references legacy topic ${row.topicId} with no rebuilt-topic remap`
+      );
+    }
+
+    if (row.reason === "scheduled" && row.fulfilledAt === null) {
+      const key = `${row.learnerId}:${nextTopicId}`;
+      const group = activeScheduledGroups.get(key) ?? [];
+      group.push(row);
+      activeScheduledGroups.set(key, group);
+      continue;
+    }
+
+    await db
+      .update(reviewQueue)
+      .set({ topicId: nextTopicId })
+      .where(eq(reviewQueue.id, row.id));
+  }
+
+  for (const [key, groupRows] of activeScheduledGroups.entries()) {
+    const nextTopicId = key.split(":")[1]!;
+    const [survivor, ...duplicates] = [...groupRows].sort((left, right) => {
+      if (left.dueAt.getTime() !== right.dueAt.getTime()) {
+        return left.dueAt.getTime() - right.dueAt.getTime();
+      }
+      return left.id.localeCompare(right.id);
+    });
+
+    await db
+      .update(reviewQueue)
+      .set({
+        topicId: nextTopicId,
+        priority: Math.max(...groupRows.map((row) => row.priority)),
+        dueAt:
+          pickEarliestDate(groupRows.map((row) => row.dueAt)) ?? survivor.dueAt,
+      })
+      .where(eq(reviewQueue.id, survivor.id));
+
+    for (const duplicate of duplicates) {
+      await db.delete(reviewQueue).where(eq(reviewQueue.id, duplicate.id));
+    }
+  }
+}
+
+async function remapAssignmentRows(
+  db: Database,
+  topicIdRemap: Map<string, string>,
+  legacyTopicIds: string[]
+): Promise<void> {
+  if (legacyTopicIds.length === 0) {
+    return;
+  }
+
+  const rows = await db
+    .select({ id: assignments.id, topicId: assignments.topicId })
+    .from(assignments)
+    .where(inArray(assignments.topicId, legacyTopicIds));
+
+  for (const row of rows) {
+    if (!row.topicId) {
+      continue;
+    }
+
+    await db
+      .update(assignments)
+      .set({ topicId: topicIdRemap.get(row.topicId) ?? row.topicId })
+      .where(eq(assignments.id, row.id));
+  }
+}
+
+async function remapTeacherNoteRows(
+  db: Database,
+  topicIdRemap: Map<string, string>,
+  legacyTopicIds: string[]
+): Promise<void> {
+  if (legacyTopicIds.length === 0) {
+    return;
+  }
+
+  const rows = await db
+    .select({ id: teacherNotes.id, topicId: teacherNotes.topicId })
+    .from(teacherNotes)
+    .where(inArray(teacherNotes.topicId, legacyTopicIds));
+
+  for (const row of rows) {
+    if (!row.topicId) {
+      continue;
+    }
+
+    await db
+      .update(teacherNotes)
+      .set({ topicId: topicIdRemap.get(row.topicId) ?? row.topicId })
+      .where(eq(teacherNotes.id, row.id));
+  }
+}
+
+async function remapSourceMappingRows(
+  db: Database,
+  topicIdRemap: Map<string, string>,
+  componentIdRemap: Map<string, string>,
+  legacyTopicIds: string[],
+  legacyComponentIds: string[]
+): Promise<void> {
+  const conditions = [];
+  if (legacyTopicIds.length > 0) {
+    conditions.push(inArray(sourceMappingsTable.topicId, legacyTopicIds));
+  }
+  if (legacyComponentIds.length > 0) {
+    conditions.push(
+      inArray(sourceMappingsTable.componentId, legacyComponentIds)
+    );
+  }
+  if (conditions.length === 0) {
+    return;
+  }
+
+  const rows = await db
+    .select({
+      id: sourceMappingsTable.id,
+      topicId: sourceMappingsTable.topicId,
+      componentId: sourceMappingsTable.componentId,
+    })
+    .from(sourceMappingsTable)
+    .where(conditions.length === 1 ? conditions[0]! : or(...conditions));
+
+  for (const row of rows) {
+    await db
+      .update(sourceMappingsTable)
+      .set({
+        topicId:
+          row.topicId && topicIdRemap.has(row.topicId)
+            ? topicIdRemap.get(row.topicId) ?? row.topicId
+            : row.topicId,
+        componentId:
+          row.componentId && componentIdRemap.has(row.componentId)
+            ? componentIdRemap.get(row.componentId) ?? row.componentId
+            : row.componentId,
+      })
+      .where(eq(sourceMappingsTable.id, row.id));
+  }
+}
+
+async function remapBiology8461DependentRows(
+  db: Database,
+  topicIdRemap: Map<string, string>,
+  componentIdRemap: Map<string, string>,
+  legacyTopicIds: string[],
+  legacyComponentIds: string[],
+  legacyMisconceptionRuleIds: string[]
+): Promise<void> {
+  await remapLearnerTopicStateRows(db, topicIdRemap, legacyTopicIds);
+  await remapLearnerComponentStateRows(
+    db,
+    componentIdRemap,
+    legacyComponentIds
+  );
+  await remapMisconceptionEventRows(
+    db,
+    topicIdRemap,
+    legacyTopicIds,
+    legacyMisconceptionRuleIds
+  );
+  await remapConfidenceEventRows(db, topicIdRemap, legacyTopicIds);
+  await remapRetentionEventRows(db, topicIdRemap, legacyTopicIds);
+  await remapStudyBlockRows(db, topicIdRemap, legacyTopicIds);
+  await remapReviewQueueRows(db, topicIdRemap, legacyTopicIds);
+  await remapAssignmentRows(db, topicIdRemap, legacyTopicIds);
+  await remapTeacherNoteRows(db, topicIdRemap, legacyTopicIds);
+  await remapSourceMappingRows(
+    db,
+    topicIdRemap,
+    componentIdRemap,
+    legacyTopicIds,
+    legacyComponentIds
+  );
+}
+
+async function migrateLegacyBiology8461QualificationVersion(
   prepared: PreparedCurriculumSeed,
   qualificationVersionId: string,
+  legacyCoreSnapshot: CoreSnapshot & {
+    componentRecords: ComponentRecordSet;
+    topicRecords: TopicRecordSet;
+  },
   db: Database
 ): Promise<LoadQualificationResult> {
   try {
     await clearPackageRuntimeArtifacts(db, qualificationVersionId);
 
-    const topicRows = await db
-      .select({ id: topicsTable.id })
-      .from(topicsTable)
-      .where(eq(topicsTable.qualificationVersionId, qualificationVersionId));
-    const topicIds = topicRows.map((row) => row.id);
+    const legacyTopicIds = legacyCoreSnapshot.topicRecords.records.flatMap((record) =>
+      record.id ? [record.id] : []
+    );
+    const legacyComponentIds =
+      legacyCoreSnapshot.componentRecords.records.flatMap((record) =>
+        record.id ? [record.id] : []
+      );
+    const legacyMisconceptionRuleRows =
+      legacyTopicIds.length === 0
+        ? []
+        : await db
+            .select({
+              id: misconceptionRulesTable.id,
+            })
+            .from(misconceptionRulesTable)
+            .where(inArray(misconceptionRulesTable.topicId, legacyTopicIds));
 
-    if (topicIds.length > 0) {
+    const packageComponentRecords = await insertSeedComponentRecords(
+      db,
+      qualificationVersionId,
+      prepared.seedData
+    );
+    const packageTopicRecords = await insertSeedTopicRecords(
+      db,
+      qualificationVersionId,
+      prepared.seedData
+    );
+    const topicIdRemap = buildBiology8461TopicIdRemap(
+      legacyCoreSnapshot.topicRecords,
+      packageTopicRecords
+    );
+    const componentIdRemap = buildBiology8461ComponentIdRemap(
+      legacyCoreSnapshot.componentRecords,
+      packageComponentRecords
+    );
+
+    await remapBiology8461DependentRows(
+      db,
+      topicIdRemap,
+      componentIdRemap,
+      legacyTopicIds,
+      legacyComponentIds,
+      legacyMisconceptionRuleRows.map((row) => row.id)
+    );
+
+    if (legacyTopicIds.length > 0) {
       await db
         .delete(misconceptionRulesTable)
-        .where(inArray(misconceptionRulesTable.topicId, topicIds));
+        .where(inArray(misconceptionRulesTable.topicId, legacyTopicIds));
       await db
         .delete(topicEdgesTable)
         .where(
           or(
-            inArray(topicEdgesTable.fromTopicId, topicIds),
-            inArray(topicEdgesTable.toTopicId, topicIds)
+            inArray(topicEdgesTable.fromTopicId, legacyTopicIds),
+            inArray(topicEdgesTable.toTopicId, legacyTopicIds)
           )
         );
     }
@@ -1054,12 +1953,15 @@ async function replaceExistingQualificationVersionCore(
     await db
       .delete(questionTypesTable)
       .where(eq(questionTypesTable.qualificationVersionId, qualificationVersionId));
-    await db
-      .delete(assessmentComponents)
-      .where(eq(assessmentComponents.qualificationVersionId, qualificationVersionId));
 
-    if (topicIds.length > 0) {
-      await db.delete(topicsTable).where(inArray(topicsTable.id, topicIds));
+    if (legacyComponentIds.length > 0) {
+      await db
+        .delete(assessmentComponents)
+        .where(inArray(assessmentComponents.id, legacyComponentIds));
+    }
+
+    if (legacyTopicIds.length > 0) {
+      await db.delete(topicsTable).where(inArray(topicsTable.id, legacyTopicIds));
     }
 
     await db
@@ -1075,10 +1977,24 @@ async function replaceExistingQualificationVersionCore(
       })
       .where(eq(qualificationVersions.id, qualificationVersionId));
 
-    return await loadQualification(db, prepared.seedData);
+    const edgesCreated = await insertSeedTopicEdges(
+      db,
+      packageTopicRecords,
+      prepared.seedData
+    );
+    await insertSeedCommandWords(db, qualificationVersionId, prepared.seedData);
+    await insertSeedQuestionTypes(db, qualificationVersionId, prepared.seedData);
+    await insertSeedMisconceptionRules(db, packageTopicRecords, prepared.seedData);
+
+    return {
+      qualificationVersionId,
+      topicsCreated: packageTopicRecords.records.length,
+      componentsCreated: packageComponentRecords.records.length,
+      edgesCreated,
+    };
   } catch (error) {
     throw new Error(
-      `Existing qualification version ${qualificationVersionId} matches the legacy AQA GCSE Biology 8461 seed, but the rebuilt package can only replace it when no dependent topic/component rows still reference that legacy core (${asErrorMessage(error)}). Migrate or clear those dependent rows first, then reseed the rebuilt package.`
+      `Existing qualification version ${qualificationVersionId} matches the legacy AQA GCSE Biology 8461 seed, but the rebuilt package migration failed (${asErrorMessage(error)}).`
     );
   }
 }
@@ -1118,9 +2034,10 @@ async function loadPreparedQualificationVersion(
     prepared.packageId === AQA_GCSE_BIOLOGY_8461_PACKAGE_ID &&
     getCoreSnapshotMismatch(actual, AQA_GCSE_BIOLOGY_8461_LEGACY_SNAPSHOT) === null
   ) {
-    return replaceExistingQualificationVersionCore(
+    return migrateLegacyBiology8461QualificationVersion(
       prepared,
       existingQualificationVersionId,
+      actual,
       db
     );
   }
