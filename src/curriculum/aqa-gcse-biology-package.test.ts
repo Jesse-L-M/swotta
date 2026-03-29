@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import legacyBiologySeed from "@/data/seeds/gcse-biology-aqa.json";
 import {
   commandWords,
   misconceptionRules,
@@ -85,12 +86,12 @@ function buildApprovedEnvelope(
       reviewers: [
         ...candidatePackage.review.reviewers,
         {
-        name: "Fixture approval wrapper",
-        role: "human",
-        outcome: "approved",
-        reviewedAt: "2026-03-28T20:30:00.000Z",
-        notes:
-          "Test-only approval wrapper used to exercise seed and verify while the committed fixture remains a candidate pending real human sign-off.",
+          name: "Fixture approval wrapper",
+          role: "human",
+          outcome: "approved",
+          reviewedAt: "2026-03-28T20:30:00.000Z",
+          notes:
+            "Test-only approval wrapper used to exercise seed and verify while the committed fixture remains a candidate pending real human sign-off.",
         },
       ],
     },
@@ -190,5 +191,70 @@ describe("AQA GCSE Biology rebuilt package", () => {
     expect(seededTaskRules).toHaveLength(9);
     expect(seededSourceMappings).toHaveLength(198);
     expect(seededMisconceptions).toHaveLength(12);
+  });
+
+  it("replaces the legacy Biology 8461 core in place and seeds package runtime artifacts", async () => {
+    const db = getTestDb();
+    const approvedPackage = buildApprovedEnvelope(await buildCandidatePackage());
+
+    const legacySeeded = await seedCurriculumInput(legacyBiologySeed, { db });
+    const rebuilt = await seedCurriculumInput(approvedPackage, { db });
+
+    expect(rebuilt.qualificationVersionId).toBe(legacySeeded.qualificationVersionId);
+    expect(rebuilt.normalizedFrom).toBe("package");
+    expect(rebuilt.topicsCreated).toBe(126);
+    expect(rebuilt.edgesCreated).toBe(13);
+
+    const seededTopics = await db
+      .select()
+      .from(topics)
+      .where(eq(topics.qualificationVersionId, rebuilt.qualificationVersionId));
+    const seededCommandWords = await db
+      .select()
+      .from(commandWords)
+      .where(
+        eq(commandWords.qualificationVersionId, rebuilt.qualificationVersionId)
+      );
+    const seededQuestionTypes = await db
+      .select()
+      .from(questionTypes)
+      .where(
+        eq(questionTypes.qualificationVersionId, rebuilt.qualificationVersionId)
+      );
+    const seededTaskRules = await db
+      .select()
+      .from(taskRules)
+      .innerJoin(topics, eq(taskRules.topicId, topics.id))
+      .where(eq(topics.qualificationVersionId, rebuilt.qualificationVersionId));
+    const seededSourceMappings = await db.select().from(sourceMappings);
+
+    expect(seededTopics).toHaveLength(126);
+    expect(seededTopics.some((topic) => topic.code === "4.8")).toBe(true);
+    expect(seededCommandWords).toHaveLength(28);
+    expect(seededQuestionTypes).toHaveLength(4);
+    expect(seededTaskRules).toHaveLength(9);
+    expect(seededSourceMappings).toHaveLength(198);
+  });
+
+  it("rejects a legacy reseed over rebuilt Biology 8461 and preserves package runtime artifacts", async () => {
+    const db = getTestDb();
+    const approvedPackage = buildApprovedEnvelope(await buildCandidatePackage());
+
+    const rebuilt = await seedCurriculumInput(approvedPackage, { db });
+    expect(rebuilt.normalizedFrom).toBe("package");
+
+    await expect(seedCurriculumInput(legacyBiologySeed, { db })).rejects.toThrow(
+      "package-only runtime artifacts already exist"
+    );
+
+    const seededTaskRules = await db
+      .select()
+      .from(taskRules)
+      .innerJoin(topics, eq(taskRules.topicId, topics.id))
+      .where(eq(topics.qualificationVersionId, rebuilt.qualificationVersionId));
+    const seededSourceMappings = await db.select().from(sourceMappings);
+
+    expect(seededTaskRules).toHaveLength(9);
+    expect(seededSourceMappings).toHaveLength(198);
   });
 });

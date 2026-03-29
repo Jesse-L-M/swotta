@@ -260,8 +260,8 @@ describe("Task 4.2 integration: endSession → mastery wire", () => {
   });
 });
 
-describe("Task 4.2: test seed uses loadQualification", () => {
-  it("seedGCSEBiology loads qualification via curriculum engine", async () => {
+describe("Task 4.2: rebuilt Biology seed helper", () => {
+  it("seedGCSEBiology loads the rebuilt Biology package through the curriculum seed bridge", async () => {
     const { seedGCSEBiology } = await import("@/test/seed");
     const result = await seedGCSEBiology();
 
@@ -277,6 +277,6 @@ describe("Task 4.2: test seed uses loadQualification", () => {
       .where(
         eq(topics.qualificationVersionId, result.qualificationVersionId)
       );
-    expect(topicCount.length).toBeGreaterThan(20);
+    expect(topicCount.length).toBeGreaterThan(100);
   });
 });

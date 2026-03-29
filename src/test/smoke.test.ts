@@ -62,15 +62,14 @@ describe("test infrastructure smoke test", () => {
   it("seeds GCSE Biology AQA with full topic tree", async () => {
     const seed = await seedGCSEBiology();
     expect(seed.qualificationVersionId).toBeDefined();
-    // Full JSON seed has 75 topics (loaded via loadQualification from curriculum engine)
-    expect(seed.topics.length).toBeGreaterThan(20);
+    expect(seed.topics.length).toBeGreaterThan(100);
 
     const unitCodes = seed.topics
       .filter((t) => t.code.split(".").length === 2)
       .map((t) => t.code)
       .sort();
     expect(unitCodes).toEqual([
-      "4.1", "4.2", "4.3", "4.4", "4.5", "4.6", "4.7",
+      "4.1", "4.2", "4.3", "4.4", "4.5", "4.6", "4.7", "4.8",
     ]);
   });
 

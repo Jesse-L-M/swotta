@@ -1,8 +1,9 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { loadQualification, type LoadQualificationResult } from "@/engine/curriculum";
 import { estimateBlockDuration } from "@/engine/scheduler";
+import biologyLegacySeedJson from "@/data/seeds/gcse-biology-aqa.json";
 import {
   assessmentComponents,
   chunkEmbeddings,
@@ -45,6 +46,14 @@ const SYSTEM_CURRICULUM_USER = {
   email: "curriculum-seed-system@swotta.local",
   name: "Curriculum Seed System",
 };
+
+const AQA_GCSE_BIOLOGY_8461_PACKAGE_ID = "aqa-gcse-biology-8461";
+const AQA_GCSE_BIOLOGY_8461_LEGACY_SEED = legacyQualificationSeedSchema.parse(
+  biologyLegacySeedJson
+);
+const AQA_GCSE_BIOLOGY_8461_LEGACY_SNAPSHOT = buildExpectedCoreSnapshot(
+  AQA_GCSE_BIOLOGY_8461_LEGACY_SEED
+);
 
 export interface CurriculumSeedNote {
   code: string;
@@ -285,6 +294,43 @@ function isSubsetCollection<T>(actual: T[], expected: T[]): boolean {
   }
 
   return true;
+}
+
+type CoreSnapshot = ReturnType<typeof buildExpectedCoreSnapshot>;
+
+function hasCoreSnapshotData(snapshot: CoreSnapshot): boolean {
+  return (
+    snapshot.components.length > 0 ||
+    snapshot.topics.length > 0 ||
+    snapshot.edges.length > 0 ||
+    snapshot.commandWords.length > 0 ||
+    snapshot.questionTypes.length > 0 ||
+    snapshot.misconceptionRules.length > 0
+  );
+}
+
+function getCoreSnapshotMismatch(
+  actual: CoreSnapshot,
+  expected: CoreSnapshot
+): string | null {
+  const comparisons = [
+    ["components", actual.components, expected.components],
+    ["topics", actual.topics, expected.topics],
+    ["edges", actual.edges, expected.edges],
+    ["command words", actual.commandWords, expected.commandWords],
+    ["question types", actual.questionTypes, expected.questionTypes],
+    ["misconception rules", actual.misconceptionRules, expected.misconceptionRules],
+  ] as const;
+
+  for (const [label, actualRows, expectedRows] of comparisons) {
+    try {
+      compareCollections(label, actualRows, expectedRows);
+    } catch (error) {
+      return asErrorMessage(error);
+    }
+  }
+
+  return null;
 }
 
 function createAdapterNotes(
@@ -938,50 +984,114 @@ async function loadActualCoreSnapshot(
   };
 }
 
-async function assertExistingQualificationVersionCompatible(
+async function replaceExistingQualificationVersionCore(
+  prepared: PreparedCurriculumSeed,
+  qualificationVersionId: string,
+  db: Database
+): Promise<LoadQualificationResult> {
+  try {
+    await clearPackageRuntimeArtifacts(db, qualificationVersionId);
+
+    const topicRows = await db
+      .select({ id: topicsTable.id })
+      .from(topicsTable)
+      .where(eq(topicsTable.qualificationVersionId, qualificationVersionId));
+    const topicIds = topicRows.map((row) => row.id);
+
+    if (topicIds.length > 0) {
+      await db
+        .delete(misconceptionRulesTable)
+        .where(inArray(misconceptionRulesTable.topicId, topicIds));
+      await db
+        .delete(topicEdgesTable)
+        .where(
+          or(
+            inArray(topicEdgesTable.fromTopicId, topicIds),
+            inArray(topicEdgesTable.toTopicId, topicIds)
+          )
+        );
+    }
+
+    await db
+      .delete(commandWordsTable)
+      .where(eq(commandWordsTable.qualificationVersionId, qualificationVersionId));
+    await db
+      .delete(questionTypesTable)
+      .where(eq(questionTypesTable.qualificationVersionId, qualificationVersionId));
+    await db
+      .delete(assessmentComponents)
+      .where(eq(assessmentComponents.qualificationVersionId, qualificationVersionId));
+
+    if (topicIds.length > 0) {
+      await db.delete(topicsTable).where(inArray(topicsTable.id, topicIds));
+    }
+
+    await db
+      .update(qualificationVersions)
+      .set({
+        firstExamYear: prepared.seedData.firstExamYear,
+        specUrl: prepared.seedData.specUrl ?? null,
+        totalMarks:
+          prepared.seedData.components.reduce(
+            (sum, component) => sum + (component.totalMarks ?? 0),
+            0
+          ) || null,
+      })
+      .where(eq(qualificationVersions.id, qualificationVersionId));
+
+    return await loadQualification(db, prepared.seedData);
+  } catch (error) {
+    throw new Error(
+      `Existing qualification version ${qualificationVersionId} matches the legacy AQA GCSE Biology 8461 seed, but the rebuilt package can only replace it when no dependent topic/component rows still reference that legacy core (${asErrorMessage(error)}). Migrate or clear those dependent rows first, then reseed the rebuilt package.`
+    );
+  }
+}
+
+async function loadPreparedQualificationVersion(
   prepared: PreparedCurriculumSeed,
   db: Database
-): Promise<string | null> {
+): Promise<LoadQualificationResult> {
   const existingQualificationVersionId = await findExistingQualificationVersionId(
     db,
     prepared.seedData
   );
   if (!existingQualificationVersionId) {
-    return null;
+    return loadQualification(db, prepared.seedData);
   }
 
   const actual = await loadActualCoreSnapshot(db, existingQualificationVersionId);
-  const hasExistingCoreData =
-    actual.components.length > 0 ||
-    actual.topics.length > 0 ||
-    actual.edges.length > 0 ||
-    actual.commandWords.length > 0 ||
-    actual.questionTypes.length > 0 ||
-    actual.misconceptionRules.length > 0;
-  if (!hasExistingCoreData) {
-    return existingQualificationVersionId;
+  if (!hasCoreSnapshotData(actual)) {
+    return loadQualification(db, prepared.seedData);
+  }
+
+  if (prepared.normalizedFrom !== "package") {
+    await assertLegacyReseedWillNotDeletePackageRuntimeArtifacts(
+      existingQualificationVersionId,
+      db
+    );
   }
 
   const expected = buildExpectedCoreSnapshot(prepared.seedData);
+  const mismatch = getCoreSnapshotMismatch(actual, expected);
+  if (!mismatch) {
+    return loadQualification(db, prepared.seedData);
+  }
 
-  try {
-    compareCollections("components", actual.components, expected.components);
-    compareCollections("topics", actual.topics, expected.topics);
-    compareCollections("edges", actual.edges, expected.edges);
-    compareCollections("command words", actual.commandWords, expected.commandWords);
-    compareCollections("question types", actual.questionTypes, expected.questionTypes);
-    compareCollections(
-      "misconception rules",
-      actual.misconceptionRules,
-      expected.misconceptionRules
-    );
-  } catch (error) {
-    throw new Error(
-      `Existing qualification version ${existingQualificationVersionId} does not match the incoming ${prepared.normalizedFrom} curriculum data (${asErrorMessage(error)}). The current seed path cannot replace an incompatible existing version in place; migrate or clear the existing qualification version before seeding this input.`
+  if (
+    prepared.normalizedFrom === "package" &&
+    prepared.packageId === AQA_GCSE_BIOLOGY_8461_PACKAGE_ID &&
+    getCoreSnapshotMismatch(actual, AQA_GCSE_BIOLOGY_8461_LEGACY_SNAPSHOT) === null
+  ) {
+    return replaceExistingQualificationVersionCore(
+      prepared,
+      existingQualificationVersionId,
+      db
     );
   }
 
-  return existingQualificationVersionId;
+  throw new Error(
+    `Existing qualification version ${existingQualificationVersionId} does not match the incoming ${prepared.normalizedFrom} curriculum data (${mismatch}). The current seed path cannot replace an incompatible existing version in place; migrate or clear the existing qualification version before seeding this input.`
+  );
 }
 
 function buildPackageTopicBindings(
@@ -1460,6 +1570,36 @@ async function clearPackageRuntimeArtifacts(
   await db.delete(sourceCollections).where(eq(sourceCollections.id, collectionId));
 }
 
+async function assertLegacyReseedWillNotDeletePackageRuntimeArtifacts(
+  qualificationVersionId: string,
+  db: Database
+): Promise<void> {
+  const actualCoreSnapshot = await loadActualCoreSnapshot(db, qualificationVersionId);
+  const actualTaskRules = await loadActualTaskRuleRecords(
+    db,
+    qualificationVersionId,
+    actualCoreSnapshot.topicRecords
+  );
+  const sourceCollectionState = await loadSyntheticSourceCollectionState(
+    db,
+    qualificationVersionId,
+    actualCoreSnapshot.topicRecords,
+    actualCoreSnapshot.componentRecords
+  );
+
+  if (
+    actualTaskRules.length > 0 ||
+    sourceCollectionState.collectionId ||
+    sourceCollectionState.fileCount > 0 ||
+    sourceCollectionState.chunkCount > 0 ||
+    sourceCollectionState.mappings.length > 0
+  ) {
+    throw new Error(
+      `Cannot seed legacy input over qualification version ${qualificationVersionId} because package-only runtime artifacts already exist and a legacy reseed would delete them. Reseed the rebuilt package instead.`
+    );
+  }
+}
+
 async function insertSyntheticSourceMappings(
   db: Database,
   collectionId: string,
@@ -1756,8 +1896,10 @@ export async function seedPreparedCurriculum(
   const targetDb = await resolveCurriculumDb(options.db);
   return targetDb.transaction(async (tx) => {
     const transactionalDb = tx as unknown as Database;
-    await assertExistingQualificationVersionCompatible(prepared, transactionalDb);
-    const loadResult = await loadQualification(transactionalDb, prepared.seedData);
+    const loadResult = await loadPreparedQualificationVersion(
+      prepared,
+      transactionalDb
+    );
 
     if (prepared.normalizedFrom === "package") {
       await ensurePackageRuntimeArtifacts(
@@ -1766,9 +1908,9 @@ export async function seedPreparedCurriculum(
         transactionalDb
       );
     } else {
-      await clearPackageRuntimeArtifacts(
-        transactionalDb,
-        loadResult.qualificationVersionId
+      await assertLegacyReseedWillNotDeletePackageRuntimeArtifacts(
+        loadResult.qualificationVersionId,
+        transactionalDb
       );
     }
     await assertPreparedCurriculumMatchesDb(

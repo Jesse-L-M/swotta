@@ -244,7 +244,7 @@ describe("curriculum seed bridge", () => {
     expect(seededTaskRules).toHaveLength(1);
   });
 
-  it("clears package-only runtime artifacts when reseeding the same version from legacy input", async () => {
+  it("rejects a legacy reseed when package-only runtime artifacts already exist", async () => {
     const db = getTestDb();
     const packageInput = buildApprovedCurriculumPackage();
     const legacyInput = buildLegacySeedFromCurriculumPackage(packageInput);
@@ -257,13 +257,14 @@ describe("curriculum seed bridge", () => {
     expect(await db.select().from(sourceChunks)).toHaveLength(1);
     expect(await db.select().from(sourceMappings)).toHaveLength(1);
 
-    const seededLegacy = await seedCurriculumInput(legacyInput, { db });
+    await expect(seedCurriculumInput(legacyInput, { db })).rejects.toThrow(
+      "package-only runtime artifacts already exist"
+    );
 
-    expect(seededLegacy.normalizedFrom).toBe("legacy_seed");
-    expect(await db.select().from(taskRules)).toHaveLength(0);
-    expect(await db.select().from(sourceCollections)).toHaveLength(0);
-    expect(await db.select().from(sourceFiles)).toHaveLength(0);
-    expect(await db.select().from(sourceChunks)).toHaveLength(0);
-    expect(await db.select().from(sourceMappings)).toHaveLength(0);
+    expect(await db.select().from(taskRules)).toHaveLength(1);
+    expect(await db.select().from(sourceCollections)).toHaveLength(1);
+    expect(await db.select().from(sourceFiles)).toHaveLength(1);
+    expect(await db.select().from(sourceChunks)).toHaveLength(1);
+    expect(await db.select().from(sourceMappings)).toHaveLength(1);
   });
 });
