@@ -1,0 +1,62 @@
+{
+  "derivedFrom": [],
+  "generatedBy": {
+    "tool": "curriculum.extract",
+    "version": "0.1.0",
+    "runId": "aqa-gcse-chemistry-20260328"
+  },
+  "sources": [
+    {
+      "source": {
+        "id": "aqa-chemistry-8462-spec",
+        "kind": "specification",
+        "authority": "primary",
+        "title": "AQA GCSE Chemistry 8462 specification",
+        "uri": "https://www.aqa.org.uk/subjects/chemistry/gcse/chemistry-8462"
+      },
+      "content": {
+        "format": "record_text",
+        "path": "./specification-records.txt"
+      }
+    },
+    {
+      "source": {
+        "id": "aqa-science-command-words",
+        "kind": "support_material",
+        "authority": "secondary",
+        "title": "AQA GCSE Science command words",
+        "uri": "https://www.aqa.org.uk/resources/science/gcse/teach/command-words"
+      },
+      "content": {
+        "format": "record_text",
+        "path": "./command-words-records.txt"
+      }
+    },
+    {
+      "source": {
+        "id": "aqa-84621h-jun23-report",
+        "kind": "examiner_report",
+        "authority": "secondary",
+        "title": "AQA GCSE Chemistry 8462/1H Report on the Examination June 2023",
+        "uri": "https://filestore.aqa.org.uk/sample-papers-and-mark-schemes/2023/june/AQA-84621H-WRE-JUN23.PDF"
+      },
+      "content": {
+        "format": "record_text",
+        "path": "./paper-1-june-2023-report-records.txt"
+      }
+    },
+    {
+      "source": {
+        "id": "aqa-84622h-jun23-report",
+        "kind": "examiner_report",
+        "authority": "secondary",
+        "title": "AQA GCSE Chemistry 8462/2H Report on the Examination June 2023",
+        "uri": "https://filestore.aqa.org.uk/sample-papers-and-mark-schemes/2023/june/AQA-84622H-WRE-JUN23.PDF"
+      },
+      "content": {
+        "format": "record_text",
+        "path": "./paper-2-june-2023-report-records.txt"
+      }
+    }
+  ]
+}

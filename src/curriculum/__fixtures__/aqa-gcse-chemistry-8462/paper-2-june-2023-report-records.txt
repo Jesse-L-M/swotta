@@ -1,0 +1,66 @@
+[misconception]
+locator: Question 03.2 and 03.3
+topicRef: 4.8.3.7
+description: Uses the abbreviation FES or describes flame emission spectroscopy as more precise rather than naming it fully and explaining its greater accuracy.
+triggerPatterns: use fes || flame emission is more precise || instrumental method gives more ions at once so that is the main advantage
+correctionGuidance: The full method name is flame emission spectroscopy. Its key advantage over a flame test is greater accuracy and more reliable measurement of the ions present.
+severity: 2
+
+[misconception]
+locator: Question 04.2 and 04.3
+topicRef: 4.9.2.2
+description: Explains rising atmospheric carbon dioxide or methane by human respiration alone or omits the causal link from demand to fuel burning or cattle farming.
+triggerPatterns: more people respire so carbon dioxide rises || more cattle means more methane with no food-demand link || population increase causes greenhouse gases without any activity named
+correctionGuidance: Population growth raises demand for transport, electricity, heating, and food, so more fossil fuels are burned and more cattle farming occurs, increasing carbon dioxide and methane emissions.
+severity: 3
+
+[misconception]
+locator: Question 05.4
+topicRef: 4.10.1.4
+description: Treats bioleaching as the same process as phytomining or omits that bacteria produce leachate solutions containing dissolved copper compounds or ions.
+triggerPatterns: bioleaching uses plants || bioleaching is the same as phytomining || bacteria directly make pure copper
+correctionGuidance: Bioleaching uses bacteria to produce leachate solutions containing dissolved copper compounds or ions; phytomining uses plants to take up metal compounds from the soil.
+severity: 3
+
+[misconception]
+locator: Question 08.8
+topicRef: 4.7.3.4
+description: Answers DNA-building-unit questions with bases or the names of bases instead of nucleotides.
+triggerPatterns: dna is made of bases || adenine thymine cytosine guanine are the repeating units || dna is made from amino acids
+correctionGuidance: DNA is a polymer of nucleotides. Each nucleotide includes a sugar, a phosphate group, and one base, so bases alone are not the repeating unit.
+severity: 2
+
+[misconception]
+locator: Question 09.5 and 09.6
+topicRef: 4.6.2.3
+description: Claims that a catalyst shifts equilibrium to the products or ignores that equal total moles on both sides mean pressure does not change the equilibrium position.
+triggerPatterns: catalyst shifts equilibrium to the right || pressure always moves equilibrium to the side with fewer moles even when the totals are equal || faster rate means higher equilibrium yield
+correctionGuidance: A catalyst speeds up both forward and reverse reactions equally and does not change equilibrium position. Pressure only changes equilibrium when the total gaseous moles differ between sides.
+severity: 3
+
+[task-rule]
+locator: Question 03.1 to 03.3
+topicRef: 4.8.3.7
+taskType: worked_example
+title: Run ion-test methods before naming the instrumental follow-up
+guidance: After the learner states sample, reagent, and expected observation for the flame and halide tests, require them to name flame emission spectroscopy in full and state that it is more accurate than a flame test.
+conditions: analysis topic || method-planning question || instrumental-method comparison
+priority: medium
+
+[task-rule]
+locator: Question 04.2 and 04.3
+topicRef: 4.9.2.2
+taskType: explanation
+title: Write greenhouse-gas explanations as a driver-to-emission chain
+guidance: Force responses into the pattern change in population or demand -> named human activity -> named greenhouse gas -> atmospheric increase, so the causal link is never skipped.
+conditions: atmosphere topic || command word explain || human-activity question
+priority: high
+
+[task-rule]
+locator: Question 09.5 and 09.6
+topicRef: 4.6.2.3
+taskType: mistake_review
+title: Separate rate effects from equilibrium-position effects
+guidance: Use review prompts that make the learner sort catalyst, temperature, pressure, and concentration changes into whether they change rate only, equilibrium position, or both, and justify each choice from the equation.
+conditions: equilibrium topic || stoichiometry on both sides || low-confidence response history
+priority: high

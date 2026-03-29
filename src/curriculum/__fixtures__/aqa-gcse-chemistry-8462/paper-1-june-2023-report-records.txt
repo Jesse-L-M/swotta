@@ -1,0 +1,118 @@
+[misconception]
+locator: Question 01.1
+topicRef: 4.1.1.3
+description: Treats the plum pudding model as a ball of positive energy or places electrons outside the positive sphere instead of embedded within it.
+triggerPatterns: plum pudding model is a ball of positive energy || electrons orbit outside the positive ball || positive sphere with no electrons named
+correctionGuidance: In the plum pudding model the atom is a sphere of positive charge with electrons embedded within it; it is an early model, not the modern nuclear atom.
+severity: 2
+
+[misconception]
+locator: Question 03.1
+topicRef: 4.4.2.3
+description: Describes salt preparation as evaporating the acid away or skips the excess-solid and filtration steps needed before crystallisation.
+triggerPatterns: evaporate the acid || heat to dryness to get crystals || crystallise without filtering excess solid
+correctionGuidance: For a soluble salt from an insoluble base or carbonate, add the solid in excess to the acid, filter off the excess solid, then gently evaporate water so crystals form on cooling.
+severity: 3
+
+[misconception]
+locator: Question 04.2
+topicRef: 4.5.1.1
+description: Explains exothermic change by saying matter or gas is lost, or mentions only bond making or only bond breaking.
+triggerPatterns: exothermic means matter is lost || gas takes the energy away || energy only released when bonds are made with no bond-breaking comparison
+correctionGuidance: Exothermic reactions release more energy when new bonds form than they require to break existing bonds; the change is about energy transfer, not loss of matter.
+severity: 3
+
+[misconception]
+locator: Question 04.5
+topicRef: 4.2.2.5
+description: Treats poly(ethene) as a giant structure that melts by breaking covalent bonds rather than by overcoming intermolecular forces between molecules.
+triggerPatterns: polymer is a giant covalent structure so covalent bonds must break to melt || boiling point depends on breaking the carbon chain bonds || intermolecular forces and covalent bonds are the same thing
+correctionGuidance: For simple hydrocarbons and polymers, boiling and melting depend on the strength of intermolecular forces between molecules, not on breaking the covalent bonds within each molecule.
+severity: 3
+
+[misconception]
+locator: Question 05.1
+topicRef: 4.4.2.6
+description: Defines a weak acid by a low pH instead of by partial ionisation or dissociation in aqueous solution.
+triggerPatterns: weak acid means low pH || weak acid has few hydrogen ions because it is dilute || weak acid partially ionises other substances
+correctionGuidance: A weak acid is one that only partially ionises in water. Strength is about extent of ionisation, not simply the pH number or whether the solution is dilute.
+severity: 3
+
+[misconception]
+locator: Question 05.3
+topicRef: 4.4.2.5
+description: Gets the titration endpoint direction wrong when acid is added to alkali or describes the endpoint as clear instead of colourless.
+triggerPatterns: phenolphthalein turns pink at the end when acid is added || solution goes clear || add alkali until the indicator changes
+correctionGuidance: When acid is added from the burette to an alkali with phenolphthalein, the endpoint is the change from pink to colourless; the colourless endpoint still depends on using the correct direction of addition.
+severity: 2
+
+[misconception]
+locator: Question 07.3
+topicRef: 4.4.3.4
+description: Explains oxygen production in aqueous electrolysis using oxide or oxygen ions rather than hydroxide ions and misuses the idea of discharge.
+triggerPatterns: oxide ions make oxygen in water electrolysis || oxygen is discharged at the electrode || oxygen ions move to the positive electrode
+correctionGuidance: In aqueous electrolysis, hydroxide ions are formed from water and are oxidised at the positive electrode to produce oxygen; it is the ions that are discharged, not the oxygen gas.
+severity: 3
+
+[task-rule]
+locator: Question 01.1
+topicRef: 4.1.1.3
+taskType: worked_example
+title: Pair early atom models with labelled sketches
+guidance: Before prose answers, make the learner sketch Dalton, plum pudding, Rutherford, and Bohr-style models with one explicit label that distinguishes each model from the next.
+conditions: atomic-model history || command word describe || diagram-free explanation
+priority: medium
+
+[task-rule]
+locator: Question 03.1
+topicRef: 4.4.2.3
+taskType: worked_example
+title: Sequence insoluble-base salt preparations exactly
+guidance: Rehearse the ordered chain acid -> add excess insoluble solid -> filter -> gently evaporate water -> crystallise, and force the learner to name what is removed at each step.
+conditions: required practical || salt preparation || method-writing question
+priority: high
+
+[task-rule]
+locator: Question 04.2 and 04.3
+topicRef: 4.5.1.1
+taskType: explanation
+title: Compare bonds broken with bonds made before naming exo or endo
+guidance: Require a two-column comparison of energy needed to break bonds and energy released when new bonds form before the learner writes the final exothermic or endothermic conclusion.
+conditions: energy-change explanation || bond-energy reasoning || reaction profile question
+priority: high
+
+[task-rule]
+locator: Question 04.5
+topicRef: 4.2.2.5
+taskType: mistake_review
+title: Separate covalent bonds from intermolecular forces explicitly
+guidance: Use error-correction tasks that force learners to label which force is broken when methane boils and which forces are compared when poly(ethene) has a higher melting or boiling point.
+conditions: bonding-properties question || polymer topic || contradictory-force language
+priority: high
+
+[task-rule]
+locator: Question 05.1 and 05.6
+topicRef: 4.4.2.6
+taskType: retrieval_drill
+title: Separate strength, concentration and pH in quick drills
+guidance: Use short prompts that make the learner classify statements as about strength, concentration, or pH and then explain why a change of one pH unit is a tenfold concentration change.
+conditions: acids topic || low-confidence response history || numerical pH reasoning
+priority: high
+
+[task-rule]
+locator: Question 05.3
+topicRef: 4.4.2.5
+taskType: worked_example
+title: Anchor titration endpoints to the direction of addition
+guidance: Force learners to state what is in the flask, what is in the burette, and the start and end colour of the indicator before they write any titration method answer.
+conditions: titration practical || indicator question || method-writing question
+priority: medium
+
+[task-rule]
+locator: Question 07.3
+topicRef: 4.4.3.4
+taskType: worked_example
+title: Build aqueous-electrolysis answers from ion movement to half equations
+guidance: Have the learner name the ions present, send them to the correct electrode, and then write the oxidation or reduction half equation before naming the final product.
+conditions: electrolysis topic || half-equation question || ion-movement explanation
+priority: high
