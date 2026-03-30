@@ -43,6 +43,13 @@
       "when": 1774886400000,
       "tag": "0005_learner_qualification_diagnostic_status",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1774891800000,
+      "tag": "0006_past_paper_foundation",
+      "breakpoints": true
     }
   ]
 }

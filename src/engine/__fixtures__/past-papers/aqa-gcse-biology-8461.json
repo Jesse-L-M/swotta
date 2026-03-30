@@ -1,0 +1,90 @@
+{
+  "qualification": {
+    "examBoardCode": "AQA",
+    "subjectSlug": "biology",
+    "versionCode": "8461"
+  },
+  "papers": [
+    {
+      "slug": "aqa-gcse-biology-8461-june-2023-paper-1",
+      "title": "AQA GCSE Biology June 2023 Paper 1",
+      "componentCode": "paper-1",
+      "series": "June",
+      "examYear": 2023,
+      "paperCode": "8461/1H",
+      "questions": [
+        {
+          "questionNumber": "01.1",
+          "prompt": "Choose the organelle where aerobic respiration occurs in a plant cell.",
+          "marks": 1,
+          "options": [
+            "nucleus",
+            "mitochondrion",
+            "ribosome",
+            "chloroplast"
+          ],
+          "topicCodeHints": [
+            "4.1.1.2"
+          ],
+          "topicHint": "cell structure and organelle function",
+          "markSchemeBullets": [
+            "mitochondrion or mitochondria"
+          ]
+        },
+        {
+          "questionNumber": "03.4",
+          "prompt": "Explain how water moves into a root hair cell by osmosis.",
+          "marks": 4,
+          "topicCodeHints": [
+            "4.1.3.2"
+          ],
+          "topicHint": "water movement across a partially permeable membrane",
+          "markSchemeBullets": [
+            "water moves from higher water potential in the soil to lower water potential in the root hair cell",
+            "movement is through a partially permeable membrane",
+            "credit net movement of water into the cell",
+            "allow dilute to concentrated if the direction is correct"
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "aqa-gcse-biology-8461-june-2023-paper-2",
+      "title": "AQA GCSE Biology June 2023 Paper 2",
+      "componentCode": "paper-2",
+      "series": "June",
+      "examYear": 2023,
+      "paperCode": "8461/2H",
+      "questions": [
+        {
+          "questionNumber": "02.5",
+          "prompt": "Compare mitosis with meiosis in terms of chromosome number and genetic variation.",
+          "marks": 4,
+          "topicCodeHints": [
+            "4.6.1.2"
+          ],
+          "topicHint": "contrasting cell division outcomes",
+          "markSchemeBullets": [
+            "mitosis produces genetically identical cells",
+            "meiosis produces genetically different gametes",
+            "mitosis keeps the chromosome number the same",
+            "meiosis halves the chromosome number"
+          ]
+        },
+        {
+          "questionNumber": "05.1",
+          "prompt": "Define a community in ecology.",
+          "marks": 2,
+          "topicCodeHints": [
+            "4.7.1.1"
+          ],
+          "topicHint": "distinguishing community from population and ecosystem",
+          "markSchemeBullets": [
+            "all the populations of different species living together in a habitat",
+            "do not credit answers that describe only one species or only the habitat"
+          ]
+        }
+      ]
+    }
+  ]
+}

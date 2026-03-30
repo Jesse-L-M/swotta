@@ -107,6 +107,11 @@ export const notificationChannelEnum = pgEnum("notification_channel", [
 
 export const mappingMethodEnum = pgEnum("mapping_method", ["auto", "manual"]);
 
+export const pastPaperSignalTypeEnum = pgEnum("past_paper_signal_type", [
+  "mark_scheme_pattern",
+  "exam_technique",
+]);
+
 export const qualLevelEnum = pgEnum("qual_level", [
   "GCSE",
   "AS",

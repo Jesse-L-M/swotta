@@ -1,0 +1,86 @@
+{
+  "qualification": {
+    "examBoardCode": "AQA",
+    "subjectSlug": "chemistry",
+    "versionCode": "8462"
+  },
+  "papers": [
+    {
+      "slug": "aqa-gcse-chemistry-8462-june-2023-paper-1",
+      "title": "AQA GCSE Chemistry June 2023 Paper 1",
+      "componentCode": "paper-1",
+      "series": "June",
+      "examYear": 2023,
+      "paperCode": "8462/1H",
+      "questions": [
+        {
+          "questionNumber": "04.2",
+          "prompt": "Calculate the hydrogen ion concentration of a solution with pH 3.",
+          "marks": 3,
+          "topicCodeHints": [
+            "4.4.2.6"
+          ],
+          "topicHint": "linking pH values to powers of ten",
+          "markSchemeBullets": [
+            "hydrogen ion concentration equals 10^-3 mol per dm^3",
+            "allow 0.001 mol per dm^3",
+            "credit correct power of ten working"
+          ]
+        },
+        {
+          "questionNumber": "06.3",
+          "prompt": "Describe how to prepare copper sulfate crystals from copper oxide and sulfuric acid.",
+          "marks": 4,
+          "topicCodeHints": [
+            "4.4.2.3"
+          ],
+          "topicHint": "ordered required-practical method for soluble salts",
+          "markSchemeBullets": [
+            "add excess copper oxide to sulfuric acid",
+            "filter to remove the excess solid",
+            "gently evaporate the filtrate",
+            "allow crystals to form on cooling and dry them"
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "aqa-gcse-chemistry-8462-june-2023-paper-2",
+      "title": "AQA GCSE Chemistry June 2023 Paper 2",
+      "componentCode": "paper-2",
+      "series": "June",
+      "examYear": 2023,
+      "paperCode": "8462/2H",
+      "questions": [
+        {
+          "questionNumber": "03.2",
+          "prompt": "Describe one advantage of flame emission spectroscopy over a flame test when identifying metal ions.",
+          "marks": 2,
+          "topicCodeHints": [
+            "4.8.3.7"
+          ],
+          "topicHint": "accuracy and sensitivity of instrumental analysis",
+          "markSchemeBullets": [
+            "more accurate or more reliable than a flame test",
+            "can detect ions present more precisely or at lower concentrations"
+          ]
+        },
+        {
+          "questionNumber": "08.6",
+          "prompt": "Evaluate bioleaching compared with phytomining for extracting copper from low-grade ores.",
+          "marks": 6,
+          "topicCodeHints": [
+            "4.10.1.4"
+          ],
+          "topicHint": "environmental and economic trade-offs in low-grade ore extraction",
+          "markSchemeBullets": [
+            "bioleaching can process low-grade ores and avoids large-scale quarrying",
+            "phytomining can use less energy and cause less landscape damage",
+            "both methods are slower than traditional extraction",
+            "a justified judgement must weigh environmental and economic trade-offs"
+          ]
+        }
+      ]
+    }
+  ]
+}
