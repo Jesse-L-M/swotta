@@ -7,6 +7,17 @@ import type {
   RetrievalResult,
 } from "@/lib/types";
 import { BLOCK_TYPE_LABELS } from "@/lib/labels";
+import type { PastPaperSessionIntelligence } from "@/engine/past-paper";
+
+export type ExamSessionContext =
+  | ({ source: "past_paper" } & PastPaperSessionIntelligence)
+  | {
+      source: "fallback";
+      qualificationVersionId: string | null;
+      topicId: string;
+      topicName: string;
+      reason: string;
+    };
 
 export interface LearnerContext {
   masteryLevel: number;
@@ -14,6 +25,7 @@ export interface LearnerContext {
   confirmedMemory: Array<{ category: string; content: string }>;
   preferences: Record<string, unknown>;
   policies: PolicyValue[];
+  examSession?: ExamSessionContext | null;
 }
 
 const BLOCK_TYPE_TO_FILENAME: Record<BlockType, string> = {
@@ -113,6 +125,120 @@ function formatPreferences(preferences: Record<string, unknown>): string {
     .join("\n");
 }
 
+function formatExamCommandWords(
+  commandWords: PastPaperSessionIntelligence["commandWords"]
+): string {
+  if (commandWords.length === 0) {
+    return "None recorded.";
+  }
+
+  return commandWords
+    .map(
+      (commandWord) =>
+        `- **${commandWord.word}** (${commandWord.count} questions, ${commandWord.totalMarks} marks): ${commandWord.definition}`
+    )
+    .join("\n");
+}
+
+function formatExamQuestionTypes(
+  questionTypes: PastPaperSessionIntelligence["questionTypes"]
+): string {
+  if (questionTypes.length === 0) {
+    return "None recorded.";
+  }
+
+  return questionTypes
+    .map((questionType) => {
+      const pattern = questionType.markSchemePattern
+        ? ` Mark scheme pattern: ${questionType.markSchemePattern}.`
+        : "";
+      return `- **${questionType.name}** (${questionType.count} questions, ${questionType.totalMarks} marks).${pattern}`;
+    })
+    .join("\n");
+}
+
+function formatExamSignals(
+  signals: PastPaperSessionIntelligence["examTechniqueSignals"]
+): string {
+  if (signals.length === 0) {
+    return "None recorded.";
+  }
+
+  return signals
+    .map(
+      (signal) =>
+        `- **${signal.label}** (${signal.count} questions): ${signal.note}`
+    )
+    .join("\n");
+}
+
+function formatReferenceQuestions(
+  questions: PastPaperSessionIntelligence["referenceQuestions"]
+): string {
+  if (questions.length === 0) {
+    return "None recorded.";
+  }
+
+  return questions
+    .map((question, index) => {
+      const commandWord = question.commandWord
+        ? `${question.commandWord.word} — ${question.commandWord.definition}`
+        : "No command word stored.";
+      const markSchemePattern =
+        question.questionType.markSchemePattern ?? "No explicit pattern stored.";
+      const techniqueSignals =
+        question.examTechniqueSignals.length > 0
+          ? question.examTechniqueSignals
+              .map((signal) => `${signal.label}: ${signal.note}`)
+              .join(" | ")
+          : "None recorded.";
+      const markSchemeSignals =
+        question.markSchemeSignals.length > 0
+          ? question.markSchemeSignals
+              .map((signal) => `${signal.label}: ${signal.note}`)
+              .join(" | ")
+          : "None recorded.";
+
+      return [
+        `### Reference Question ${index + 1}`,
+        `- **Paper**: ${question.examYear} ${question.series} ${question.componentCode} ${question.componentName}`,
+        `- **Question**: ${question.locator} (${question.marksAvailable} marks)`,
+        `- **Prompt excerpt**: ${question.promptExcerpt}`,
+        `- **Command word**: ${commandWord}`,
+        `- **Question type**: ${question.questionType.name}`,
+        `- **Mark scheme pattern**: ${markSchemePattern}`,
+        `- **Exam technique signals**: ${techniqueSignals}`,
+        `- **Mark scheme signals**: ${markSchemeSignals}`,
+      ].join("\n");
+    })
+    .join("\n\n");
+}
+
+function formatExamSession(examSession: ExamSessionContext | null | undefined): string {
+  if (!examSession) {
+    return "";
+  }
+
+  if (examSession.source === "fallback") {
+    return examSession.reason;
+  }
+
+  return [
+    `- **Coverage**: ${examSession.questionCount} questions across ${examSession.paperCount} papers (${examSession.totalMarks} total marks).`,
+    `- **Observed mark allocations**: ${examSession.marks.distinct.join(", ")} marks (average ${examSession.marks.average}).`,
+    `- **Common command words**:`,
+    formatExamCommandWords(examSession.commandWords),
+    `- **Common question types**:`,
+    formatExamQuestionTypes(examSession.questionTypes),
+    `- **Recurring exam-technique signals**:`,
+    formatExamSignals(examSession.examTechniqueSignals),
+    `- **Recurring mark-scheme signals**:`,
+    formatExamSignals(examSession.markSchemeSignals),
+    `- **Reference questions to mirror**:`,
+    formatReferenceQuestions(examSession.referenceQuestions),
+  ].join("\n");
+}
+
 export async function buildSystemPrompt(
   block: StudyBlock,
   learnerContext: LearnerContext,
@@ -135,6 +261,14 @@ export async function buildSystemPrompt(
     `- **Estimated duration**: ${block.durationMinutes} minutes`,
     `- **Session reason**: ${block.reason}`,
     "",
+    ...(learnerContext.examSession
+      ? [
+          "## Exam Intelligence",
+          "",
+          formatExamSession(learnerContext.examSession),
+          "",
+        ]
+      : []),
     "## Learner Context",
     "",
     `- **Current mastery level**: ${(learnerContext.masteryLevel * 100).toFixed(0)}%`,
@@ -157,6 +291,7 @@ export async function buildSystemPrompt(
     "",
     "- Guide the student to discover answers themselves. Never give answers directly unless reviewing after an attempt.",
     "- Keep responses focused and exam-relevant.",
+    "- If an Exam Intelligence section is present, ground the question choice, mark allocations, mark-scheme feedback, and technique coaching in that structured data instead of generic boilerplate.",
     "- When the session block is complete, include `<session_status>complete</session_status>` at the very end of your message.",
     "- Do not include the session_status tag until the block is genuinely complete.",
   ];

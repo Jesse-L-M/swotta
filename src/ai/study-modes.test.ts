@@ -6,6 +6,7 @@ import {
   buildOutcomeExtractionPrompt,
   type LearnerContext,
 } from "./study-modes";
+import type { PastPaperSessionIntelligence } from "@/engine/past-paper";
 import type {
   BlockType,
   StudyBlock,
@@ -52,6 +53,106 @@ function makeChunks(count = 1): RetrievalResult[] {
     sourceFileName: `biology-notes-${i}.pdf`,
     sourceFileId: `file-${i}`,
   }));
+}
+
+function makePastPaperSessionIntelligence(): PastPaperSessionIntelligence {
+  return {
+    qualificationVersionId: "qual-1",
+    topicId: "topic-1",
+    topicName: "Cell Biology",
+    paperCount: 2,
+    questionCount: 3,
+    totalMarks: 10,
+    marks: {
+      min: 2,
+      max: 4,
+      average: 3.3,
+      distinct: [2, 4],
+    },
+    commandWords: [
+      {
+        word: "Explain",
+        definition: "Make something clear, giving reasons.",
+        expectedDepth: 3,
+        count: 2,
+        totalMarks: 8,
+      },
+    ],
+    questionTypes: [
+      {
+        name: "Structured",
+        description: "Short structured response",
+        typicalMarks: 4,
+        markSchemePattern: "Point-plus-reason explanation",
+        count: 2,
+        totalMarks: 8,
+      },
+    ],
+    markSchemeSignals: [
+      {
+        signalType: "mark_scheme_pattern",
+        code: "point_plus_reason",
+        label: "Point-plus-reason explanation",
+        note: "Marks reward linked scientific reasoning.",
+        count: 2,
+      },
+    ],
+    examTechniqueSignals: [
+      {
+        signalType: "exam_technique",
+        code: "link_cause_and_effect",
+        label: "Link cause and effect",
+        note: "Build each mark as cause -> process -> outcome.",
+        count: 2,
+      },
+    ],
+    referenceQuestions: [
+      {
+        paperSlug: "paper-1",
+        paperTitle: "AQA GCSE Biology Paper 1",
+        series: "June",
+        examYear: 2025,
+        paperCode: "8461/1H",
+        componentCode: "paper-1",
+        componentName: "Paper 1",
+        questionId: "question-1",
+        questionNumber: "02.3",
+        questionOrder: 3,
+        locator: "02.3",
+        promptExcerpt: "Explain why diffusion happens faster when the concentration gradient is steeper.",
+        marksAvailable: 4,
+        commandWord: {
+          id: "cw-1",
+          word: "Explain",
+          definition: "Make something clear, giving reasons.",
+          expectedDepth: 3,
+        },
+        questionType: {
+          id: "qt-1",
+          name: "Structured",
+          description: "Short structured response",
+          typicalMarks: 4,
+          markSchemePattern: "Point-plus-reason explanation",
+        },
+        markSchemeSignals: [
+          {
+            signalType: "mark_scheme_pattern",
+            code: "point_plus_reason",
+            label: "Point-plus-reason explanation",
+            note: "Marks reward linked scientific reasoning.",
+          },
+        ],
+        examTechniqueSignals: [
+          {
+            signalType: "exam_technique",
+            code: "link_cause_and_effect",
+            label: "Link cause and effect",
+            note: "Build each mark as cause -> process -> outcome.",
+          },
+        ],
+      },
+    ],
+  };
 }
 
 describe("loadPromptTemplate", () => {
@@ -307,6 +408,47 @@ describe("buildSystemPrompt", () => {
     expect(prompt).toContain('Source 2 (from "biology-notes-1.pdf")');
     expect(prompt).toContain('Source 3 (from "biology-notes-2.pdf")');
     expect(prompt).toContain("source content for chunk 0");
+  });
+
+  it("includes real exam intelligence for exam-style modes", async () => {
+    const block = makeBlock({ blockType: "timed_problems" });
+    const context = makeLearnerContext({
+      examSession: {
+        source: "past_paper",
+        ...makePastPaperSessionIntelligence(),
+      },
+    });
+
+    const prompt = await buildSystemPrompt(block, context, []);
+
+    expect(prompt).toContain("## Exam Intelligence");
+    expect(prompt).toContain("3 questions across 2 papers");
+    expect(prompt).toContain("Observed mark allocations");
+    expect(prompt).toContain("Explain");
+    expect(prompt).toContain("Point-plus-reason explanation");
+    expect(prompt).toContain("Link cause and effect");
+    expect(prompt).toContain("Explain why diffusion happens faster");
+  });
+
+  it("includes clean fallback guidance when exam intelligence is unavailable", async () => {
+    const block = makeBlock({ blockType: "essay_planning" });
+    const context = makeLearnerContext({
+      examSession: {
+        source: "fallback",
+        qualificationVersionId: null,
+        topicId: "topic-1",
+        topicName: "Cell Biology",
+        reason:
+          "No structured past-paper intelligence is available for this topic yet.",
+      },
+    });
+
+    const prompt = await buildSystemPrompt(block, context, []);
+
+    expect(prompt).toContain("## Exam Intelligence");
+    expect(prompt).toContain(
+      "No structured past-paper intelligence is available for this topic yet."
+    );
   });
 });
 

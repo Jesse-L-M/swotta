@@ -20,6 +20,7 @@ import type {
 import {
   analyzePastPaperFixture,
   getPastPaperQualificationOverview,
+  getPastPaperSessionIntelligence,
   getPastPaperTopicIntelligence,
   listPastPaperQuestionIntelligence,
   loadQualificationPastPaperCatalog,
@@ -294,6 +295,68 @@ describe("past-paper intelligence foundation", () => {
     expect(chemistryQuestionList[0]!.signals.map((signal) => signal.code)).toEqual(
       ["balanced_judgement", "justify_overall_judgement"]
     );
+
+    const chemistryBioleachingTopicId = await loadTopicIdByCode(
+      chemistryQualificationVersionId,
+      "4.10.1.4"
+    );
+    const chemistrySessionIntelligence = await getPastPaperSessionIntelligence(
+      db,
+      {
+        topicId: chemistryBioleachingTopicId,
+      }
+    );
+
+    expect(chemistrySessionIntelligence).toEqual(
+      expect.objectContaining({
+        qualificationVersionId: chemistryQualificationVersionId,
+        topicId: chemistryBioleachingTopicId,
+        topicName: "Alternative methods of extracting metals (HT only)",
+        paperCount: 1,
+        questionCount: 1,
+        totalMarks: 6,
+        marks: {
+          min: 6,
+          max: 6,
+          average: 6,
+          distinct: [6],
+        },
+      })
+    );
+    expect(chemistrySessionIntelligence?.commandWords).toEqual([
+      expect.objectContaining({
+        word: "Evaluate",
+        expectedDepth: 4,
+        count: 1,
+        totalMarks: 6,
+      }),
+    ]);
+    expect(chemistrySessionIntelligence?.questionTypes).toEqual([
+      expect.objectContaining({
+        name: "Open response",
+        count: 1,
+        totalMarks: 6,
+      }),
+    ]);
+    expect(chemistrySessionIntelligence?.markSchemeSignals).toEqual([
+      expect.objectContaining({
+        code: "balanced_judgement",
+        count: 1,
+      }),
+    ]);
+    expect(chemistrySessionIntelligence?.examTechniqueSignals).toEqual([
+      expect.objectContaining({
+        code: "justify_overall_judgement",
+        count: 1,
+      }),
+    ]);
+    expect(chemistrySessionIntelligence?.referenceQuestions).toEqual([
+      expect.objectContaining({
+        marksAvailable: 6,
+        commandWord: expect.objectContaining({ word: "Evaluate" }),
+        questionType: expect.objectContaining({ name: "Open response" }),
+      }),
+    ]);
   });
 
   it("fails fast when the narrower input format references unknown qualification records", async () => {

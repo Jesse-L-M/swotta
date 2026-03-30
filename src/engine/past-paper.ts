@@ -226,6 +226,77 @@ export interface PastPaperTopicIntelligence {
   questions: PastPaperQuestionIntelligence[];
 }
 
+export interface PastPaperSessionCommandWordSummary {
+  word: string;
+  definition: string;
+  expectedDepth: number;
+  count: number;
+  totalMarks: number;
+}
+
+export interface PastPaperSessionQuestionTypeSummary {
+  name: string;
+  description: string | null;
+  typicalMarks: number | null;
+  markSchemePattern: string | null;
+  count: number;
+  totalMarks: number;
+}
+
+export interface PastPaperSessionSignalSummary {
+  signalType: PastPaperSignalType;
+  code: string;
+  label: string;
+  note: string;
+  count: number;
+}
+
+export interface PastPaperSessionReferenceQuestion {
+  paperSlug: string;
+  paperTitle: string;
+  series: string;
+  examYear: number;
+  paperCode: string | null;
+  componentCode: string;
+  componentName: string;
+  questionId: string;
+  questionNumber: string;
+  questionOrder: number;
+  locator: string;
+  promptExcerpt: string;
+  marksAvailable: number;
+  commandWord: QualificationReferenceCommandWord | null;
+  questionType: QualificationReferenceQuestionType;
+  markSchemeSignals: PastPaperQuestionSignal[];
+  examTechniqueSignals: PastPaperQuestionSignal[];
+}
+
+export interface PastPaperSessionIntelligence {
+  qualificationVersionId: string;
+  topicId: string;
+  topicName: string | null;
+  paperCount: number;
+  questionCount: number;
+  totalMarks: number;
+  marks: {
+    min: number;
+    max: number;
+    average: number;
+    distinct: number[];
+  };
+  commandWords: PastPaperSessionCommandWordSummary[];
+  questionTypes: PastPaperSessionQuestionTypeSummary[];
+  markSchemeSignals: PastPaperSessionSignalSummary[];
+  examTechniqueSignals: PastPaperSessionSignalSummary[];
+  referenceQuestions: PastPaperSessionReferenceQuestion[];
+}
+
+export interface GetPastPaperSessionIntelligenceOptions {
+  topicId: TopicId | string;
+  qualificationVersionId?: QualificationVersionId | string;
+  referenceQuestionLimit?: number;
+}
+
 const SIGNAL_DEFINITIONS: Record<
   PastPaperSignalType,
   Record<
@@ -930,6 +1001,138 @@ function aggregateByLabel(
   );
 }
 
+function aggregateSessionCommandWords(
+  questions: PastPaperQuestionIntelligence[]
+): PastPaperSessionCommandWordSummary[] {
+  const aggregates = new Map<string, PastPaperSessionCommandWordSummary>();
+
+  for (const question of questions) {
+    if (!question.commandWord) {
+      continue;
+    }
+
+    const key = question.commandWord.word.toLowerCase();
+    const existing = aggregates.get(key) ?? {
+      word: question.commandWord.word,
+      definition: question.commandWord.definition,
+      expectedDepth: question.commandWord.expectedDepth,
+      count: 0,
+      totalMarks: 0,
+    };
+
+    existing.count += 1;
+    existing.totalMarks += question.marksAvailable;
+    aggregates.set(key, existing);
+  }
+
+  return [...aggregates.values()].sort(
+    (left, right) =>
+      right.count - left.count ||
+      right.totalMarks - left.totalMarks ||
+      left.word.localeCompare(right.word)
+  );
+}
+
+function aggregateSessionQuestionTypes(
+  questions: PastPaperQuestionIntelligence[]
+): PastPaperSessionQuestionTypeSummary[] {
+  const aggregates = new Map<string, PastPaperSessionQuestionTypeSummary>();
+
+  for (const question of questions) {
+    const key = question.questionType.name.toLowerCase();
+    const existing = aggregates.get(key) ?? {
+      name: question.questionType.name,
+      description: question.questionType.description,
+      typicalMarks: question.questionType.typicalMarks,
+      markSchemePattern: question.questionType.markSchemePattern,
+      count: 0,
+      totalMarks: 0,
+    };
+
+    existing.count += 1;
+    existing.totalMarks += question.marksAvailable;
+    aggregates.set(key, existing);
+  }
+
+  return [...aggregates.values()].sort(
+    (left, right) =>
+      right.count - left.count ||
+      right.totalMarks - left.totalMarks ||
+      left.name.localeCompare(right.name)
+  );
+}
+
+function aggregateSessionSignals(
+  questions: PastPaperQuestionIntelligence[],
+  signalType: PastPaperSignalType
+): PastPaperSessionSignalSummary[] {
+  const aggregates = new Map<string, PastPaperSessionSignalSummary>();
+
+  for (const question of questions) {
+    for (const signal of question.signals) {
+      if (signal.signalType !== signalType) {
+        continue;
+      }
+
+      const key = `${signal.signalType}:${signal.code}`;
+      const existing = aggregates.get(key) ?? {
+        signalType: signal.signalType,
+        code: signal.code,
+        label: signal.label,
+        note: signal.note,
+        count: 0,
+      };
+
+      existing.count += 1;
+      aggregates.set(key, existing);
+    }
+  }
+
+  return [...aggregates.values()].sort(
+    (left, right) =>
+      right.count - left.count ||
+      left.label.localeCompare(right.label)
+  );
+}
+
+function selectReferenceQuestions(
+  questions: PastPaperQuestionIntelligence[],
+  limit: number
+): PastPaperSessionReferenceQuestion[] {
+  return [...questions]
+    .sort(
+      (left, right) =>
+        right.examYear - left.examYear ||
+        right.marksAvailable - left.marksAvailable ||
+        left.questionOrder - right.questionOrder ||
+        left.questionNumber.localeCompare(right.questionNumber)
+    )
+    .slice(0, limit)
+    .map((question) => ({
+      paperSlug: question.paperSlug,
+      paperTitle: question.paperTitle,
+      series: question.series,
+      examYear: question.examYear,
+      paperCode: question.paperCode,
+      componentCode: question.componentCode,
+      componentName: question.componentName,
+      questionId: question.questionId,
+      questionNumber: question.questionNumber,
+      questionOrder: question.questionOrder,
+      locator: question.locator,
+      promptExcerpt: question.promptExcerpt,
+      marksAvailable: question.marksAvailable,
+      commandWord: question.commandWord,
+      questionType: question.questionType,
+      markSchemeSignals: question.signals.filter(
+        (signal) => signal.signalType === "mark_scheme_pattern"
+      ),
+      examTechniqueSignals: question.signals.filter(
+        (signal) => signal.signalType === "exam_technique"
+      ),
+    }));
+}
+
 export async function listPastPaperQuestionIntelligence(
   db: Database,
   options: ListPastPaperQuestionIntelligenceOptions
@@ -1231,5 +1434,68 @@ export async function getPastPaperTopicIntelligence(
         left.label.localeCompare(right.label)
     ),
     questions,
+  };
+}
+
+export async function getPastPaperSessionIntelligence(
+  db: Database,
+  options: GetPastPaperSessionIntelligenceOptions
+): Promise<PastPaperSessionIntelligence | null> {
+  const qualificationVersionId =
+    options.qualificationVersionId ??
+    (
+      await db
+        .select({ qualificationVersionId: topics.qualificationVersionId })
+        .from(topics)
+        .where(eq(topics.id, options.topicId))
+        .limit(1)
+    )[0]?.qualificationVersionId;
+
+  if (!qualificationVersionId) {
+    return null;
+  }
+
+  const topicIntelligence = await getPastPaperTopicIntelligence(
+    db,
+    qualificationVersionId,
+    options.topicId
+  );
+
+  if (topicIntelligence.questionCount === 0) {
+    return null;
+  }
+
+  const questions = topicIntelligence.questions;
+  const distinctMarks = [...new Set(questions.map((question) => question.marksAvailable))]
+    .sort((left, right) => left - right);
+  const totalMarks = questions.reduce(
+    (sum, question) => sum + question.marksAvailable,
+    0
+  );
+
+  return {
+    qualificationVersionId: topicIntelligence.qualificationVersionId,
+    topicId: topicIntelligence.topicId,
+    topicName: topicIntelligence.topicName,
+    paperCount: new Set(questions.map((question) => question.paperId)).size,
+    questionCount: topicIntelligence.questionCount,
+    totalMarks,
+    marks: {
+      min: Math.min(...distinctMarks),
+      max: Math.max(...distinctMarks),
+      average: Math.round((totalMarks / questions.length) * 10) / 10,
+      distinct: distinctMarks,
+    },
+    commandWords: aggregateSessionCommandWords(questions),
+    questionTypes: aggregateSessionQuestionTypes(questions),
+    markSchemeSignals: aggregateSessionSignals(
+      questions,
+      "mark_scheme_pattern"
+    ),
+    examTechniqueSignals: aggregateSessionSignals(questions, "exam_technique"),
+    referenceQuestions: selectReferenceQuestions(
+      questions,
+      options.referenceQuestionLimit ?? 3
+    ),
   };
 }

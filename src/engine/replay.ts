@@ -12,7 +12,10 @@ import type { LearnerId, SessionId, TopicId, BlockType } from "@/lib/types";
 import { BLOCK_TYPE_LABELS } from "@/lib/labels";
 import { calculateCalibration } from "@/engine/calibration";
 import { structuredLog } from "@/lib/logger";
-import { getPersistedAttemptMisconceptions } from "@/engine/session";
+import {
+  getPersistedAttemptMisconceptions,
+  getPersistedExamSession,
+} from "@/engine/session";
 
 const SHARE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
@@ -316,6 +319,34 @@ export function buildWhatsNext(
   return next;
 }
 
+function buildExamFocusSummary(rawInteraction: unknown): string | null {
+  const examSession = getPersistedExamSession(rawInteraction);
+  if (!examSession || examSession.source !== "past_paper") {
+    return null;
+  }
+
+  const commandWords = examSession.commandWords
+    .slice(0, 2)
+    .map((commandWord) => commandWord.word);
+  const markAllocations = examSession.marks.distinct
+    .map((mark) => `${mark}-mark`)
+    .join(", ");
+  if (commandWords.length === 0) {
+    return `Exam focus: practised real ${markAllocations} patterns from past papers.`;
+  }
+
+  return `Exam focus: ${commandWords.join(", ")} questions with real ${markAllocations} patterns.`;
+}
+
+function buildExamTechniqueNextStep(rawInteraction: unknown): string | null {
+  const examSession = getPersistedExamSession(rawInteraction);
+  if (!examSession || examSession.source !== "past_paper") {
+    return null;
+  }
+
+  return examSession.examTechniqueSignals[0]?.note ?? null;
+}
+
 export function formatRelativeTime(date: Date): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -377,6 +408,7 @@ export async function generateReplaySummary(
   let helpRequested = false;
   let misconceptionsDetected = 0;
   let attemptId: string | null = null;
+  let rawInteraction: unknown = null;
 
   if (session.blockId) {
     const blockRows = await db
@@ -398,6 +430,7 @@ export async function generateReplaySummary(
 
     if (attempt) {
       attemptId = attempt.id;
+      rawInteraction = attempt.rawInteraction;
       score = attempt.score ? Number(attempt.score) : null;
       confidenceBefore = attempt.confidenceBefore
         ? Number(attempt.confidenceBefore)
@@ -478,6 +511,14 @@ export async function generateReplaySummary(
     misconceptions.length,
     session.status
   );
+  const examFocus = buildExamFocusSummary(rawInteraction);
+  if (examFocus) {
+    whatYouCovered.push(examFocus);
+  }
+  const examTechniqueNext = buildExamTechniqueNextStep(rawInteraction);
+  if (examTechniqueNext) {
+    whatsNext.push(`Exam technique focus: ${examTechniqueNext}`);
+  }
 
   return {
     sessionId: session.id,

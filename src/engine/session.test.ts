@@ -113,9 +113,116 @@ function makeChunks(count = 2): RetrievalResult[] {
   }));
 }
 
+function makePastPaperExamSession() {
+  return {
+    source: "past_paper" as const,
+    qualificationVersionId: "qual-1",
+    topicId: "topic-1",
+    topicName: "Cell Biology",
+    paperCount: 2,
+    questionCount: 3,
+    totalMarks: 10,
+    marks: {
+      min: 2,
+      max: 4,
+      average: 3.3,
+      distinct: [2, 4],
+    },
+    commandWords: [
+      {
+        word: "Explain",
+        definition: "Make something clear, giving reasons.",
+        expectedDepth: 3,
+        count: 2,
+        totalMarks: 8,
+      },
+    ],
+    questionTypes: [
+      {
+        name: "Structured",
+        description: "Short structured response",
+        typicalMarks: 4,
+        markSchemePattern: "Point-plus-reason explanation",
+        count: 2,
+        totalMarks: 8,
+      },
+    ],
+    markSchemeSignals: [
+      {
+        signalType: "mark_scheme_pattern" as const,
+        code: "point_plus_reason",
+        label: "Point-plus-reason explanation",
+        note: "Marks reward linked scientific reasoning.",
+        count: 2,
+      },
+    ],
+    examTechniqueSignals: [
+      {
+        signalType: "exam_technique" as const,
+        code: "link_cause_and_effect",
+        label: "Link cause and effect",
+        note: "Build each mark as cause -> process -> outcome.",
+        count: 2,
+      },
+    ],
+    referenceQuestions: [
+      {
+        paperSlug: "paper-1",
+        paperTitle: "AQA GCSE Biology Paper 1",
+        series: "June",
+        examYear: 2025,
+        paperCode: "8461/1H",
+        componentCode: "paper-1",
+        componentName: "Paper 1",
+        questionId: "question-1",
+        questionNumber: "02.3",
+        questionOrder: 3,
+        locator: "02.3",
+        promptExcerpt:
+          "Explain why diffusion happens faster when the concentration gradient is steeper.",
+        marksAvailable: 4,
+        commandWord: {
+          id: "cw-1",
+          word: "Explain",
+          definition: "Make something clear, giving reasons.",
+          expectedDepth: 3,
+        },
+        questionType: {
+          id: "qt-1",
+          name: "Structured",
+          description: "Short structured response",
+          typicalMarks: 4,
+          markSchemePattern: "Point-plus-reason explanation",
+        },
+        markSchemeSignals: [
+          {
+            signalType: "mark_scheme_pattern" as const,
+            code: "point_plus_reason",
+            label: "Point-plus-reason explanation",
+            note: "Marks reward linked scientific reasoning.",
+          },
+        ],
+        examTechniqueSignals: [
+          {
+            signalType: "exam_technique" as const,
+            code: "link_cause_and_effect",
+            label: "Link cause and effect",
+            note: "Build each mark as cause -> process -> outcome.",
+          },
+        ],
+      },
+    ],
+  };
+}
+
 async function createBlockInDb(
   learnerId: string,
-  topicId: string
+  topicId: string,
+  overrides?: {
+    blockType?: StudyBlock["blockType"];
+    durationMinutes?: number;
+    priority?: number;
+  }
 ): Promise<string> {
   const [plan] = await db
     .insert(studyPlans)
@@ -134,9 +241,9 @@ async function createBlockInDb(
       planId: plan.id,
       learnerId,
       topicId,
-      blockType: "retrieval_drill",
-      durationMinutes: 15,
-      priority: 3,
+      blockType: overrides?.blockType ?? "retrieval_drill",
+      durationMinutes: overrides?.durationMinutes ?? 15,
+      priority: overrides?.priority ?? 3,
       status: "pending",
     })
     .returning();
@@ -328,6 +435,85 @@ describe("startSession", () => {
     expect(result.systemPrompt).toContain("notes-0.pdf");
     expect(result.systemPrompt).toContain("notes-1.pdf");
     expect(result.systemPrompt).toContain("Source content chunk 0");
+  });
+
+  it("injects past-paper intelligence into exam-style sessions when available", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qual = await createTestQualification();
+    const topicId = qual.topics[1].id;
+    const blockId = await createBlockInDb(learner.id, topicId, {
+      blockType: "timed_problems",
+    });
+
+    const mockAnthropicClient = createMockAnthropicClient(["Hello!"]);
+    const loadSessionExamIntelligence = vi
+      .fn()
+      .mockResolvedValue(makePastPaperExamSession());
+
+    configureSessionRunner({
+      db,
+      anthropic: mockAnthropicClient as unknown as SessionRunnerDeps["anthropic"],
+      retrieveChunks: createMockRetrieveChunks(),
+      loadSessionExamIntelligence,
+    });
+
+    const block = makeBlock(learner.id, topicId, blockId, {
+      blockType: "timed_problems",
+    });
+    const result = await startSession(block, makeLearnerContext());
+
+    expect(loadSessionExamIntelligence).toHaveBeenCalledWith(db, block);
+    expect(result.systemPrompt).toContain("## Exam Intelligence");
+    expect(result.systemPrompt).toContain("Point-plus-reason explanation");
+    expect(result.systemPrompt).toContain(
+      "Explain why diffusion happens faster when the concentration gradient is steeper."
+    );
+
+    const attempts = await db
+      .select()
+      .from(blockAttempts)
+      .where(eq(blockAttempts.blockId, blockId));
+
+    expect(attempts[0].rawInteraction).toEqual(
+      expect.objectContaining({
+        examSession: expect.objectContaining({
+          source: "past_paper",
+          questionCount: 3,
+          totalMarks: 10,
+        }),
+      })
+    );
+  });
+
+  it("falls back cleanly when exam intelligence is unavailable for exam-style sessions", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qual = await createTestQualification();
+    const topicId = qual.topics[1].id;
+    const blockId = await createBlockInDb(learner.id, topicId, {
+      blockType: "essay_planning",
+    });
+
+    const mockAnthropicClient = createMockAnthropicClient(["Hello!"]);
+    const loadSessionExamIntelligence = vi.fn().mockResolvedValue(null);
+
+    configureSessionRunner({
+      db,
+      anthropic: mockAnthropicClient as unknown as SessionRunnerDeps["anthropic"],
+      retrieveChunks: createMockRetrieveChunks(),
+      loadSessionExamIntelligence,
+    });
+
+    const block = makeBlock(learner.id, topicId, blockId, {
+      blockType: "essay_planning",
+    });
+    const result = await startSession(block, makeLearnerContext());
+
+    expect(result.systemPrompt).toContain("## Exam Intelligence");
+    expect(result.systemPrompt).toContain(
+      "No structured past-paper intelligence is available for this topic yet."
+    );
   });
 
   it("works with different block types", async () => {
