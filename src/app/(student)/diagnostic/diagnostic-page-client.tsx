@@ -1,7 +1,7 @@
 "use client";
 
-import { Suspense, useState, useRef, useEffect, useCallback } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   IntroScreen,
   ChatHeader,
@@ -16,52 +16,96 @@ import type {
   DiagnosticResult,
   ChatMessage,
   DiagnosticPhase,
+  DiagnosticContinueStep,
+  DiagnosticIntroMode,
 } from "@/components/diagnostic";
 
-function DiagnosticPageContent() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const qualificationVersionId = searchParams.get("qualificationVersionId");
+interface DiagnosticPageClientProps {
+  qualificationVersionId: string;
+  qualificationLabel: string;
+  remainingPendingCount: number;
+}
 
-  const [phase, setPhase] = useState<DiagnosticPhase>("intro");
-  const [qualificationName, setQualificationName] = useState("");
-  const [topics, setTopics] = useState<DiagnosticTopic[]>([]);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [pendingMessage, setPendingMessage] = useState<ChatMessage | null>(null);
-  const [progress, setProgress] = useState<DiagnosticProgress>({
+type DiagnosticApiResponse = {
+  data?: Record<string, unknown>;
+  error?: {
+    code?: string;
+    message: string;
+  };
+};
+
+class DiagnosticApiError extends Error {
+  code?: string;
+  status: number;
+
+  constructor(message: string, options: { code?: string; status: number }) {
+    super(message);
+    this.name = "DiagnosticApiError";
+    this.code = options.code;
+    this.status = options.status;
+  }
+}
+
+function buildEmptyProgress(): DiagnosticProgress {
+  return {
     explored: [],
     current: null,
     total: 0,
     isComplete: false,
-  });
+  };
+}
+
+function getContinueStep(nextPath: string): DiagnosticContinueStep {
+  return nextPath.startsWith("/diagnostic?")
+    ? "diagnostic"
+    : "dashboard";
+}
+
+function DiagnosticPageContent({
+  qualificationVersionId,
+  qualificationLabel,
+  remainingPendingCount,
+}: DiagnosticPageClientProps) {
+  const router = useRouter();
+
+  const [phase, setPhase] = useState<DiagnosticPhase>("intro");
+  const [topics, setTopics] = useState<DiagnosticTopic[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [pendingMessage, setPendingMessage] = useState<ChatMessage | null>(null);
+  const [progress, setProgress] = useState<DiagnosticProgress>(
+    buildEmptyProgress
+  );
   const [results, setResults] = useState<DiagnosticResult[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isComplete, setIsComplete] = useState(false);
+  const [introMode, setIntroMode] = useState<DiagnosticIntroMode>("start");
   const [continuePath, setContinuePath] = useState("/dashboard");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const resetConversation = useCallback(
+    (options: { error?: string | null; introMode?: DiagnosticIntroMode } = {}) => {
+      setPhase("intro");
+      setTopics([]);
+      setMessages([]);
+      setPendingMessage(null);
+      setProgress(buildEmptyProgress());
+      setResults([]);
+      setInput("");
+      setLoading(false);
+      setError(options.error ?? null);
+      setIsComplete(false);
+      setIntroMode(options.introMode ?? "start");
+      setContinuePath("/dashboard");
+    },
+    []
+  );
+
   useEffect(() => {
-    setPhase("intro");
-    setQualificationName("");
-    setTopics([]);
-    setMessages([]);
-    setPendingMessage(null);
-    setProgress({
-      explored: [],
-      current: null,
-      total: 0,
-      isComplete: false,
-    });
-    setResults([]);
-    setInput("");
-    setLoading(false);
-    setError(null);
-    setIsComplete(false);
-    setContinuePath("/dashboard");
-  }, [qualificationVersionId]);
+    resetConversation();
+  }, [qualificationVersionId, resetConversation]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -74,13 +118,14 @@ function DiagnosticPageContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const json = (await res.json()) as {
-        data?: Record<string, unknown>;
-        error?: { message: string };
-      };
+      const json = (await res.json()) as DiagnosticApiResponse;
       if (!res.ok) {
-        throw new Error(
-          json.error?.message ?? `Request failed (${res.status})`
+        throw new DiagnosticApiError(
+          json.error?.message ?? `Request failed (${res.status})`,
+          {
+            code: json.error?.code,
+            status: res.status,
+          }
         );
       }
       return json.data;
@@ -88,8 +133,11 @@ function DiagnosticPageContent() {
     []
   );
 
+  const routeToFlowFallback = useCallback(() => {
+    router.replace("/dashboard");
+  }, [router]);
+
   async function handleStart() {
-    if (!qualificationVersionId) return;
     setLoading(true);
     setError(null);
     try {
@@ -98,11 +146,11 @@ function DiagnosticPageContent() {
         qualificationVersionId,
       });
       if (!data) throw new Error("No data returned");
-      setQualificationName(data.qualificationName as string);
       setTopics(data.topics as DiagnosticTopic[]);
       setProgress(data.progress as DiagnosticProgress);
       setPendingMessage(null);
       setIsComplete(false);
+      setIntroMode("start");
       setContinuePath("/dashboard");
       setMessages([
         { role: "user", content: "I'm ready to start the diagnostic." },
@@ -110,6 +158,15 @@ function DiagnosticPageContent() {
       ]);
       setPhase("chat");
     } catch (err: unknown) {
+      if (err instanceof DiagnosticApiError) {
+        if (
+          err.code === "DIAGNOSTIC_ALREADY_RESOLVED" ||
+          err.code === "NOT_ENROLLED"
+        ) {
+          routeToFlowFallback();
+          return;
+        }
+      }
       setError(
         err instanceof Error ? err.message : "Failed to start diagnostic"
       );
@@ -147,6 +204,22 @@ function DiagnosticPageContent() {
     } catch (err: unknown) {
       setPendingMessage(null);
       setInput(text);
+      if (err instanceof DiagnosticApiError) {
+        if (err.code === "INVALID_DIAGNOSTIC_STATE") {
+          resetConversation({
+            error: err.message,
+            introMode: "restart",
+          });
+          return;
+        }
+        if (
+          err.code === "DIAGNOSTIC_ALREADY_RESOLVED" ||
+          err.code === "NOT_ENROLLED"
+        ) {
+          routeToFlowFallback();
+          return;
+        }
+      }
       setError(
         err instanceof Error ? err.message : "Failed to send message"
       );
@@ -169,6 +242,22 @@ function DiagnosticPageContent() {
       setContinuePath((data.nextPath as string | undefined) ?? "/dashboard");
       setPhase("complete");
     } catch (err: unknown) {
+      if (err instanceof DiagnosticApiError) {
+        if (err.code === "INVALID_DIAGNOSTIC_STATE") {
+          resetConversation({
+            error: err.message,
+            introMode: "restart",
+          });
+          return;
+        }
+        if (
+          err.code === "DIAGNOSTIC_ALREADY_RESOLVED" ||
+          err.code === "NOT_ENROLLED"
+        ) {
+          routeToFlowFallback();
+          return;
+        }
+      }
       setError(
         err instanceof Error ? err.message : "Failed to analyse responses"
       );
@@ -177,7 +266,6 @@ function DiagnosticPageContent() {
   }
 
   async function handleSkip() {
-    if (!qualificationVersionId) return;
     setLoading(true);
     setError(null);
     try {
@@ -187,6 +275,15 @@ function DiagnosticPageContent() {
       });
       router.push((data?.nextPath as string | undefined) ?? "/dashboard");
     } catch (err: unknown) {
+      if (err instanceof DiagnosticApiError) {
+        if (
+          err.code === "DIAGNOSTIC_ALREADY_RESOLVED" ||
+          err.code === "NOT_ENROLLED"
+        ) {
+          routeToFlowFallback();
+          return;
+        }
+      }
       setError(
         err instanceof Error ? err.message : "Failed to skip diagnostic"
       );
@@ -195,19 +292,12 @@ function DiagnosticPageContent() {
     }
   }
 
-  if (!qualificationVersionId) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <p className="text-[#5C5950]">
-          No qualification specified. Please return to your dashboard.
-        </p>
-      </div>
-    );
-  }
-
   if (phase === "intro") {
     return (
       <IntroScreen
+        qualificationLabel={qualificationLabel}
+        remainingPendingCount={remainingPendingCount}
+        mode={introMode}
         onStart={handleStart}
         onSkip={handleSkip}
         loading={loading}
@@ -224,7 +314,9 @@ function DiagnosticPageContent() {
     return (
       <MasteryReveal
         results={results}
-        qualificationName={qualificationName}
+        qualificationLabel={qualificationLabel}
+        remainingPendingCount={remainingPendingCount}
+        nextStep={getContinueStep(continuePath)}
         onContinue={() => router.push(continuePath)}
       />
     );
@@ -233,9 +325,10 @@ function DiagnosticPageContent() {
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
       <ChatHeader
-        qualificationName={qualificationName}
+        qualificationLabel={qualificationLabel}
         progress={progress}
         topicCount={topics.length}
+        remainingPendingCount={remainingPendingCount}
       />
 
       <div className="flex-1 overflow-y-auto px-4 py-6">
@@ -287,10 +380,6 @@ function DiagnosticPageContent() {
   );
 }
 
-export default function DiagnosticPageClient() {
-  return (
-    <Suspense fallback={<div className="min-h-[60vh]" />}>
-      <DiagnosticPageContent />
-    </Suspense>
-  );
+export default function DiagnosticPageClient(props: DiagnosticPageClientProps) {
+  return <DiagnosticPageContent {...props} />;
 }

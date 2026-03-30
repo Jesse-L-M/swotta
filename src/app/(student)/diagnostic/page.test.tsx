@@ -3,16 +3,13 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import DiagnosticPageClient from "./diagnostic-page-client";
 
-const { pushMock, searchParamsState } = vi.hoisted(() => ({
+const { pushMock, replaceMock } = vi.hoisted(() => ({
   pushMock: vi.fn(),
-  searchParamsState: {
-    value: "qualificationVersionId=11111111-1111-1111-1111-111111111111",
-  },
+  replaceMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: pushMock }),
-  useSearchParams: () => new URLSearchParams(searchParamsState.value),
+  useRouter: () => ({ push: pushMock, replace: replaceMock }),
 }));
 
 describe("DiagnosticPage", () => {
@@ -21,8 +18,7 @@ describe("DiagnosticPage", () => {
 
   beforeEach(() => {
     pushMock.mockReset();
-    searchParamsState.value =
-      "qualificationVersionId=11111111-1111-1111-1111-111111111111";
+    replaceMock.mockReset();
     Object.defineProperty(Element.prototype, "scrollIntoView", {
       configurable: true,
       value: vi.fn(),
@@ -77,7 +73,7 @@ describe("DiagnosticPage", () => {
 
     global.fetch = fetchMock as typeof fetch;
 
-    render(<DiagnosticPageClient />);
+    render(<DiagnosticPageClient {...buildProps()} />);
 
     fireEvent.click(screen.getByTestId("start-btn"));
     await waitFor(() => expect(screen.getByTestId("chat-input")).toBeDefined());
@@ -160,7 +156,9 @@ describe("DiagnosticPage", () => {
 
     global.fetch = fetchMock as typeof fetch;
 
-    const { unmount } = render(<DiagnosticPageClient />);
+    const { unmount } = render(
+      <DiagnosticPageClient {...buildProps({ remainingPendingCount: 1 })} />
+    );
 
     fireEvent.click(screen.getByTestId("skip-btn"));
 
@@ -173,7 +171,9 @@ describe("DiagnosticPage", () => {
     unmount();
     pushMock.mockReset();
 
-    render(<DiagnosticPageClient />);
+    render(
+      <DiagnosticPageClient {...buildProps({ remainingPendingCount: 0 })} />
+    );
 
     fireEvent.click(screen.getByTestId("start-btn"));
     await waitFor(() => expect(screen.getByTestId("chat-input")).toBeDefined());
@@ -192,12 +192,96 @@ describe("DiagnosticPage", () => {
     await waitFor(() =>
       expect(screen.getByTestId("continue-btn")).toBeDefined()
     );
+    expect(screen.getByTestId("continue-btn").textContent).toBe(
+      "Continue to my dashboard"
+    );
     fireEvent.click(screen.getByTestId("continue-btn"));
 
     expect(pushMock).toHaveBeenCalledWith("/dashboard");
   });
 
-  it("resets back to the intro state when the qualification in the URL changes", async () => {
+  it("returns to a restart intro when the diagnostic session expires", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        buildResponse({
+          data: {
+            systemPrompt: "server prompt",
+            qualificationName: "GCSE Test Subject",
+            topics: [
+              { id: "topic-1", name: "Unit 1", code: "1" },
+              { id: "topic-2", name: "Unit 2", code: "2" },
+            ],
+            progress: {
+              explored: [],
+              current: "Unit 1",
+              total: 2,
+              isComplete: false,
+            },
+            reply: "Opening question",
+          },
+        })
+      )
+      .mockResolvedValueOnce(
+        buildResponse(
+          {
+            error: {
+              code: "INVALID_DIAGNOSTIC_STATE",
+              message:
+                "Diagnostic session is invalid or has expired. Please restart the diagnostic.",
+            },
+          },
+          { ok: false, status: 409 }
+        )
+      );
+
+    global.fetch = fetchMock as typeof fetch;
+
+    render(<DiagnosticPageClient {...buildProps()} />);
+
+    fireEvent.click(screen.getByTestId("start-btn"));
+    await waitFor(() => expect(screen.getByTestId("chat-input")).toBeDefined());
+
+    fireEvent.change(screen.getByTestId("chat-input"), {
+      target: { value: "I know quite a bit about this." },
+    });
+    fireEvent.submit(screen.getByTestId("chat-input-form"));
+
+    await waitFor(() =>
+      expect(screen.getByText(/restart your diagnostic/i)).toBeDefined()
+    );
+
+    expect(screen.getByTestId("start-btn").textContent).toBe(
+      "Restart diagnostic"
+    );
+    expect(screen.getByTestId("intro-error").textContent).toContain(
+      "Please restart the diagnostic"
+    );
+  });
+
+  it("routes resolved diagnostics back through the dashboard fallback", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      buildResponse(
+        {
+          error: {
+            code: "DIAGNOSTIC_ALREADY_RESOLVED",
+            message: "Diagnostic has already been resolved for this qualification.",
+          },
+        },
+        { ok: false, status: 409 }
+      )
+    );
+
+    global.fetch = fetchMock as typeof fetch;
+
+    render(<DiagnosticPageClient {...buildProps()} />);
+
+    fireEvent.click(screen.getByTestId("start-btn"));
+
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/dashboard"));
+  });
+
+  it("resets back to the intro state when the qualification prop changes", async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(
       buildResponse({
         data: {
@@ -220,19 +304,44 @@ describe("DiagnosticPage", () => {
 
     global.fetch = fetchMock as typeof fetch;
 
-    const view = render(<DiagnosticPageClient />);
+    const view = render(<DiagnosticPageClient {...buildProps()} />);
 
     fireEvent.click(screen.getByTestId("start-btn"));
     await waitFor(() => expect(screen.getByTestId("chat-input")).toBeDefined());
 
-    searchParamsState.value =
-      "qualificationVersionId=22222222-2222-2222-2222-222222222222";
-    view.rerender(<DiagnosticPageClient />);
+    view.rerender(
+      <DiagnosticPageClient
+        {...buildProps({
+          qualificationVersionId: "22222222-2222-2222-2222-222222222222",
+          qualificationLabel: "GCSE Chemistry (OCR)",
+        })}
+      />
+    );
 
     await waitFor(() => expect(screen.getByTestId("start-btn")).toBeDefined());
     expect(screen.queryByTestId("chat-input")).toBeNull();
+    expect(screen.getByTestId("qualification-label").textContent).toBe(
+      "GCSE Chemistry (OCR)"
+    );
   });
 });
+
+function buildProps(
+  overrides: Partial<{
+    qualificationVersionId: string;
+    qualificationLabel: string;
+    remainingPendingCount: number;
+  }> = {}
+) {
+  return {
+    qualificationVersionId:
+      overrides.qualificationVersionId ??
+      "11111111-1111-1111-1111-111111111111",
+    qualificationLabel:
+      overrides.qualificationLabel ?? "GCSE Test Subject (AQA)",
+    remainingPendingCount: overrides.remainingPendingCount ?? 0,
+  };
+}
 
 function buildResponse(
   body: Record<string, unknown>,

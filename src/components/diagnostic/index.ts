@@ -11,4 +11,6 @@ export type {
   DiagnosticResult,
   ChatMessage,
   DiagnosticPhase,
+  DiagnosticIntroMode,
+  DiagnosticContinueStep,
 } from "./types";

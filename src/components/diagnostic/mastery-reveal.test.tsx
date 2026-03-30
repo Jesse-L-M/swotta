@@ -20,7 +20,9 @@ describe("MasteryReveal", () => {
 
   const defaultProps = {
     results,
-    qualificationName: "GCSE Biology",
+    qualificationLabel: "GCSE Biology (AQA)",
+    remainingPendingCount: 0,
+    nextStep: "dashboard" as const,
     onContinue: vi.fn(),
   };
 
@@ -34,7 +36,7 @@ describe("MasteryReveal", () => {
   it("renders qualification name in subtitle", () => {
     render(<MasteryReveal {...defaultProps} />);
     expect(
-      screen.getByText(/Here's where you stand in GCSE Biology/)
+      screen.getByText(/Here's where you stand in GCSE Biology \(AQA\)/)
     ).toBeDefined();
   });
 
@@ -91,7 +93,9 @@ describe("MasteryReveal", () => {
     render(
       <MasteryReveal
         results={onlyStrong}
-        qualificationName="Test"
+        qualificationLabel="Test (AQA)"
+        remainingPendingCount={0}
+        nextStep="dashboard"
         onContinue={vi.fn()}
       />
     );
@@ -105,7 +109,7 @@ describe("MasteryReveal", () => {
     render(<MasteryReveal {...defaultProps} />);
     expect(screen.getByTestId("plan-transition")).toBeDefined();
     expect(
-      screen.getByText(/your personalised plan/)
+      screen.getByText(/What happens next/)
     ).toBeDefined();
   });
 
@@ -113,7 +117,7 @@ describe("MasteryReveal", () => {
     render(<MasteryReveal {...defaultProps} />);
     expect(screen.getByTestId("continue-btn")).toBeDefined();
     expect(screen.getByTestId("continue-btn").textContent).toBe(
-      "Go to my dashboard"
+      "Continue to my dashboard"
     );
   });
 
@@ -144,7 +148,9 @@ describe("MasteryReveal", () => {
     render(
       <MasteryReveal
         results={[]}
-        qualificationName="Test"
+        qualificationLabel="Test (AQA)"
+        remainingPendingCount={0}
+        nextStep="dashboard"
         onContinue={vi.fn()}
       />
     );
@@ -161,7 +167,9 @@ describe("MasteryReveal", () => {
     render(
       <MasteryReveal
         results={sameScore}
-        qualificationName="Test"
+        qualificationLabel="Test (AQA)"
+        remainingPendingCount={0}
+        nextStep="dashboard"
         onContinue={vi.fn()}
       />
     );
@@ -189,5 +197,42 @@ describe("MasteryReveal", () => {
     const reveal = screen.getByTestId("mastery-reveal");
     const header = reveal.querySelector(".bg-\\[\\#D6EBE7\\]");
     expect(header).not.toBeNull();
+  });
+
+  it("renders the learning summary cards", () => {
+    render(<MasteryReveal {...defaultProps} />);
+    expect(screen.getByTestId("learning-summary").textContent).toContain(
+      "What Swotta learned"
+    );
+    expect(screen.getByTestId("learning-summary").textContent).toContain("2");
+  });
+
+  it("switches the final CTA when another diagnostic remains", () => {
+    render(
+      <MasteryReveal
+        {...defaultProps}
+        remainingPendingCount={1}
+        nextStep="diagnostic"
+      />
+    );
+    expect(
+      screen.getByText(/One more diagnostic before your dashboard/)
+    ).toBeDefined();
+    expect(screen.getByTestId("continue-btn").textContent).toBe(
+      "Continue to the next diagnostic"
+    );
+  });
+
+  it("uses the exact remaining count when multiple diagnostics are still queued", () => {
+    render(
+      <MasteryReveal
+        {...defaultProps}
+        remainingPendingCount={3}
+        nextStep="diagnostic"
+      />
+    );
+    expect(
+      screen.getByText(/3 more diagnostics before your dashboard/)
+    ).toBeDefined();
   });
 });

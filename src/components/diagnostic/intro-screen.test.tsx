@@ -5,6 +5,9 @@ import { IntroScreen } from "./intro-screen";
 
 describe("IntroScreen", () => {
   const defaultProps = {
+    qualificationLabel: "GCSE Biology (AQA)",
+    remainingPendingCount: 0,
+    mode: "start" as const,
     onStart: vi.fn(),
     onSkip: vi.fn(),
     loading: false,
@@ -23,6 +26,13 @@ describe("IntroScreen", () => {
     expect(
       screen.getByText(/Before we build your study plan/)
     ).toBeDefined();
+  });
+
+  it("renders the qualification label", () => {
+    render(<IntroScreen {...defaultProps} />);
+    expect(screen.getByTestId("qualification-label").textContent).toBe(
+      "GCSE Biology (AQA)"
+    );
   });
 
   it("renders start button", () => {
@@ -44,6 +54,22 @@ describe("IntroScreen", () => {
     expect(screen.getByTestId("skip-explanation")).toBeDefined();
     expect(screen.getByTestId("skip-explanation").textContent).toContain(
       "all topics start at zero mastery"
+    );
+  });
+
+  it("explains when the dashboard unlocks immediately after this diagnostic", () => {
+    render(<IntroScreen {...defaultProps} />);
+    expect(screen.getByTestId("diagnostic-flow-note").textContent).toContain(
+      "dashboard will be ready"
+    );
+  });
+
+  it("explains when more diagnostics remain", () => {
+    render(
+      <IntroScreen {...defaultProps} remainingPendingCount={2} />
+    );
+    expect(screen.getByTestId("diagnostic-flow-note").textContent).toContain(
+      "2 more diagnostics"
     );
   });
 
@@ -89,6 +115,14 @@ describe("IntroScreen", () => {
   it("does not render error element when error is null", () => {
     render(<IntroScreen {...defaultProps} error={null} />);
     expect(screen.queryByTestId("intro-error")).toBeNull();
+  });
+
+  it("switches to restart copy when recovering an expired diagnostic", () => {
+    render(<IntroScreen {...defaultProps} mode="restart" />);
+    expect(screen.getByText(/restart your diagnostic/i)).toBeDefined();
+    expect(screen.getByTestId("start-btn").textContent).toBe(
+      "Restart diagnostic"
+    );
   });
 
   it("has the correct data-testid on the root", () => {

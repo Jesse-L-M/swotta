@@ -24,3 +24,5 @@ export interface ChatMessage {
 }
 
 export type DiagnosticPhase = "intro" | "chat" | "analysing" | "complete";
+export type DiagnosticIntroMode = "start" | "restart";
+export type DiagnosticContinueStep = "dashboard" | "diagnostic";
