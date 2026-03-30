@@ -30,6 +30,10 @@ import { sendEmail as defaultSendEmail, type EmailOptions, type EmailResult } fr
 import { renderWeeklyReportEmail } from "@/email/templates/weekly-report";
 import { detectPatterns, type BehaviourReport } from "@/engine/behaviour";
 import { calculateCalibration, type CalibrationResult } from "@/engine/calibration";
+import {
+  findRecentMisconceptionClusters,
+  type MisconceptionRootCauseCluster,
+} from "@/engine/misconception-clustering";
 import { getTechniqueMastery, type TechniqueMastery } from "@/engine/technique";
 import { getExamPhase, type ExamPhase, type ExamPhaseName, calculateDaysToExam } from "@/engine/proximity";
 
@@ -376,39 +380,73 @@ export async function detectFlags(
   }
 
   // --- 4. Repeated misconception clusters ---
-  const misconceptionClusters = await database
-    .select({
-      topicId: misconceptionEvents.topicId,
-      topicName: topics.name,
-      count: sql<number>`count(*)::int`.as("count"),
-    })
-    .from(misconceptionEvents)
-    .innerJoin(topics, eq(misconceptionEvents.topicId, topics.id))
-    .where(
-      and(
-        eq(misconceptionEvents.learnerId, learnerId),
-        gte(misconceptionEvents.createdAt, lookbackDate),
-        eq(misconceptionEvents.resolved, false),
-      ),
-    )
-    .groupBy(misconceptionEvents.topicId, topics.name)
-    .having(sql`count(*) >= 3`);
+  const crossTopicClusters = await findRecentMisconceptionClusters(
+    database,
+    learnerId,
+    {
+      lookbackDays,
+      minEvents: 2,
+      minTopics: 2,
+      now,
+    },
+  );
+  const actionableRootCauseClusters = crossTopicClusters.filter(
+    (cluster) => cluster.signal.totalEvents >= 3,
+  );
 
-  if (misconceptionClusters.length > 0) {
-    const severity: FlagSeverity = misconceptionClusters.some((c) => c.count >= 5) ? "high" : "medium";
-    const details = misconceptionClusters.map((c) => `${c.topicName} (${c.count}x)`);
+  if (actionableRootCauseClusters.length > 0) {
+    const severity: FlagSeverity = actionableRootCauseClusters.some(
+      (cluster) => cluster.signal.level === "high",
+    )
+      ? "high"
+      : "medium";
+    const details = actionableRootCauseClusters.map((cluster) => {
+      const topicNames = cluster.memberTopics.map((topic) => topic.topicName);
+      return `${cluster.rootCauseLabel} (${topicNames.join(", ")}; ${cluster.signal.totalEvents}x)`;
+    });
     flags.push({
       type: "distress",
-      description: `Repeated misconceptions detected: ${details.join(", ")}.`,
+      description: `Repeated root-cause misconceptions detected across topics: ${details.join("; ")}.`,
       severity,
       evidence: {
-        clusters: misconceptionClusters.map((c) => ({
-          topicId: c.topicId,
-          topicName: c.topicName,
-          count: c.count,
-        })),
+        clusters: actionableRootCauseClusters,
       },
     });
+  } else {
+    const misconceptionClusters = await database
+      .select({
+        topicId: misconceptionEvents.topicId,
+        topicName: topics.name,
+        count: sql<number>`count(*)::int`.as("count"),
+      })
+      .from(misconceptionEvents)
+      .innerJoin(topics, eq(misconceptionEvents.topicId, topics.id))
+      .where(
+        and(
+          eq(misconceptionEvents.learnerId, learnerId),
+          gte(misconceptionEvents.createdAt, lookbackDate),
+          eq(misconceptionEvents.resolved, false),
+        ),
+      )
+      .groupBy(misconceptionEvents.topicId, topics.name)
+      .having(sql`count(*) >= 3`);
+
+    if (misconceptionClusters.length > 0) {
+      const severity: FlagSeverity = misconceptionClusters.some((c) => c.count >= 5) ? "high" : "medium";
+      const details = misconceptionClusters.map((c) => `${c.topicName} (${c.count}x)`);
+      flags.push({
+        type: "distress",
+        description: `Repeated misconceptions detected: ${details.join(", ")}.`,
+        severity,
+        evidence: {
+          clusters: misconceptionClusters.map((c) => ({
+            topicId: c.topicId,
+            topicName: c.topicName,
+            count: c.count,
+          })),
+        },
+      });
+    }
   }
 
   return flags;
@@ -826,6 +864,7 @@ export interface ReportEnrichment {
   behaviour: BehaviourReport | null;
   calibration: CalibrationResult | null;
   misconceptionNarratives: MisconceptionNarrative[];
+  misconceptionClusters?: MisconceptionRootCauseCluster[];
   techniqueMastery: TechniqueMastery[];
   examPhase: ExamPhaseContext | null;
   suggestions: ActionableSuggestion[];
@@ -1141,7 +1180,13 @@ async function gatherEnrichment(
     getExamPhaseFn,
   } = deps;
 
-  const [behaviourResult, calibrationResult, techniqueResult, misconceptionNarratives] =
+  const [
+    behaviourResult,
+    calibrationResult,
+    techniqueResult,
+    misconceptionNarratives,
+    misconceptionClusters,
+  ] =
     await Promise.all([
       detectPatternsFn
         ? detectPatternsFn(database, learnerId).catch((err: unknown) => {
@@ -1162,6 +1207,18 @@ async function gatherEnrichment(
           })
         : Promise.resolve([]),
       buildMisconceptionNarratives(database, learnerId),
+      findRecentMisconceptionClusters(database, learnerId, {
+        lookbackDays: 30,
+        minEvents: 2,
+        minTopics: 2,
+      }).catch((err: unknown) => {
+        structuredLog("enrichment_engine_failed", {
+          engine: "findRecentMisconceptionClusters",
+          learnerId,
+          err: String(err),
+        });
+        return [] as MisconceptionRootCauseCluster[];
+      }),
     ]);
 
   let examPhase: ExamPhaseContext | null = null;
@@ -1181,6 +1238,7 @@ async function gatherEnrichment(
     behaviour: behaviourResult,
     calibration: calibrationResult,
     misconceptionNarratives,
+    misconceptionClusters,
     techniqueMastery: techniqueResult,
     examPhase,
     suggestions,
@@ -1419,6 +1477,7 @@ export function mapEnrichmentToEmailProps(
   _learnerName: string,
 ): Record<string, unknown> {
   const props: Record<string, unknown> = {};
+  const misconceptionClusters = enrichment.misconceptionClusters ?? [];
 
   if (enrichment.behaviour) {
     props.behaviourInsights = {
@@ -1453,6 +1512,16 @@ export function mapEnrichmentToEmailProps(
     props.misconceptionNarratives = enrichment.misconceptionNarratives.map((m) => ({
       narrative: m.narrative,
       resolved: m.resolved,
+    }));
+  }
+
+  if (misconceptionClusters.length > 0) {
+    props.misconceptionClusters = misconceptionClusters.map((cluster) => ({
+      rootCauseLabel: cluster.rootCauseLabel,
+      explanation: cluster.explanation,
+      topicNames: cluster.memberTopics.map((topic) => topic.topicName),
+      totalEvents: cluster.signal.totalEvents,
+      signalLevel: cluster.signal.level,
     }));
   }
 
@@ -1501,6 +1570,7 @@ function buildEnhancedReportSummaryPrompt(input: EnhancedReportSummaryInput): st
     .map((m) => `${m.topicName}: ${Math.round(m.delta * 100)}%`);
 
   const { enrichment } = input;
+  const misconceptionClusters = enrichment.misconceptionClusters ?? [];
 
   let behaviourSection = "No behavioural data available.";
   if (enrichment.behaviour) {
@@ -1530,11 +1600,24 @@ function buildEnhancedReportSummaryPrompt(input: EnhancedReportSummaryInput): st
   }
 
   let misconceptionSection = "No misconceptions tracked.";
-  if (enrichment.misconceptionNarratives.length > 0) {
-    misconceptionSection = enrichment.misconceptionNarratives
-      .slice(0, 5)
-      .map((m) => `- ${m.narrative}`)
-      .join("\n");
+  if (misconceptionClusters.length > 0 || enrichment.misconceptionNarratives.length > 0) {
+    const parts: string[] = [];
+    if (misconceptionClusters.length > 0) {
+      parts.push("Cross-topic clusters:");
+      for (const cluster of misconceptionClusters.slice(0, 3)) {
+        const topicNames = cluster.memberTopics.map((topic) => topic.topicName).join(", ");
+        parts.push(
+          `- ${cluster.rootCauseLabel} (${cluster.signal.totalEvents} events across ${cluster.signal.distinctTopics} topics: ${topicNames})`,
+        );
+      }
+    }
+    if (enrichment.misconceptionNarratives.length > 0) {
+      parts.push("Topic narratives:");
+      for (const narrative of enrichment.misconceptionNarratives.slice(0, 5)) {
+        parts.push(`- ${narrative.narrative}`);
+      }
+    }
+    misconceptionSection = parts.join("\n");
   }
 
   let techniqueSection = "No technique data available.";

@@ -576,20 +576,28 @@ describe("detectFlags", () => {
     expect(distress).toBeUndefined();
   });
 
-  it("detects repeated misconception clusters", async () => {
+  it("detects repeated root-cause misconception clusters across topics", async () => {
     const org = await createTestOrg();
     const learner = await createTestLearner(org.id);
     const qual = await createTestQualification();
-    const topic = qual.topics[1];
+    const firstTopic = qual.topics[1];
+    const secondTopic = qual.topics[2];
 
-    // 3 unresolved misconceptions on the same topic in the lookback period
-    for (let i = 0; i < 3; i++) {
-      await createMisconceptionEvent(learner.id, topic.id, {
-        description: `Misconception ${i}`,
-        resolved: false,
-        createdAt: new Date(),
-      });
-    }
+    await createMisconceptionEvent(learner.id, firstTopic.id, {
+      description: "Confuses osmosis with diffusion",
+      resolved: false,
+      createdAt: new Date(),
+    });
+    await createMisconceptionEvent(learner.id, firstTopic.id, {
+      description: "Confuses osmosis with diffusion",
+      resolved: false,
+      createdAt: new Date(),
+    });
+    await createMisconceptionEvent(learner.id, secondTopic.id, {
+      description: "Mixes up diffusion and osmosis",
+      resolved: false,
+      createdAt: new Date(),
+    });
     await createStudySession(learner.id, { startedAt: new Date() });
 
     const flags = await detectFlags(learner.id as LearnerId, 7, baseDeps());
@@ -598,17 +606,28 @@ describe("detectFlags", () => {
       (f) => f.type === "distress" && f.description.includes("misconception"),
     );
     expect(misconceptionFlag).toBeDefined();
+    expect(misconceptionFlag!.description).toContain("root-cause");
+    expect(misconceptionFlag!.description).toContain(firstTopic.name);
+    expect(misconceptionFlag!.description).toContain(secondTopic.name);
   });
 
-  it("flags misconceptions as high severity when 5+ on a topic", async () => {
+  it("flags cross-topic misconception clusters as high severity when 5+ events recur", async () => {
     const org = await createTestOrg();
     const learner = await createTestLearner(org.id);
     const qual = await createTestQualification();
-    const topic = qual.topics[1];
+    const firstTopic = qual.topics[1];
+    const secondTopic = qual.topics[2];
 
-    for (let i = 0; i < 5; i++) {
-      await createMisconceptionEvent(learner.id, topic.id, {
-        description: `Misconception ${i}`,
+    for (let i = 0; i < 3; i++) {
+      await createMisconceptionEvent(learner.id, firstTopic.id, {
+        description: "Confuses independent and dependent variables",
+        resolved: false,
+        createdAt: new Date(),
+      });
+    }
+    for (let i = 0; i < 2; i++) {
+      await createMisconceptionEvent(learner.id, secondTopic.id, {
+        description: "Mixes up dependent and independent variables",
         resolved: false,
         createdAt: new Date(),
       });
@@ -1733,13 +1752,56 @@ describe("generateEnhancedWeeklyReport", () => {
     expect(result.enrichment.misconceptionNarratives[0].occurrences).toBe(2);
   });
 
+  it("includes reusable cross-topic misconception clusters in enrichment", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qual = await createTestQualification();
+    const firstTopic = qual.topics[1];
+    const secondTopic = qual.topics[2];
+
+    await createMisconceptionEvent(learner.id, firstTopic.id, {
+      description: "Confuses osmosis with diffusion",
+      resolved: false,
+    });
+    await createMisconceptionEvent(learner.id, secondTopic.id, {
+      description: "Mixes up diffusion and osmosis",
+      resolved: false,
+    });
+
+    const periodStart = new Date("2026-03-09T00:00:00Z");
+    const periodEnd = new Date("2026-03-15T23:59:59Z");
+
+    const result = await generateEnhancedWeeklyReport(
+      learner.id as LearnerId,
+      periodStart,
+      periodEnd,
+      enhancedDeps(),
+    );
+
+    expect(result.enrichment.misconceptionClusters).toHaveLength(1);
+    expect(result.enrichment.misconceptionClusters?.[0].memberTopics).toHaveLength(2);
+    expect(result.enrichment.misconceptionClusters?.[0].signal.totalEvents).toBe(2);
+  });
+
   it("passes enrichment data to the AI prompt", async () => {
     const org = await createTestOrg();
     const learner = await createTestLearner(org.id);
+    const qual = await createTestQualification();
+    const firstTopic = qual.topics[1];
+    const secondTopic = qual.topics[2];
 
     const aiMock = mockAiSummarize("Summary with enrichment.");
     const periodStart = new Date("2026-03-09T00:00:00Z");
     const periodEnd = new Date("2026-03-15T23:59:59Z");
+
+    await createMisconceptionEvent(learner.id, firstTopic.id, {
+      description: "Confuses osmosis with diffusion",
+      resolved: false,
+    });
+    await createMisconceptionEvent(learner.id, secondTopic.id, {
+      description: "Mixes up diffusion and osmosis",
+      resolved: false,
+    });
 
     await generateEnhancedWeeklyReport(
       learner.id as LearnerId,
@@ -1754,6 +1816,8 @@ describe("generateEnhancedWeeklyReport", () => {
     const prompt = aiMock.mock.calls[0][0] as string;
     expect(prompt).toContain("Engagement trend");
     expect(prompt).toContain("Well calibrated");
+    expect(prompt).toContain("Cross-topic clusters");
+    expect(prompt).toContain("osmosis");
   });
 });
 
@@ -1840,6 +1904,66 @@ describe("mapEnrichmentToEmailProps", () => {
     const narrs = props.misconceptionNarratives as Array<{ narrative: string; resolved: boolean }>;
     expect(narrs).toHaveLength(1);
     expect(narrs[0].resolved).toBe(true);
+  });
+
+  it("maps misconception clusters", () => {
+    const enrichment: ReportEnrichment = {
+      behaviour: null,
+      calibration: null,
+      misconceptionNarratives: [],
+      misconceptionClusters: [
+        {
+          clusterKey: "shared_concept_pair:diffusion::osmosis",
+          strategy: "shared_concept_pair",
+          rootCauseLabel: "Confusion around diffusion and osmosis",
+          explanation: "Matched via the same pair of key concepts appearing in misconception descriptions.",
+          memberTopics: [
+            {
+              topicId: "t1" as TopicId,
+              topicName: "Transport",
+              occurrences: 1,
+              maxSeverity: 2,
+            },
+            {
+              topicId: "t2" as TopicId,
+              topicName: "Plants",
+              occurrences: 1,
+              maxSeverity: 2,
+            },
+          ],
+          supportingDescriptions: [
+            {
+              description: "Confuses osmosis with diffusion",
+              occurrences: 2,
+              topicNames: ["Plants", "Transport"],
+            },
+          ],
+          signal: {
+            totalEvents: 2,
+            distinctTopics: 2,
+            maxSeverity: 2,
+            averageSeverity: 2,
+            level: "low",
+          },
+          firstSeenAt: new Date(),
+          lastSeenAt: new Date(),
+        },
+      ],
+      techniqueMastery: [],
+      examPhase: null,
+      suggestions: [],
+    };
+
+    const props = mapEnrichmentToEmailProps(enrichment, "Bob");
+    const clusters = props.misconceptionClusters as Array<{
+      rootCauseLabel: string;
+      topicNames: string[];
+      totalEvents: number;
+    }>;
+    expect(clusters).toHaveLength(1);
+    expect(clusters[0].rootCauseLabel).toContain("osmosis");
+    expect(clusters[0].topicNames).toEqual(["Transport", "Plants"]);
+    expect(clusters[0].totalEvents).toBe(2);
   });
 
   it("maps suggestions", () => {
