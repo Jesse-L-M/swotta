@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "evals": "tsx ./src/evals/cli.ts",
+    "evals": "npm exec --yes -- tsx ./src/evals/cli.ts",
     "lint": "eslint .",
     "test": "vitest",
     "test:run": "vitest run",
