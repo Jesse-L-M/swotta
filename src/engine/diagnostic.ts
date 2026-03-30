@@ -15,6 +15,7 @@ import { getTopicTree } from "@/engine/curriculum";
 import { processDiagnosticResult, initTopicStates } from "@/engine/mastery";
 import { structuredLog } from "@/lib/logger";
 import { getDiagnosticSessionEnv } from "@/lib/env";
+import { setQualificationDiagnosticStatus } from "@/lib/pending-diagnostics";
 
 const DIAGNOSTIC_MODEL = "claude-sonnet-4-20250514";
 const DIAGNOSTIC_SESSION_TTL_MS = 2 * 60 * 60 * 1000;
@@ -546,42 +547,64 @@ export async function completeDiagnostic(
   qualificationVersionId: QualificationVersionId,
   majorTopicResults: DiagnosticResult[]
 ): Promise<{ topicsUpdated: number }> {
-  await initTopicStates(learnerId, qualificationVersionId, db);
+  return db.transaction(async (tx) => {
+    const transactionalDb = tx as unknown as Database;
 
-  const tree = await getTopicTree(db, qualificationVersionId);
+    await initTopicStates(
+      learnerId,
+      qualificationVersionId,
+      transactionalDb
+    );
 
-  const majorTopicMap = new Map<string, TopicTreeNode>();
-  for (const node of tree) {
-    majorTopicMap.set(node.id, node);
-  }
+    const tree = await getTopicTree(transactionalDb, qualificationVersionId);
 
-  const allResults: Array<{
-    topicId: TopicId;
-    score: number;
-    confidence: number;
-  }> = [];
+    const majorTopicMap = new Map<string, TopicTreeNode>();
+    for (const node of tree) {
+      majorTopicMap.set(node.id, node);
+    }
 
-  for (const result of majorTopicResults) {
-    allResults.push({
-      topicId: result.topicId,
-      score: result.score,
-      confidence: result.confidence,
-    });
+    const allResults: Array<{
+      topicId: TopicId;
+      score: number;
+      confidence: number;
+    }> = [];
 
-    const node = majorTopicMap.get(result.topicId);
-    if (node) {
-      const descendantIds = collectDescendantIds(node);
-      for (const id of descendantIds) {
-        allResults.push({
-          topicId: id,
-          score: result.score,
-          confidence: result.confidence,
-        });
+    for (const result of majorTopicResults) {
+      allResults.push({
+        topicId: result.topicId,
+        score: result.score,
+        confidence: result.confidence,
+      });
+
+      const node = majorTopicMap.get(result.topicId);
+      if (node) {
+        const descendantIds = collectDescendantIds(node);
+        for (const id of descendantIds) {
+          allResults.push({
+            topicId: id,
+            score: result.score,
+            confidence: result.confidence,
+          });
+        }
       }
     }
-  }
 
-  return processDiagnosticResult(learnerId, allResults, db);
+    const diagnosticResult = await processDiagnosticResult(
+      learnerId,
+      allResults,
+      transactionalDb
+    );
+
+    await setQualificationDiagnosticStatus(
+      transactionalDb,
+      learnerId,
+      qualificationVersionId,
+      "completed",
+      { expectedCurrentStatus: "pending" }
+    );
+
+    return diagnosticResult;
+  });
 }
 
 export async function skipDiagnostic(
@@ -589,10 +612,22 @@ export async function skipDiagnostic(
   learnerId: LearnerId,
   qualificationVersionId: QualificationVersionId
 ): Promise<{ topicsInitialised: number }> {
-  const result = await initTopicStates(
-    learnerId,
-    qualificationVersionId,
-    db
-  );
-  return { topicsInitialised: result.topicsCreated };
+  return db.transaction(async (tx) => {
+    const transactionalDb = tx as unknown as Database;
+    const result = await initTopicStates(
+      learnerId,
+      qualificationVersionId,
+      transactionalDb
+    );
+
+    await setQualificationDiagnosticStatus(
+      transactionalDb,
+      learnerId,
+      qualificationVersionId,
+      "skipped",
+      { expectedCurrentStatus: "pending" }
+    );
+
+    return { topicsInitialised: result.topicsCreated };
+  });
 }

@@ -2,8 +2,11 @@ import { redirect } from "next/navigation";
 import { AuthError } from "@/lib/auth";
 import { getCollections } from "../actions";
 import { SourceUploadFlow } from "@/components/sources/source-upload-flow";
+import { requireStudentPageAuth } from "../../student-page-auth";
 
 export default async function UploadPage() {
+  await requireStudentPageAuth("/sources/upload");
+
   const collections = await loadCollections();
 
   return (

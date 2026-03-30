@@ -1,8 +1,5 @@
-import { redirect } from "next/navigation";
-import { getAuthContext } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
-  loadLearnerByUserId,
   loadQualifications,
   loadDashboardStats,
   loadMasteryTopics,
@@ -20,13 +17,10 @@ import {
   nextExam,
   getMasteryState,
 } from "@/components/dashboard/utils";
+import { requireStudentPageAuth } from "../student-page-auth";
 
 export default async function DashboardPage() {
-  const ctx = await getAuthContext();
-  if (!ctx) redirect("/login");
-
-  const learner = await loadLearnerByUserId(ctx.user.id, db);
-  if (!learner) redirect("/onboarding");
+  const { learner } = await requireStudentPageAuth("/dashboard");
 
   const qualifications = await loadQualifications(learner.id, db);
 

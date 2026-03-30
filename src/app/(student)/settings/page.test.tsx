@@ -1,16 +1,22 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { getAuthContext } from "@/lib/auth";
 import {
   loadSettingsPageData,
   savePreferences,
 } from "@/app/(student)/settings/actions";
 import SettingsPage from "@/app/(student)/settings/page";
 
+const { requireStudentPageAuthMock } = vi.hoisted(() => ({
+  requireStudentPageAuthMock: vi.fn(),
+}));
+
 vi.mock("@/lib/auth", () => ({
-  getAuthContext: vi.fn(),
   AuthError: class AuthError extends Error {},
+}));
+
+vi.mock("../student-page-auth", () => ({
+  requireStudentPageAuth: requireStudentPageAuthMock,
 }));
 
 vi.mock("@/app/(student)/settings/actions", () => ({
@@ -18,20 +24,17 @@ vi.mock("@/app/(student)/settings/actions", () => ({
   savePreferences: vi.fn(),
 }));
 
-const mockedGetAuthContext = vi.mocked(getAuthContext);
 const mockedLoadSettingsPageData = vi.mocked(loadSettingsPageData);
 
 describe("SettingsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockedGetAuthContext.mockResolvedValue({
-      user: {
-        id: "user-1",
-        firebaseUid: "firebase-user-1",
-        email: "learner@example.com",
-        name: "Learner",
+    requireStudentPageAuthMock.mockResolvedValue({
+      learner: {
+        id: "learner-1",
+        displayName: "Learner",
+        yearGroup: 10,
       },
-      roles: [{ orgId: "org-1", role: "learner" }],
     });
     vi.mocked(savePreferences).mockResolvedValue({ success: true });
   });
@@ -73,6 +76,7 @@ describe("SettingsPage", () => {
     ).toBeDefined();
     expect(screen.getByText("Disabled")).toBeDefined();
     expect(screen.getByText("Enabled")).toBeDefined();
+    expect(requireStudentPageAuthMock).toHaveBeenCalledWith("/settings");
   });
 
   it("surfaces the multi-guardian UX gap instead of rendering unsafe controls", async () => {

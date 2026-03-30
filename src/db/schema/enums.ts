@@ -130,6 +130,12 @@ export const learnerQualStatusEnum = pgEnum("learner_qual_status", [
   "dropped",
 ]);
 
+export const diagnosticStatusEnum = pgEnum("diagnostic_status", [
+  "pending",
+  "completed",
+  "skipped",
+]);
+
 export const policyScopeEnum = pgEnum("policy_scope", [
   "global",
   "qualification",

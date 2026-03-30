@@ -39,8 +39,29 @@ function DiagnosticPageContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isComplete, setIsComplete] = useState(false);
+  const [continuePath, setContinuePath] = useState("/dashboard");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setPhase("intro");
+    setQualificationName("");
+    setTopics([]);
+    setMessages([]);
+    setPendingMessage(null);
+    setProgress({
+      explored: [],
+      current: null,
+      total: 0,
+      isComplete: false,
+    });
+    setResults([]);
+    setInput("");
+    setLoading(false);
+    setError(null);
+    setIsComplete(false);
+    setContinuePath("/dashboard");
+  }, [qualificationVersionId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -82,6 +103,7 @@ function DiagnosticPageContent() {
       setProgress(data.progress as DiagnosticProgress);
       setPendingMessage(null);
       setIsComplete(false);
+      setContinuePath("/dashboard");
       setMessages([
         { role: "user", content: "I'm ready to start the diagnostic." },
         { role: "assistant", content: data.reply as string },
@@ -144,6 +166,7 @@ function DiagnosticPageContent() {
       });
       if (!data) throw new Error("No data returned");
       setResults(data.results as DiagnosticResult[]);
+      setContinuePath((data.nextPath as string | undefined) ?? "/dashboard");
       setPhase("complete");
     } catch (err: unknown) {
       setError(
@@ -158,11 +181,11 @@ function DiagnosticPageContent() {
     setLoading(true);
     setError(null);
     try {
-      await apiCall({
+      const data = await apiCall({
         action: "skip",
         qualificationVersionId,
       });
-      router.push("/dashboard");
+      router.push((data?.nextPath as string | undefined) ?? "/dashboard");
     } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : "Failed to skip diagnostic"
@@ -202,7 +225,7 @@ function DiagnosticPageContent() {
       <MasteryReveal
         results={results}
         qualificationName={qualificationName}
-        onContinue={() => router.push("/dashboard")}
+        onContinue={() => router.push(continuePath)}
       />
     );
   }

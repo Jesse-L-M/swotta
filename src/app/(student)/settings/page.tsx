@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { AuthError, getAuthContext } from "@/lib/auth";
+import { AuthError } from "@/lib/auth";
 import { structuredLog } from "@/lib/logger";
 import { PreferencesForm } from "@/components/settings/preferences-form";
 import {
@@ -7,10 +7,10 @@ import {
   savePreferences,
   type SettingsPageData,
 } from "@/app/(student)/settings/actions";
+import { requireStudentPageAuth } from "../student-page-auth";
 
 export default async function SettingsPage() {
-  const ctx = await getAuthContext();
-  if (!ctx) redirect("/login");
+  await requireStudentPageAuth("/settings");
 
   let settingsData: SettingsPageData;
   try {

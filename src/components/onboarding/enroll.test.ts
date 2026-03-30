@@ -85,7 +85,7 @@ describe("enrollInQualifications", () => {
     expect(result.error).toBe("Learner not found");
   });
 
-  test("creates learner qualifications and topic states", async () => {
+  test("creates learner qualifications without initialising topic states", async () => {
     const db = getTestDb();
     const org = await createTestOrg();
     const learner = await createTestLearner(org.id);
@@ -112,12 +112,13 @@ describe("enrollInQualifications", () => {
     expect(enrollments.length).toBe(1);
     expect(enrollments[0].targetGrade).toBe("7");
     expect(enrollments[0].examDate).toBe("2026-06-15");
+    expect(enrollments[0].diagnosticStatus).toBe("pending");
 
     const topicStates = await db
       .select()
       .from(learnerTopicState)
       .where(eq(learnerTopicState.learnerId, learner.id));
-    expect(topicStates.length).toBe(qual.topics.length);
+    expect(topicStates.length).toBe(0);
   });
 
   test("creates multiple qualification enrollments", async () => {
@@ -153,7 +154,7 @@ describe("enrollInQualifications", () => {
     expect(enrollments.length).toBe(2);
   });
 
-  test("initializes topic states for all topics", async () => {
+  test("leaves mastery uninitialised until diagnostic decision", async () => {
     const db = getTestDb();
     const org = await createTestOrg();
     const learner = await createTestLearner(org.id);
@@ -176,11 +177,14 @@ describe("enrollInQualifications", () => {
       .from(learnerTopicState)
       .where(eq(learnerTopicState.learnerId, learner.id));
 
-    expect(states.length).toBe(qual.topics.length);
-    for (const state of states) {
-      expect(Number(state.masteryLevel)).toBe(0);
-      expect(state.streak).toBe(0);
-    }
+    expect(states).toHaveLength(0);
+
+    const [enrollment] = await db
+      .select()
+      .from(learnerQualifications)
+      .where(eq(learnerQualifications.learnerId, learner.id));
+
+    expect(enrollment.diagnosticStatus).toBe("pending");
   });
 
   test("trims target grade whitespace", async () => {

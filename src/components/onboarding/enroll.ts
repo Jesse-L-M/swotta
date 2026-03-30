@@ -1,8 +1,6 @@
 import { eq } from "drizzle-orm";
 import { learners, learnerQualifications } from "@/db/schema";
-import { initTopicStates } from "@/engine/mastery";
 import type { Database } from "@/lib/db";
-import type { LearnerId, QualificationVersionId } from "@/lib/types";
 import { structuredLog } from "@/lib/logger";
 
 export interface EnrollmentInput {
@@ -62,14 +60,6 @@ export async function enrollInQualifications(
           examDate: enrollment.examDate,
         })
         .onConflictDoNothing();
-    }
-
-    for (const enrollment of enrollments) {
-      await initTopicStates(
-        learnerId as LearnerId,
-        enrollment.qualificationVersionId as QualificationVersionId,
-        tx as unknown as Database
-      );
     }
   });
 

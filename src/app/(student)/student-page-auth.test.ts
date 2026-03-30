@@ -3,7 +3,9 @@ import {
   createTestLearner,
   createTestMembership,
   createTestOrg,
+  createTestQualification,
   createTestUser,
+  enrollLearnerInQualification,
   resetFixtureCounter,
 } from "@/test/fixtures";
 
@@ -58,8 +60,66 @@ describe("requireStudentPageAuth", () => {
     });
 
     await expect(
-      requireStudentPageAuth("/diagnostic?qualificationVersionId=test")
-    ).resolves.toBeUndefined();
+      requireStudentPageAuth("/diagnostic?qualificationVersionId=test", {
+        allowPendingDiagnostic: true,
+      })
+    ).resolves.toMatchObject({
+      learner: {
+        id: learner.id,
+        displayName: learner.displayName,
+      },
+    });
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it("redirects learners with a pending diagnostic to the next diagnostic route", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qualification = await createTestQualification();
+    await enrollLearnerInQualification(
+      learner.id,
+      qualification.qualificationVersionId
+    );
+
+    getAuthContextMock.mockResolvedValue({
+      user: { id: learner.userId },
+      roles: [{ orgId: org.id, role: "learner" }],
+    });
+
+    await expect(requireStudentPageAuth("/settings")).rejects.toThrow(
+      `REDIRECT:/diagnostic?qualificationVersionId=${qualification.qualificationVersionId}`
+    );
+
+    expect(redirectMock).toHaveBeenCalledWith(
+      `/diagnostic?qualificationVersionId=${qualification.qualificationVersionId}`
+    );
+  });
+
+  it("allows the diagnostic page itself to bypass the pending redirect", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qualification = await createTestQualification();
+    await enrollLearnerInQualification(
+      learner.id,
+      qualification.qualificationVersionId
+    );
+
+    getAuthContextMock.mockResolvedValue({
+      user: { id: learner.userId },
+      roles: [{ orgId: org.id, role: "learner" }],
+    });
+
+    await expect(
+      requireStudentPageAuth(
+        `/diagnostic?qualificationVersionId=${qualification.qualificationVersionId}`,
+        { allowPendingDiagnostic: true }
+      )
+    ).resolves.toMatchObject({
+      learner: {
+        id: learner.id,
+      },
+    });
+
     expect(redirectMock).not.toHaveBeenCalled();
   });
 
