@@ -163,6 +163,32 @@ describe("past-paper intelligence foundation", () => {
     ]);
   });
 
+  it("enforces fixture qualification identity against the catalog", async () => {
+    const {
+      biologyQualificationVersionId,
+      chemistryQualificationVersionId,
+    } = await seedWedgeQualificationFixtures();
+
+    const biologyCatalog = await loadQualificationPastPaperCatalog(
+      getTestDb(),
+      biologyQualificationVersionId
+    );
+    const chemistryCatalog = await loadQualificationPastPaperCatalog(
+      getTestDb(),
+      chemistryQualificationVersionId
+    );
+
+    expect(() =>
+      analyzePastPaperFixture(biologyCatalog, biologyPastPaperFixture)
+    ).not.toThrow();
+
+    expect(() =>
+      analyzePastPaperFixture(chemistryCatalog, biologyPastPaperFixture)
+    ).toThrow(
+      "Past-paper fixture qualification mismatch: subjectSlug fixture=biology catalog=chemistry; versionCode fixture=8461 catalog=8462"
+    );
+  });
+
   it("persists analyzed wedge fixtures and exposes overview and topic query surfaces", async () => {
     const {
       db,

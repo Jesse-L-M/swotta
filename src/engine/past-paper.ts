@@ -5,11 +5,15 @@ import type { QualificationVersionId, TopicId } from "@/lib/types";
 import {
   assessmentComponents,
   commandWords,
+  examBoards,
   pastPapers,
   pastPaperQuestions,
   pastPaperQuestionSignals,
   pastPaperQuestionTopics,
+  qualifications,
+  qualificationVersions,
   questionTypes,
+  subjects,
   topics,
 } from "@/db/schema";
 
@@ -93,6 +97,11 @@ interface QualificationReferenceQuestionType {
 
 interface QualificationPastPaperCatalog {
   qualificationVersionId: string;
+  qualification: {
+    examBoardCode: string;
+    subjectSlug: string;
+    versionCode: string;
+  };
   componentsByCode: Map<string, QualificationReferenceComponent>;
   topicsByCode: Map<string, QualificationReferenceTopic>;
   commandWords: QualificationReferenceCommandWord[];
@@ -531,6 +540,7 @@ function buildTopicLinks(
 
 function buildCatalogMaps(
   qualificationVersionId: string,
+  qualification: QualificationPastPaperCatalog["qualification"],
   components: QualificationReferenceComponent[],
   referenceTopics: QualificationReferenceTopic[],
   referenceCommandWords: QualificationReferenceCommandWord[],
@@ -538,6 +548,7 @@ function buildCatalogMaps(
 ): QualificationPastPaperCatalog {
   return {
     qualificationVersionId,
+    qualification,
     componentsByCode: new Map(
       components.map((component) => [component.code.toLowerCase(), component])
     ),
@@ -566,8 +577,31 @@ export async function loadQualificationPastPaperCatalog(
   db: Database,
   qualificationVersionId: QualificationVersionId | string
 ): Promise<QualificationPastPaperCatalog> {
-  const [components, referenceTopics, referenceCommandWords, referenceQuestionTypes] =
-    await Promise.all([
+  const [
+    qualificationRow,
+    components,
+    referenceTopics,
+    referenceCommandWords,
+    referenceQuestionTypes,
+  ] = await Promise.all([
+      db
+        .select({
+          examBoardCode: examBoards.code,
+          subjectSlug: subjects.slug,
+          versionCode: qualificationVersions.versionCode,
+        })
+        .from(qualificationVersions)
+        .innerJoin(
+          qualifications,
+          eq(qualificationVersions.qualificationId, qualifications.id)
+        )
+        .innerJoin(subjects, eq(qualifications.subjectId, subjects.id))
+        .innerJoin(
+          examBoards,
+          eq(qualificationVersions.examBoardId, examBoards.id)
+        )
+        .where(eq(qualificationVersions.id, qualificationVersionId))
+        .limit(1),
       db
         .select({
           id: assessmentComponents.id,
@@ -605,6 +639,12 @@ export async function loadQualificationPastPaperCatalog(
         .where(eq(questionTypes.qualificationVersionId, qualificationVersionId)),
     ]);
 
+  if (!qualificationRow[0]) {
+    throw new Error(
+      `Unknown qualification version ${qualificationVersionId} for past-paper analysis`
+    );
+  }
+
   if (components.length === 0) {
     throw new Error(
       `No assessment components found for qualification version ${qualificationVersionId}`
@@ -623,11 +663,54 @@ export async function loadQualificationPastPaperCatalog(
 
   return buildCatalogMaps(
     String(qualificationVersionId),
+    qualificationRow[0],
     components,
     referenceTopics,
     referenceCommandWords,
     referenceQuestionTypes
   );
+}
+
+function assertFixtureQualificationMatchesCatalog(
+  fixture: PastPaperFixture,
+  catalog: QualificationPastPaperCatalog
+): void {
+  const mismatches: string[] = [];
+  const fixtureQualification = fixture.qualification;
+  const catalogQualification = catalog.qualification;
+
+  if (
+    fixtureQualification.examBoardCode.trim().toLowerCase() !==
+    catalogQualification.examBoardCode.trim().toLowerCase()
+  ) {
+    mismatches.push(
+      `examBoardCode fixture=${fixtureQualification.examBoardCode} catalog=${catalogQualification.examBoardCode}`
+    );
+  }
+
+  if (
+    fixtureQualification.subjectSlug.trim().toLowerCase() !==
+    catalogQualification.subjectSlug.trim().toLowerCase()
+  ) {
+    mismatches.push(
+      `subjectSlug fixture=${fixtureQualification.subjectSlug} catalog=${catalogQualification.subjectSlug}`
+    );
+  }
+
+  if (
+    fixtureQualification.versionCode.trim().toLowerCase() !==
+    catalogQualification.versionCode.trim().toLowerCase()
+  ) {
+    mismatches.push(
+      `versionCode fixture=${fixtureQualification.versionCode} catalog=${catalogQualification.versionCode}`
+    );
+  }
+
+  if (mismatches.length > 0) {
+    throw new Error(
+      `Past-paper fixture qualification mismatch: ${mismatches.join("; ")}`
+    );
+  }
 }
 
 export function analyzePastPaperDraft(
@@ -681,6 +764,7 @@ export function analyzePastPaperFixture(
   input: PastPaperFixture
 ): AnalyzedPastPaper[] {
   const fixture = pastPaperFixtureSchema.parse(input);
+  assertFixtureQualificationMatchesCatalog(fixture, catalog);
   return fixture.papers.map((paper) => analyzePastPaperDraft(catalog, paper));
 }
 
