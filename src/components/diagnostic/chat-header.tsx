@@ -3,14 +3,14 @@
 import type { DiagnosticProgress } from "./types";
 
 interface ChatHeaderProps {
-  qualificationName: string;
+  qualificationLabel: string;
   progress: DiagnosticProgress;
   topicCount: number;
   remainingPendingCount: number;
 }
 
 export function ChatHeader({
-  qualificationName,
+  qualificationLabel,
   progress,
   topicCount,
   remainingPendingCount,
@@ -35,7 +35,7 @@ export function ChatHeader({
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-[family-name:var(--font-serif)] text-[1.125rem] leading-[1.3] text-[#1A1917]">
-              {qualificationName} Diagnostic
+              {qualificationLabel} Diagnostic
             </h2>
             <p
               className="mt-0.5 text-[0.875rem] leading-[1.5] text-[#949085]"

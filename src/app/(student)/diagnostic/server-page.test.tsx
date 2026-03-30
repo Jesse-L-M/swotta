@@ -44,7 +44,7 @@ describe("DiagnosticPage", () => {
     resolveDiagnosticPageContextMock.mockResolvedValue({
       context: {
         qualificationVersionId: "11111111-1111-1111-1111-111111111111",
-        qualificationName: "GCSE Test Subject",
+        qualificationLabel: "GCSE Test Subject (AQA)",
         remainingPendingCount: 1,
       },
       redirectTo: null,
@@ -80,7 +80,7 @@ describe("DiagnosticPage", () => {
       type: diagnosticPageClientMock,
       props: {
         qualificationVersionId: "11111111-1111-1111-1111-111111111111",
-        qualificationName: "GCSE Test Subject",
+        qualificationLabel: "GCSE Test Subject (AQA)",
         remainingPendingCount: 1,
       },
     });

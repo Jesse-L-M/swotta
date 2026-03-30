@@ -5,7 +5,7 @@ import { IntroScreen } from "./intro-screen";
 
 describe("IntroScreen", () => {
   const defaultProps = {
-    qualificationName: "GCSE Biology",
+    qualificationLabel: "GCSE Biology (AQA)",
     remainingPendingCount: 0,
     mode: "start" as const,
     onStart: vi.fn(),
@@ -31,7 +31,7 @@ describe("IntroScreen", () => {
   it("renders the qualification label", () => {
     render(<IntroScreen {...defaultProps} />);
     expect(screen.getByTestId("qualification-label").textContent).toBe(
-      "GCSE Biology"
+      "GCSE Biology (AQA)"
     );
   });
 

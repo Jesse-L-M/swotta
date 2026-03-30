@@ -20,7 +20,7 @@ describe("MasteryReveal", () => {
 
   const defaultProps = {
     results,
-    qualificationName: "GCSE Biology",
+    qualificationLabel: "GCSE Biology (AQA)",
     remainingPendingCount: 0,
     nextStep: "dashboard" as const,
     onContinue: vi.fn(),
@@ -36,7 +36,7 @@ describe("MasteryReveal", () => {
   it("renders qualification name in subtitle", () => {
     render(<MasteryReveal {...defaultProps} />);
     expect(
-      screen.getByText(/Here's where you stand in GCSE Biology/)
+      screen.getByText(/Here's where you stand in GCSE Biology \(AQA\)/)
     ).toBeDefined();
   });
 
@@ -93,7 +93,7 @@ describe("MasteryReveal", () => {
     render(
       <MasteryReveal
         results={onlyStrong}
-        qualificationName="Test"
+        qualificationLabel="Test (AQA)"
         remainingPendingCount={0}
         nextStep="dashboard"
         onContinue={vi.fn()}
@@ -148,7 +148,7 @@ describe("MasteryReveal", () => {
     render(
       <MasteryReveal
         results={[]}
-        qualificationName="Test"
+        qualificationLabel="Test (AQA)"
         remainingPendingCount={0}
         nextStep="dashboard"
         onContinue={vi.fn()}
@@ -167,7 +167,7 @@ describe("MasteryReveal", () => {
     render(
       <MasteryReveal
         results={sameScore}
-        qualificationName="Test"
+        qualificationLabel="Test (AQA)"
         remainingPendingCount={0}
         nextStep="dashboard"
         onContinue={vi.fn()}
@@ -215,9 +215,24 @@ describe("MasteryReveal", () => {
         nextStep="diagnostic"
       />
     );
-    expect(screen.getByText(/One more step before your dashboard/)).toBeDefined();
+    expect(
+      screen.getByText(/One more diagnostic before your dashboard/)
+    ).toBeDefined();
     expect(screen.getByTestId("continue-btn").textContent).toBe(
       "Continue to the next diagnostic"
     );
+  });
+
+  it("uses the exact remaining count when multiple diagnostics are still queued", () => {
+    render(
+      <MasteryReveal
+        {...defaultProps}
+        remainingPendingCount={3}
+        nextStep="diagnostic"
+      />
+    );
+    expect(
+      screen.getByText(/3 more diagnostics before your dashboard/)
+    ).toBeDefined();
   });
 });

@@ -9,7 +9,7 @@ import {
 
 interface MasteryRevealProps {
   results: DiagnosticResult[];
-  qualificationName: string;
+  qualificationLabel: string;
   remainingPendingCount: number;
   nextStep: DiagnosticContinueStep;
   onContinue: () => void;
@@ -80,7 +80,7 @@ function getCategoryAccent(category: MasteryCategory): {
 
 export function MasteryReveal({
   results,
-  qualificationName,
+  qualificationLabel,
   remainingPendingCount,
   nextStep,
   onContinue,
@@ -110,11 +110,13 @@ export function MasteryReveal({
       : "Continue to my dashboard";
   const nextHeading =
     nextStep === "diagnostic"
-      ? "One more step before your dashboard"
+      ? remainingPendingCount === 1
+        ? "One more diagnostic before your dashboard"
+        : `${remainingPendingCount} more diagnostics before your dashboard`
       : "What happens next";
   const nextDescription =
     nextStep === "diagnostic"
-      ? `Swotta has saved your ${qualificationName} baseline. Next, you'll move straight into ${
+      ? `Swotta has saved your ${qualificationLabel} baseline. Next, you'll move straight into ${
           remainingPendingCount === 1
             ? "one more diagnostic"
             : `${remainingPendingCount} more diagnostics`
@@ -133,7 +135,7 @@ export function MasteryReveal({
             Your knowledge map
           </h1>
           <p className="mt-3 text-[1.125rem] leading-[1.7] text-[#5C5950]">
-            Here&apos;s where you stand in {qualificationName}
+            Here&apos;s where you stand in {qualificationLabel}
           </p>
 
           {/* Summary stats */}

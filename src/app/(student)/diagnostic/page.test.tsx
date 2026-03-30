@@ -313,7 +313,7 @@ describe("DiagnosticPage", () => {
       <DiagnosticPageClient
         {...buildProps({
           qualificationVersionId: "22222222-2222-2222-2222-222222222222",
-          qualificationName: "GCSE Chemistry",
+          qualificationLabel: "GCSE Chemistry (OCR)",
         })}
       />
     );
@@ -321,7 +321,7 @@ describe("DiagnosticPage", () => {
     await waitFor(() => expect(screen.getByTestId("start-btn")).toBeDefined());
     expect(screen.queryByTestId("chat-input")).toBeNull();
     expect(screen.getByTestId("qualification-label").textContent).toBe(
-      "GCSE Chemistry"
+      "GCSE Chemistry (OCR)"
     );
   });
 });
@@ -329,7 +329,7 @@ describe("DiagnosticPage", () => {
 function buildProps(
   overrides: Partial<{
     qualificationVersionId: string;
-    qualificationName: string;
+    qualificationLabel: string;
     remainingPendingCount: number;
   }> = {}
 ) {
@@ -337,7 +337,8 @@ function buildProps(
     qualificationVersionId:
       overrides.qualificationVersionId ??
       "11111111-1111-1111-1111-111111111111",
-    qualificationName: overrides.qualificationName ?? "GCSE Test Subject",
+    qualificationLabel:
+      overrides.qualificationLabel ?? "GCSE Test Subject (AQA)",
     remainingPendingCount: overrides.remainingPendingCount ?? 0,
   };
 }

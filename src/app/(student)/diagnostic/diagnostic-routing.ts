@@ -1,5 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import {
+  examBoards,
   learnerQualifications,
   qualificationVersions,
   qualifications,
@@ -10,7 +11,7 @@ import type { LearnerId, QualificationVersionId } from "@/lib/types";
 
 export interface DiagnosticPageContext {
   qualificationVersionId: QualificationVersionId;
-  qualificationName: string;
+  qualificationLabel: string;
   remainingPendingCount: number;
 }
 
@@ -29,6 +30,7 @@ export async function resolveDiagnosticPageContext(
       qualificationVersionId: learnerQualifications.qualificationVersionId,
       diagnosticStatus: learnerQualifications.diagnosticStatus,
       qualificationName: qualifications.name,
+      examBoardCode: examBoards.code,
     })
     .from(learnerQualifications)
     .innerJoin(
@@ -41,6 +43,10 @@ export async function resolveDiagnosticPageContext(
     .innerJoin(
       qualifications,
       eq(qualificationVersions.qualificationId, qualifications.id)
+    )
+    .innerJoin(
+      examBoards,
+      eq(qualificationVersions.examBoardId, examBoards.id)
     )
     .where(
       and(
@@ -80,9 +86,19 @@ export async function resolveDiagnosticPageContext(
     context: {
       qualificationVersionId:
         currentQualification.qualificationVersionId as QualificationVersionId,
-      qualificationName: currentQualification.qualificationName,
+      qualificationLabel: formatDiagnosticQualificationLabel(
+        currentQualification.qualificationName,
+        currentQualification.examBoardCode
+      ),
       remainingPendingCount: pendingQualifications.length - 1,
     },
     redirectTo: null,
   };
+}
+
+function formatDiagnosticQualificationLabel(
+  qualificationName: string,
+  examBoardCode: string
+): string {
+  return `${qualificationName} (${examBoardCode})`;
 }

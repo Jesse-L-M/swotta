@@ -88,7 +88,7 @@ describe("resolveDiagnosticPageContext", () => {
     ).resolves.toMatchObject({
       context: {
         qualificationVersionId: firstQualification.qualificationVersionId,
-        qualificationName: "GCSE Test Subject",
+        qualificationLabel: `GCSE Test Subject (${firstQualification.examBoard.code})`,
         remainingPendingCount: 1,
       },
       redirectTo: null,

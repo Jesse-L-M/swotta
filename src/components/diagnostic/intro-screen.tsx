@@ -3,7 +3,7 @@
 import type { DiagnosticIntroMode } from "./types";
 
 interface IntroScreenProps {
-  qualificationName: string;
+  qualificationLabel: string;
   remainingPendingCount: number;
   mode: DiagnosticIntroMode;
   onStart: () => void;
@@ -13,7 +13,7 @@ interface IntroScreenProps {
 }
 
 export function IntroScreen({
-  qualificationName,
+  qualificationLabel,
   remainingPendingCount,
   mode,
   onStart,
@@ -25,7 +25,7 @@ export function IntroScreen({
   const remainingCopy =
     remainingPendingCount === 0
       ? "Finish this diagnostic and your dashboard will be ready."
-      : `After ${qualificationName}, you'll move straight into ${remainingPendingCount} more diagnostic${
+      : `After ${qualificationLabel}, you'll move straight into ${remainingPendingCount} more diagnostic${
           remainingPendingCount === 1 ? "" : "s"
         } before your dashboard.`;
 
@@ -39,7 +39,7 @@ export function IntroScreen({
           className="text-[0.75rem] font-medium uppercase tracking-[0.16em] text-[#2D7A6E]"
           data-testid="qualification-label"
         >
-          {qualificationName}
+          {qualificationLabel}
         </p>
         <h1 className="font-[family-name:var(--font-serif)] text-[2.5rem] leading-[1.2] tracking-[-0.01em] text-[#1A1917]">
           {isRestart

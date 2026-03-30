@@ -22,7 +22,7 @@ import type {
 
 interface DiagnosticPageClientProps {
   qualificationVersionId: string;
-  qualificationName: string;
+  qualificationLabel: string;
   remainingPendingCount: number;
 }
 
@@ -63,7 +63,7 @@ function getContinueStep(nextPath: string): DiagnosticContinueStep {
 
 function DiagnosticPageContent({
   qualificationVersionId,
-  qualificationName,
+  qualificationLabel,
   remainingPendingCount,
 }: DiagnosticPageClientProps) {
   const router = useRouter();
@@ -295,7 +295,7 @@ function DiagnosticPageContent({
   if (phase === "intro") {
     return (
       <IntroScreen
-        qualificationName={qualificationName}
+        qualificationLabel={qualificationLabel}
         remainingPendingCount={remainingPendingCount}
         mode={introMode}
         onStart={handleStart}
@@ -314,7 +314,7 @@ function DiagnosticPageContent({
     return (
       <MasteryReveal
         results={results}
-        qualificationName={qualificationName}
+        qualificationLabel={qualificationLabel}
         remainingPendingCount={remainingPendingCount}
         nextStep={getContinueStep(continuePath)}
         onContinue={() => router.push(continuePath)}
@@ -325,7 +325,7 @@ function DiagnosticPageContent({
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
       <ChatHeader
-        qualificationName={qualificationName}
+        qualificationLabel={qualificationLabel}
         progress={progress}
         topicCount={topics.length}
         remainingPendingCount={remainingPendingCount}
