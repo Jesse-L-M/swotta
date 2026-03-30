@@ -247,7 +247,7 @@ export interface PastPaperSessionSignalSummary {
   signalType: PastPaperSignalType;
   code: string;
   label: string;
-  note: string;
+  note: string | null;
   count: number;
 }
 
@@ -1066,7 +1066,10 @@ function aggregateSessionSignals(
   questions: PastPaperQuestionIntelligence[],
   signalType: PastPaperSignalType
 ): PastPaperSessionSignalSummary[] {
-  const aggregates = new Map<string, PastPaperSessionSignalSummary>();
+  const aggregates = new Map<
+    string,
+    PastPaperSessionSignalSummary & { notes: Set<string> }
+  >();
 
   for (const question of questions) {
     for (const signal of question.signals) {
@@ -1079,20 +1082,27 @@ function aggregateSessionSignals(
         signalType: signal.signalType,
         code: signal.code,
         label: signal.label,
-        note: signal.note,
+        note: null,
         count: 0,
+        notes: new Set<string>(),
       };
 
       existing.count += 1;
+      existing.notes.add(signal.note);
       aggregates.set(key, existing);
     }
   }
 
-  return [...aggregates.values()].sort(
-    (left, right) =>
-      right.count - left.count ||
-      left.label.localeCompare(right.label)
-  );
+  return [...aggregates.values()]
+    .map(({ notes, ...signal }) => ({
+      ...signal,
+      note: notes.size === 1 ? [...notes][0]! : null,
+    }))
+    .sort(
+      (left, right) =>
+        right.count - left.count ||
+        left.label.localeCompare(right.label)
+    );
 }
 
 function selectReferenceQuestions(

@@ -582,6 +582,57 @@ describe("generateReplaySummary", () => {
     ).toBe(true);
   });
 
+  it("falls back to the safe signal label when aggregate exam notes are unstable", async () => {
+    const { db, learner, topicA } = await setupTestData();
+    const { session } = await createSessionWithBlock(
+      db,
+      learner.id,
+      topicA.id,
+      {
+        blockType: "timed_problems",
+        rawInteraction: {
+          sessionId: "session-with-unstable-exam-note",
+          examSession: {
+            source: "past_paper",
+            qualificationVersionId: "qual-1",
+            topicId: topicA.id,
+            topicName: topicA.name,
+            paperCount: 2,
+            questionCount: 3,
+            totalMarks: 10,
+            marks: {
+              min: 2,
+              max: 4,
+              average: 3.3,
+              distinct: [2, 4],
+            },
+            commandWords: [],
+            questionTypes: [],
+            markSchemeSignals: [],
+            examTechniqueSignals: [
+              {
+                signalType: "exam_technique",
+                code: "one_point_per_mark",
+                label: "One point per mark",
+                note: null,
+                count: 2,
+              },
+            ],
+            referenceQuestions: [],
+          },
+        },
+      }
+    );
+
+    const result = await generateReplaySummary(db, session.id as SessionId);
+
+    expect(
+      result?.whatsNext.some((entry) =>
+        entry.includes("Exam technique focus: One point per mark")
+      )
+    ).toBe(true);
+  });
+
   it("populates whatYouNailed for high score", async () => {
     const { db, learner, topicA } = await setupTestData();
     const { session } = await createSessionWithBlock(

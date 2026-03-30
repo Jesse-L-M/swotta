@@ -344,7 +344,12 @@ function buildExamTechniqueNextStep(rawInteraction: unknown): string | null {
     return null;
   }
 
-  return examSession.examTechniqueSignals[0]?.note ?? null;
+  const primarySignal = examSession.examTechniqueSignals[0];
+  if (!primarySignal) {
+    return null;
+  }
+
+  return primarySignal.note ?? primarySignal.label;
 }
 
 export function formatRelativeTime(date: Date): string {

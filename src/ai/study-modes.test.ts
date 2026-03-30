@@ -450,6 +450,33 @@ describe("buildSystemPrompt", () => {
       "No structured past-paper intelligence is available for this topic yet."
     );
   });
+
+  it("omits unstable aggregate signal notes instead of printing misleading text", async () => {
+    const block = makeBlock({ blockType: "timed_problems" });
+    const examSession = makePastPaperSessionIntelligence();
+    examSession.markSchemeSignals = [
+      {
+        signalType: "mark_scheme_pattern",
+        code: "point_plus_reason",
+        label: "Point-plus-reason explanation",
+        note: null,
+        count: 2,
+      },
+    ];
+    const context = makeLearnerContext({
+      examSession: {
+        source: "past_paper",
+        ...examSession,
+      },
+    });
+
+    const prompt = await buildSystemPrompt(block, context, []);
+
+    expect(prompt).toContain(
+      "**Point-plus-reason explanation** (2 questions)"
+    );
+    expect(prompt).not.toContain("(2 questions): null");
+  });
 });
 
 describe("parseSessionStatus", () => {

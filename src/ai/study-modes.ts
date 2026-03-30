@@ -165,10 +165,10 @@ function formatExamSignals(
   }
 
   return signals
-    .map(
-      (signal) =>
-        `- **${signal.label}** (${signal.count} questions): ${signal.note}`
-    )
+    .map((signal) => {
+      const note = signal.note ? `: ${signal.note}` : "";
+      return `- **${signal.label}** (${signal.count} questions)${note}`;
+    })
     .join("\n");
 }
 
