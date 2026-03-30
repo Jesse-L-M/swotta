@@ -12,27 +12,22 @@ describe("ChatHeader", () => {
     isComplete: false,
   };
 
+  const baseProps = {
+    qualificationName: "GCSE Biology",
+    progress: baseProgress,
+    topicCount: 8,
+    remainingPendingCount: 0,
+  };
+
   it("renders the qualification name", () => {
-    render(
-      <ChatHeader
-        qualificationName="GCSE Biology"
-        progress={baseProgress}
-        topicCount={8}
-      />
-    );
+    render(<ChatHeader {...baseProps} />);
     expect(
       screen.getByText("GCSE Biology Diagnostic")
     ).toBeDefined();
   });
 
   it("shows 'Getting started...' when no topics explored", () => {
-    render(
-      <ChatHeader
-        qualificationName="GCSE Biology"
-        progress={baseProgress}
-        topicCount={8}
-      />
-    );
+    render(<ChatHeader {...baseProps} />);
     expect(screen.getByTestId("progress-status").textContent).toBe(
       "Getting started..."
     );
@@ -47,9 +42,10 @@ describe("ChatHeader", () => {
     };
     render(
       <ChatHeader
-        qualificationName="GCSE Biology"
+        qualificationName={baseProps.qualificationName}
         progress={progress}
         topicCount={8}
+        remainingPendingCount={0}
       />
     );
     expect(screen.getByTestId("progress-status").textContent).toBe(
@@ -66,9 +62,10 @@ describe("ChatHeader", () => {
     };
     render(
       <ChatHeader
-        qualificationName="GCSE Biology"
+        qualificationName={baseProps.qualificationName}
         progress={progress}
         topicCount={8}
+        remainingPendingCount={0}
       />
     );
     expect(screen.getByTestId("progress-status").textContent).toBe(
@@ -85,9 +82,10 @@ describe("ChatHeader", () => {
     };
     render(
       <ChatHeader
-        qualificationName="GCSE Biology"
+        qualificationName={baseProps.qualificationName}
         progress={progress}
         topicCount={8}
+        remainingPendingCount={0}
       />
     );
     expect(screen.getByTestId("progress-status").textContent).toBe(
@@ -107,6 +105,7 @@ describe("ChatHeader", () => {
         qualificationName="Test"
         progress={progress}
         topicCount={10}
+        remainingPendingCount={0}
       />
     );
     expect(screen.getByTestId("progress-count").textContent).toBe("3/10");
@@ -124,6 +123,7 @@ describe("ChatHeader", () => {
         qualificationName="Test"
         progress={progress}
         topicCount={5}
+        remainingPendingCount={0}
       />
     );
     expect(screen.getByTestId("progress-count").textContent).toBe("1/5");
@@ -135,6 +135,7 @@ describe("ChatHeader", () => {
         qualificationName="Test"
         progress={baseProgress}
         topicCount={8}
+        remainingPendingCount={0}
       />
     );
     const bar = screen.getByTestId("progress-bar");
@@ -153,9 +154,24 @@ describe("ChatHeader", () => {
         qualificationName="Test"
         progress={progress}
         topicCount={8}
+        remainingPendingCount={0}
       />
     );
     const bar = screen.getByTestId("progress-bar");
     expect(bar.style.width).toBe("50%");
+  });
+
+  it("shows a remaining-diagnostics pill when another qualification is queued", () => {
+    render(
+      <ChatHeader
+        qualificationName="Test"
+        progress={baseProgress}
+        topicCount={8}
+        remainingPendingCount={2}
+      />
+    );
+    expect(screen.getByTestId("remaining-diagnostics-pill").textContent).toBe(
+      "2 more after this"
+    );
   });
 });

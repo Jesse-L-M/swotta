@@ -6,12 +6,14 @@ interface ChatHeaderProps {
   qualificationName: string;
   progress: DiagnosticProgress;
   topicCount: number;
+  remainingPendingCount: number;
 }
 
 export function ChatHeader({
   qualificationName,
   progress,
   topicCount,
+  remainingPendingCount,
 }: ChatHeaderProps) {
   const total = progress.total || topicCount;
   const explored = progress.explored.length;
@@ -49,6 +51,14 @@ export function ChatHeader({
             >
               {explored}/{total}
             </span>
+            {remainingPendingCount > 0 && (
+              <span
+                className="rounded-full bg-[#F0ECE4] px-2.5 py-1 text-[0.75rem] text-[#5C5950]"
+                data-testid="remaining-diagnostics-pill"
+              >
+                {remainingPendingCount} more after this
+              </span>
+            )}
           </div>
         </div>
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#F0ECE4]">

@@ -1,5 +1,9 @@
-import DiagnosticPageClient from "./diagnostic-page-client";
+import { redirect } from "next/navigation";
+import { db } from "@/lib/db";
 import { requireStudentPageAuth } from "../student-page-auth";
+import type { LearnerId } from "@/lib/types";
+import DiagnosticPageClient from "./diagnostic-page-client";
+import { resolveDiagnosticPageContext } from "./diagnostic-routing";
 
 interface DiagnosticPageProps {
   searchParams: Promise<{
@@ -15,9 +19,23 @@ export default async function DiagnosticPage({
     ? `/diagnostic?qualificationVersionId=${encodeURIComponent(qualificationVersionId)}`
     : "/diagnostic";
 
-  await requireStudentPageAuth(redirectTarget, {
+  const { learner } = await requireStudentPageAuth(redirectTarget, {
     allowPendingDiagnostic: true,
   });
 
-  return <DiagnosticPageClient />;
+  const resolution = await resolveDiagnosticPageContext(
+    db,
+    learner.id as LearnerId,
+    qualificationVersionId
+  );
+
+  if (resolution.redirectTo) {
+    redirect(resolution.redirectTo);
+  }
+
+  if (!resolution.context) {
+    redirect("/dashboard");
+  }
+
+  return <DiagnosticPageClient {...resolution.context} />;
 }
