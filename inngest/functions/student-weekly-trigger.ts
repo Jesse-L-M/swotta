@@ -62,6 +62,12 @@ type PlanBlockRow = {
   scheduledOrder: number | null;
 };
 
+type StudentWeeklyResult = {
+  learnerId: string;
+  status: "sent" | "skipped" | "failed";
+  reason?: string;
+};
+
 function extractFirstName(userName: string, displayName: string): string {
   const candidate = [userName, displayName]
     .map((value) => value.trim())
@@ -192,10 +198,10 @@ export const studentWeeklyTrigger = inngest.createFunction(
     });
 
     if (activeLearners.length === 0) {
-      return { processed: 0, sent: 0, skipped: 0 };
+      return { processed: 0, sent: 0, skipped: 0, failed: 0 };
     }
 
-    const results: Array<{ learnerId: string; sent: boolean }> = [];
+    const results: StudentWeeklyResult[] = [];
 
     for (const learner of activeLearners) {
       const result = await step.run(
@@ -210,7 +216,11 @@ export const studentWeeklyTrigger = inngest.createFunction(
               reason: "reminders_disabled",
             });
 
-            return { learnerId: learner.learnerId, sent: false };
+            return {
+              learnerId: learner.learnerId,
+              status: "skipped" as const,
+              reason: "reminders_disabled",
+            };
           }
 
           const [currentPlan] = await db
@@ -338,7 +348,11 @@ export const studentWeeklyTrigger = inngest.createFunction(
               currentPlanId: currentPlan?.id ?? null,
             });
 
-            return { learnerId: learner.learnerId, sent: false };
+            return {
+              learnerId: learner.learnerId,
+              status: "skipped" as const,
+              reason: "no_content",
+            };
           }
 
           // --- Render and send ---
@@ -354,7 +368,27 @@ export const studentWeeklyTrigger = inngest.createFunction(
           const html = await renderStudentWeeklyEmail(emailProps);
           const subject = `Your week ahead, ${learner.firstName}`;
 
-          await sendEmail({ to: learner.email, subject, html });
+          try {
+            await sendEmail({ to: learner.email, subject, html });
+          } catch (error) {
+            structuredLog("student-weekly-email.failed", {
+              learnerId: learner.learnerId,
+              email: learner.email,
+              subject,
+              currentPlanId: currentPlan?.id ?? null,
+              blocksPlanned: planBlocks.length,
+              streakCount,
+              examCount: examCountdown.length,
+              phase: closestPhase,
+              error: error instanceof Error ? error.message : String(error),
+            });
+
+            return {
+              learnerId: learner.learnerId,
+              status: "failed" as const,
+              reason: "email_send_failed",
+            };
+          }
 
           structuredLog("student-weekly-email.sent", {
             learnerId: learner.learnerId,
@@ -365,7 +399,7 @@ export const studentWeeklyTrigger = inngest.createFunction(
             phase: closestPhase,
           });
 
-          return { learnerId: learner.learnerId, sent: true };
+          return { learnerId: learner.learnerId, status: "sent" as const };
         },
       );
       results.push(result);
@@ -373,8 +407,9 @@ export const studentWeeklyTrigger = inngest.createFunction(
 
     return {
       processed: activeLearners.length,
-      sent: results.filter((r) => r.sent).length,
-      skipped: results.filter((r) => !r.sent).length,
+      sent: results.filter((result) => result.status === "sent").length,
+      skipped: results.filter((result) => result.status === "skipped").length,
+      failed: results.filter((result) => result.status === "failed").length,
     };
   },
 );

@@ -320,6 +320,7 @@ describe("student/weekly-email function", () => {
       processed: 1,
       sent: 1,
       skipped: 0,
+      failed: 0,
     });
     expect(stepRun.mock.calls.map((call) => call[0])).toEqual([
       "get-active-learners",
@@ -382,6 +383,7 @@ describe("student/weekly-email function", () => {
       processed: 1,
       sent: 0,
       skipped: 1,
+      failed: 0,
     });
     expect(sendEmailMock).not.toHaveBeenCalled();
     expect(structuredLogMock).toHaveBeenCalledWith(
@@ -414,6 +416,7 @@ describe("student/weekly-email function", () => {
       processed: 1,
       sent: 0,
       skipped: 1,
+      failed: 0,
     });
     expect(sendEmailMock).not.toHaveBeenCalled();
     expect(structuredLogMock).toHaveBeenCalledWith(
@@ -421,6 +424,94 @@ describe("student/weekly-email function", () => {
       expect.objectContaining({
         learnerId: learner.id,
         reason: "reminders_disabled",
+      }),
+    );
+  });
+
+  it("continues processing later learners when one email send fails", async () => {
+    const now = referenceNow();
+    const firstExamDate = formatLondonDate(addDays(now, 9));
+    const secondExamDate = formatLondonDate(addDays(now, 12));
+
+    const firstLearnerContext = await createActiveLearnerEmailContext({
+      email: "first@example.com",
+      name: "First Learner",
+      displayName: "First Learner",
+      examDate: firstExamDate,
+    });
+    const secondLearnerContext = await createActiveLearnerEmailContext({
+      email: "second@example.com",
+      name: "Second Learner",
+      displayName: "Second Learner",
+      examDate: secondExamDate,
+    });
+
+    const [firstTopic] = firstLearnerContext.qualification.topics.filter(
+      (entry) => entry.depth === 1,
+    );
+    const [secondTopic] = secondLearnerContext.qualification.topics.filter(
+      (entry) => entry.depth === 1,
+    );
+
+    const firstPlan = await createWeeklyPlan(firstLearnerContext.learner.id);
+    await createPlanBlock(
+      firstLearnerContext.learner.id,
+      firstPlan.id,
+      firstTopic.id,
+      {
+        durationMinutes: 15,
+      },
+    );
+
+    const secondPlan = await createWeeklyPlan(secondLearnerContext.learner.id);
+    await createPlanBlock(
+      secondLearnerContext.learner.id,
+      secondPlan.id,
+      secondTopic.id,
+      {
+        durationMinutes: 20,
+      },
+    );
+
+    sendEmailMock.mockImplementation(({ to }: { to: string }) => {
+      if (to === "first@example.com") {
+        return Promise.reject(new Error("SMTP unavailable"));
+      }
+
+      return Promise.resolve({ id: `email-${to}` });
+    });
+
+    const { result } = await runTrigger();
+
+    expect(result).toEqual({
+      processed: 2,
+      sent: 1,
+      skipped: 0,
+      failed: 1,
+    });
+    expect(sendEmailMock).toHaveBeenCalledTimes(2);
+    expect(sendEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "first@example.com" }),
+    );
+    expect(sendEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "second@example.com" }),
+    );
+    expect(structuredLogMock).toHaveBeenCalledWith(
+      "student-weekly-email.failed",
+      expect.objectContaining({
+        learnerId: firstLearnerContext.learner.id,
+        email: "first@example.com",
+        currentPlanId: firstPlan.id,
+        error: "SMTP unavailable",
+        phase: "revision",
+      }),
+    );
+    expect(structuredLogMock).toHaveBeenCalledWith(
+      "student-weekly-email.sent",
+      expect.objectContaining({
+        learnerId: secondLearnerContext.learner.id,
+        currentPlanId: secondPlan.id,
+        blocksPlanned: 1,
       }),
     );
   });
@@ -437,6 +528,7 @@ describe("student/weekly-email function", () => {
       processed: 1,
       sent: 0,
       skipped: 1,
+      failed: 0,
     });
     expect(sendEmailMock).not.toHaveBeenCalled();
     expect(structuredLogMock).toHaveBeenCalledWith(
