@@ -81,49 +81,49 @@ describe("clusterMisconceptionEvents", () => {
     expect(clusters[0].explanation).toContain("same misconception rule");
   });
 
-  it("clusters paraphrases through a shared concept pair", () => {
+  it("clusters explicit comparison-pattern confusions across topics", () => {
     const clusters = clusterMisconceptionEvents([
       event(
         "event-1",
         "topic-1",
-        "Enzymes",
-        "Assumes catalysts change equilibrium position",
+        "Variables",
+        "Confuses independent and dependent variables",
       ),
       event(
         "event-2",
         "topic-2",
-        "Rates of reaction",
-        "Thinks a catalyst shifts the equilibrium",
+        "Data analysis",
+        "Mixes up dependent and independent variables",
       ),
       event(
         "event-3",
         "topic-3",
         "Bonding",
-        "Confuses ionic and covalent bonding",
+        "Assumes pressure rises when volume falls",
       ),
     ]);
 
     expect(clusters).toHaveLength(1);
-    expect(clusters[0].strategy).toBe("shared_concept_pair");
+    expect(clusters[0].strategy).toBe("comparison_pattern");
     expect(clusters[0].rootCauseLabel).toBe(
-      "Confusion around catalyst and equilibrium",
+      "Confusion between dependent variable and independent variable",
     );
     expect(clusters[0].signal.totalEvents).toBe(2);
   });
 
-  it("stays conservative when only one keyword overlaps", () => {
+  it("stays conservative when two concepts recur without an explicit comparison pattern", () => {
     const clusters = clusterMisconceptionEvents([
       event(
         "event-1",
         "topic-1",
-        "Energy stores",
-        "Thinks respiration creates energy",
+        "Gas laws",
+        "Pressure rises as volume falls in Boyle law questions",
       ),
       event(
         "event-2",
         "topic-2",
-        "Food tests",
-        "Confuses chemical energy with heat",
+        "Particle model",
+        "Volume changes when pressure increases in a sealed container",
       ),
     ]);
 

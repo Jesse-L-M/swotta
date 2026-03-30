@@ -1,4 +1,4 @@
-import { and, eq, gte } from "drizzle-orm";
+import { and, eq, gte, lte } from "drizzle-orm";
 import type { Database } from "@/lib/db";
 import { misconceptionEvents, misconceptionRules, topics } from "@/db/schema";
 import type { LearnerId, TopicId } from "@/lib/types";
@@ -98,7 +98,7 @@ const GENERIC_TOKENS = new Set([
 const STRATEGY_BASE_SCORE: Record<MisconceptionClusterStrategy, number> = {
   rule_lineage: 140,
   normalized_description: 110,
-  shared_concept_pair: 80,
+  comparison_pattern: 85,
 };
 
 export interface MisconceptionClusterSourceEvent {
@@ -116,7 +116,7 @@ export interface MisconceptionClusterSourceEvent {
 export type MisconceptionClusterStrategy =
   | "rule_lineage"
   | "normalized_description"
-  | "shared_concept_pair";
+  | "comparison_pattern";
 
 export interface MisconceptionClusterTopic {
   topicId: TopicId;
@@ -156,12 +156,14 @@ export interface MisconceptionClusterOptions {
   minEvents?: number;
   minTopics?: number;
   now?: Date;
+  since?: Date;
+  until?: Date;
 }
 
 interface PreparedClusterEvent extends MisconceptionClusterSourceEvent {
   normalizedDescription: string;
   normalizedRuleDescription: string | null;
-  conceptPairKeys: string[];
+  comparisonPatternKeys: string[];
 }
 
 interface CandidateGroup {
@@ -187,7 +189,7 @@ export function clusterMisconceptionEvents(
   const candidateGroups = [
     ...buildCandidateGroups(prepared, "rule_lineage", minEvents, minTopics),
     ...buildCandidateGroups(prepared, "normalized_description", minEvents, minTopics),
-    ...buildCandidateGroups(prepared, "shared_concept_pair", minEvents, minTopics),
+    ...buildCandidateGroups(prepared, "comparison_pattern", minEvents, minTopics),
   ].sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
     return a.clusterKey.localeCompare(b.clusterKey);
@@ -227,11 +229,25 @@ export async function findRecentMisconceptionClusters(
   learnerId: LearnerId,
   options: MisconceptionClusterOptions = {},
 ): Promise<MisconceptionRootCauseCluster[]> {
-  const lookbackDays = options.lookbackDays ?? 30;
-  const now = options.now ?? new Date();
-  const lookbackDate = new Date(
-    now.getTime() - lookbackDays * 24 * 60 * 60 * 1000,
+  const since =
+    options.since ??
+    new Date(
+      (options.now ?? new Date()).getTime() -
+        (options.lookbackDays ?? 30) * 24 * 60 * 60 * 1000,
+    );
+
+  let whereClause = and(
+    eq(misconceptionEvents.learnerId, learnerId),
+    eq(misconceptionEvents.resolved, false),
+    gte(misconceptionEvents.createdAt, since),
   );
+
+  if (options.until) {
+    whereClause = and(
+      whereClause,
+      lte(misconceptionEvents.createdAt, options.until),
+    );
+  }
 
   const rows = await database
     .select({
@@ -251,13 +267,7 @@ export async function findRecentMisconceptionClusters(
       misconceptionRules,
       eq(misconceptionEvents.misconceptionRuleId, misconceptionRules.id),
     )
-    .where(
-      and(
-        eq(misconceptionEvents.learnerId, learnerId),
-        eq(misconceptionEvents.resolved, false),
-        gte(misconceptionEvents.createdAt, lookbackDate),
-      ),
-    );
+    .where(whereClause);
 
   return clusterMisconceptionEvents(
     rows.map((row) => ({
@@ -282,17 +292,16 @@ function prepareEvent(
   const normalizedRuleDescription = event.ruleDescription
     ? normalizeText(event.ruleDescription)
     : null;
-  const conceptPairKeys = buildConceptPairKeys([
+  const comparisonPatternKeys = buildComparisonPatternKeys([
     event.description,
     event.ruleDescription,
-    ...event.triggerPatterns,
   ]);
 
   return {
     ...event,
     normalizedDescription,
     normalizedRuleDescription,
-    conceptPairKeys,
+    comparisonPatternKeys,
   };
 }
 
@@ -345,8 +354,8 @@ function getCandidateKeys(
         : [];
     case "normalized_description":
       return event.normalizedDescription ? [event.normalizedDescription] : [];
-    case "shared_concept_pair":
-      return event.conceptPairKeys;
+    case "comparison_pattern":
+      return event.comparisonPatternKeys;
   }
 }
 
@@ -466,10 +475,10 @@ function buildRootCauseLabel(
   candidate: CandidateGroup,
   events: PreparedClusterEvent[],
 ): string {
-  if (candidate.strategy === "shared_concept_pair") {
+  if (candidate.strategy === "comparison_pattern") {
     const [left, right] = candidate.keyValue.split("::");
     if (left && right) {
-      return `Confusion around ${formatToken(left)} and ${formatToken(right)}`;
+      return `Confusion between ${formatPhrase(left)} and ${formatPhrase(right)}`;
     }
   }
 
@@ -498,28 +507,16 @@ function selectRepresentativeLabel(labels: string[]): string {
     })[0]?.[0] ?? "Related misconception pattern";
 }
 
-function buildConceptPairKeys(texts: Array<string | null>): string[] {
-  const tokens = new Set<string>();
-
+function buildComparisonPatternKeys(texts: Array<string | null>): string[] {
+  const keys = new Set<string>();
   for (const text of texts) {
     if (!text) continue;
-    for (const token of normalizeText(text).split(" ")) {
-      const normalizedToken = normalizeToken(token);
-      if (!normalizedToken || normalizedToken.length < 3) continue;
-      if (GENERIC_TOKENS.has(normalizedToken)) continue;
-      if (/^\d+$/.test(normalizedToken)) continue;
-      tokens.add(normalizedToken);
+    const key = extractComparisonPatternKey(text);
+    if (key) {
+      keys.add(key);
     }
   }
-
-  const tokenList = Array.from(tokens).sort();
-  const keys: string[] = [];
-  for (let i = 0; i < tokenList.length; i += 1) {
-    for (let j = i + 1; j < tokenList.length; j += 1) {
-      keys.push(`${tokenList[i]}::${tokenList[j]}`);
-    }
-  }
-  return keys;
+  return Array.from(keys).sort();
 }
 
 function normalizeText(text: string): string {
@@ -552,8 +549,8 @@ function explainStrategy(strategy: MisconceptionClusterStrategy): string {
       return "Matched via the same misconception rule description across topics.";
     case "normalized_description":
       return "Matched via the same normalized misconception wording across topics.";
-    case "shared_concept_pair":
-      return "Matched via the same pair of key concepts appearing in misconception descriptions.";
+    case "comparison_pattern":
+      return "Matched via the same explicit confusion pattern across concepts.";
   }
 }
 
@@ -602,4 +599,88 @@ function sentenceCase(text: string): string {
 
 function formatToken(token: string): string {
   return token.toUpperCase() === token ? token : token;
+}
+
+function extractComparisonPatternKey(text: string): string | null {
+  const normalized = normalizeText(text);
+
+  const confusionMatch = normalized.match(
+    /\bconfuses\s+(.+?)\s+(with|and|for|vs)\s+(.+)$/,
+  );
+  if (confusionMatch) {
+    return buildComparisonKey(confusionMatch[1], confusionMatch[3]);
+  }
+
+  const betweenMatch = normalized.match(/\bbetween\s+(.+?)\s+and\s+(.+)$/);
+  if (betweenMatch) {
+    return buildComparisonKey(betweenMatch[1], betweenMatch[2]);
+  }
+
+  return null;
+}
+
+function buildComparisonKey(
+  leftPhrase: string,
+  rightPhrase: string,
+): string | null {
+  let left = cleanComparisonPhrase(leftPhrase);
+  let right = cleanComparisonPhrase(rightPhrase);
+
+  if (!left || !right) {
+    return null;
+  }
+
+  [left, right] = harmonizeSharedSuffix(left, right);
+
+  if (!left || !right || left === right) {
+    return null;
+  }
+
+  const ordered = [left, right].sort();
+  return `${ordered[0]}::${ordered[1]}`;
+}
+
+function cleanComparisonPhrase(phrase: string): string {
+  return phrase
+    .split(" ")
+    .map(normalizeToken)
+    .filter((token) => {
+      if (!token) return false;
+      if (token.length < 3) return false;
+      if (GENERIC_TOKENS.has(token)) return false;
+      return !/^\d+$/.test(token);
+    })
+    .join(" ")
+    .trim();
+}
+
+function harmonizeSharedSuffix(
+  leftPhrase: string,
+  rightPhrase: string,
+): [string, string] {
+  const leftWords = leftPhrase.split(" ");
+  const rightWords = rightPhrase.split(" ");
+
+  if (leftWords.length === 1 && rightWords.length >= 2) {
+    const sharedSuffix = rightWords.slice(1).join(" ");
+    if (sharedSuffix && !leftPhrase.endsWith(sharedSuffix)) {
+      return [`${leftPhrase} ${sharedSuffix}`.trim(), rightPhrase];
+    }
+  }
+
+  if (rightWords.length === 1 && leftWords.length >= 2) {
+    const sharedSuffix = leftWords.slice(1).join(" ");
+    if (sharedSuffix && !rightPhrase.endsWith(sharedSuffix)) {
+      return [leftPhrase, `${rightPhrase} ${sharedSuffix}`.trim()];
+    }
+  }
+
+  return [leftPhrase, rightPhrase];
+}
+
+function formatPhrase(phrase: string): string {
+  return phrase
+    .split(" ")
+    .map((word) => formatToken(word))
+    .join(" ");
 }

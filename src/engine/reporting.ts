@@ -998,7 +998,12 @@ export async function generateEnhancedWeeklyReport(
   const learnerName = learnerRow?.displayName ?? "Student";
 
   // 8. Gather Phase 5 enrichment data (best-effort, parallel)
-  const enrichment = await gatherEnrichment(learnerId, resolved);
+  const enrichment = await gatherEnrichment(
+    learnerId,
+    periodStart,
+    periodEnd,
+    resolved,
+  );
 
   // 9. Generate enhanced AI summary
   const summaryPrompt = buildEnhancedReportSummaryPrompt({
@@ -1170,6 +1175,8 @@ export async function sendEnhancedWeeklyReport(
 
 async function gatherEnrichment(
   learnerId: LearnerId,
+  periodStart: Date,
+  periodEnd: Date,
   deps: ReportingDeps,
 ): Promise<ReportEnrichment> {
   const {
@@ -1208,7 +1215,8 @@ async function gatherEnrichment(
         : Promise.resolve([]),
       buildMisconceptionNarratives(database, learnerId),
       findRecentMisconceptionClusters(database, learnerId, {
-        lookbackDays: 30,
+        since: periodStart,
+        until: periodEnd,
         minEvents: 2,
         minTopics: 2,
       }).catch((err: unknown) => {

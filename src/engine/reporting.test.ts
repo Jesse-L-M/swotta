@@ -1762,10 +1762,12 @@ describe("generateEnhancedWeeklyReport", () => {
     await createMisconceptionEvent(learner.id, firstTopic.id, {
       description: "Confuses osmosis with diffusion",
       resolved: false,
+      createdAt: new Date("2026-03-10T12:00:00Z"),
     });
     await createMisconceptionEvent(learner.id, secondTopic.id, {
       description: "Mixes up diffusion and osmosis",
       resolved: false,
+      createdAt: new Date("2026-03-11T12:00:00Z"),
     });
 
     const periodStart = new Date("2026-03-09T00:00:00Z");
@@ -1783,6 +1785,37 @@ describe("generateEnhancedWeeklyReport", () => {
     expect(result.enrichment.misconceptionClusters?.[0].signal.totalEvents).toBe(2);
   });
 
+  it("limits misconception clusters to the report period", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qual = await createTestQualification();
+    const firstTopic = qual.topics[1];
+    const secondTopic = qual.topics[2];
+
+    await createMisconceptionEvent(learner.id, firstTopic.id, {
+      description: "Confuses osmosis with diffusion",
+      resolved: false,
+      createdAt: new Date("2026-03-01T12:00:00Z"),
+    });
+    await createMisconceptionEvent(learner.id, secondTopic.id, {
+      description: "Mixes up diffusion and osmosis",
+      resolved: false,
+      createdAt: new Date("2026-03-02T12:00:00Z"),
+    });
+
+    const periodStart = new Date("2026-03-09T00:00:00Z");
+    const periodEnd = new Date("2026-03-15T23:59:59Z");
+
+    const result = await generateEnhancedWeeklyReport(
+      learner.id as LearnerId,
+      periodStart,
+      periodEnd,
+      enhancedDeps(),
+    );
+
+    expect(result.enrichment.misconceptionClusters).toEqual([]);
+  });
+
   it("passes enrichment data to the AI prompt", async () => {
     const org = await createTestOrg();
     const learner = await createTestLearner(org.id);
@@ -1797,10 +1830,12 @@ describe("generateEnhancedWeeklyReport", () => {
     await createMisconceptionEvent(learner.id, firstTopic.id, {
       description: "Confuses osmosis with diffusion",
       resolved: false,
+      createdAt: new Date("2026-03-10T12:00:00Z"),
     });
     await createMisconceptionEvent(learner.id, secondTopic.id, {
       description: "Mixes up diffusion and osmosis",
       resolved: false,
+      createdAt: new Date("2026-03-11T12:00:00Z"),
     });
 
     await generateEnhancedWeeklyReport(
@@ -1913,10 +1948,10 @@ describe("mapEnrichmentToEmailProps", () => {
       misconceptionNarratives: [],
       misconceptionClusters: [
         {
-          clusterKey: "shared_concept_pair:diffusion::osmosis",
-          strategy: "shared_concept_pair",
-          rootCauseLabel: "Confusion around diffusion and osmosis",
-          explanation: "Matched via the same pair of key concepts appearing in misconception descriptions.",
+          clusterKey: "comparison_pattern:diffusion::osmosis",
+          strategy: "comparison_pattern",
+          rootCauseLabel: "Confusion between diffusion and osmosis",
+          explanation: "Matched via the same explicit confusion pattern across concepts.",
           memberTopics: [
             {
               topicId: "t1" as TopicId,
