@@ -20,6 +20,8 @@ import {
   nextExam,
   getMasteryState,
 } from "@/components/dashboard/utils";
+import { getNextPendingDiagnosticPath } from "@/lib/pending-diagnostics";
+import type { LearnerId } from "@/lib/types";
 
 export default async function DashboardPage() {
   const ctx = await getAuthContext();
@@ -27,6 +29,12 @@ export default async function DashboardPage() {
 
   const learner = await loadLearnerByUserId(ctx.user.id, db);
   if (!learner) redirect("/onboarding");
+
+  const nextDiagnosticPath = await getNextPendingDiagnosticPath(
+    db,
+    learner.id as LearnerId
+  );
+  if (nextDiagnosticPath) redirect(nextDiagnosticPath);
 
   const qualifications = await loadQualifications(learner.id, db);
 

@@ -807,6 +807,10 @@ describe("diagnostic engine", () => {
       const learner = await createTestLearner(org.id);
       const { qualificationVersionId, topics: allTopics } =
         await createTestQualification();
+      await enrollLearnerInQualification(
+        learner.id,
+        qualificationVersionId
+      );
 
       const rootTopics = allTopics.filter((t) => t.parentTopicId === null);
       const childTopics = allTopics.filter((t) => t.parentTopicId !== null);
@@ -880,6 +884,21 @@ describe("diagnostic engine", () => {
         )
         .limit(1);
       expect(Number(state2.masteryLevel)).toBe(0.3);
+
+      const [enrollment] = await db
+        .select({ diagnosticStatus: learnerQualifications.diagnosticStatus })
+        .from(learnerQualifications)
+        .where(
+          and(
+            eq(learnerQualifications.learnerId, learner.id),
+            eq(
+              learnerQualifications.qualificationVersionId,
+              qualificationVersionId
+            )
+          )
+        )
+        .limit(1);
+      expect(enrollment?.diagnosticStatus).toBe("completed");
     });
 
     it("initialises topic states before updating (idempotent)", async () => {
@@ -888,6 +907,10 @@ describe("diagnostic engine", () => {
       const learner = await createTestLearner(org.id);
       const { qualificationVersionId, topics: allTopics } =
         await createTestQualification();
+      await enrollLearnerInQualification(
+        learner.id,
+        qualificationVersionId
+      );
 
       const rootTopics = allTopics.filter((t) => t.parentTopicId === null);
 
@@ -924,6 +947,10 @@ describe("diagnostic engine", () => {
       const org = await createTestOrg();
       const learner = await createTestLearner(org.id);
       const { qualificationVersionId } = await createTestQualification();
+      await enrollLearnerInQualification(
+        learner.id,
+        qualificationVersionId
+      );
 
       const { topicsUpdated } = await completeDiagnostic(
         db,
@@ -933,6 +960,21 @@ describe("diagnostic engine", () => {
       );
 
       expect(topicsUpdated).toBe(0);
+
+      const [enrollment] = await db
+        .select({ diagnosticStatus: learnerQualifications.diagnosticStatus })
+        .from(learnerQualifications)
+        .where(
+          and(
+            eq(learnerQualifications.learnerId, learner.id),
+            eq(
+              learnerQualifications.qualificationVersionId,
+              qualificationVersionId
+            )
+          )
+        )
+        .limit(1);
+      expect(enrollment?.diagnosticStatus).toBe("completed");
     });
   });
 
@@ -943,6 +985,10 @@ describe("diagnostic engine", () => {
       const learner = await createTestLearner(org.id);
       const { qualificationVersionId, topics: allTopics } =
         await createTestQualification();
+      await enrollLearnerInQualification(
+        learner.id,
+        qualificationVersionId
+      );
 
       const { topicsInitialised } = await skipDiagnostic(
         db,
@@ -963,6 +1009,21 @@ describe("diagnostic engine", () => {
         expect(Number(state.masteryLevel)).toBe(0);
         expect(Number(state.confidence)).toBe(0);
       }
+
+      const [enrollment] = await db
+        .select({ diagnosticStatus: learnerQualifications.diagnosticStatus })
+        .from(learnerQualifications)
+        .where(
+          and(
+            eq(learnerQualifications.learnerId, learner.id),
+            eq(
+              learnerQualifications.qualificationVersionId,
+              qualificationVersionId
+            )
+          )
+        )
+        .limit(1);
+      expect(enrollment?.diagnosticStatus).toBe("skipped");
     });
 
     it("is idempotent - calling twice does not create duplicates", async () => {
@@ -971,6 +1032,10 @@ describe("diagnostic engine", () => {
       const learner = await createTestLearner(org.id);
       const { qualificationVersionId, topics: allTopics } =
         await createTestQualification();
+      await enrollLearnerInQualification(
+        learner.id,
+        qualificationVersionId
+      );
 
       await skipDiagnostic(
         db,
@@ -994,6 +1059,21 @@ describe("diagnostic engine", () => {
         .from(learnerTopicState)
         .where(eq(learnerTopicState.learnerId, learner.id));
       expect(states).toHaveLength(allTopics.length);
+
+      const [enrollment] = await db
+        .select({ diagnosticStatus: learnerQualifications.diagnosticStatus })
+        .from(learnerQualifications)
+        .where(
+          and(
+            eq(learnerQualifications.learnerId, learner.id),
+            eq(
+              learnerQualifications.qualificationVersionId,
+              qualificationVersionId
+            )
+          )
+        )
+        .limit(1);
+      expect(enrollment?.diagnosticStatus).toBe("skipped");
     });
   });
 

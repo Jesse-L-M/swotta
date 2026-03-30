@@ -6,10 +6,12 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { learners } from "@/db/schema";
 import { getAuthContext } from "@/lib/auth";
+import { getNextPendingDiagnosticPath } from "@/lib/pending-diagnostics";
 import {
   enrollInQualifications,
   type EnrollmentInput,
 } from "@/components/onboarding/enroll";
+import type { LearnerId } from "@/lib/types";
 
 const enrollmentSchema = z.array(
   z.object({
@@ -43,5 +45,9 @@ export async function completeOnboarding(
   if (result.error) {
     return result;
   }
-  redirect("/dashboard");
+  const nextDiagnosticPath = await getNextPendingDiagnosticPath(
+    db,
+    learner.id as LearnerId
+  );
+  redirect(nextDiagnosticPath ?? "/dashboard");
 }

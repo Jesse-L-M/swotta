@@ -268,6 +268,65 @@ describe("diagnostic API route", () => {
     });
     expect(sendSpy).toHaveBeenCalledTimes(2);
   });
+
+  it("returns the next pending diagnostic path after skip and blocks restarting a resolved diagnostic", async () => {
+    const db = getTestDb();
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const firstQualification = await createTestQualification();
+    const secondQualification = await createTestQualification();
+
+    await enrollLearnerInQualification(
+      learner.id,
+      firstQualification.qualificationVersionId
+    );
+    await enrollLearnerInQualification(
+      learner.id,
+      secondQualification.qualificationVersionId
+    );
+
+    requireLearnerMock.mockResolvedValue(buildLearnerContext(learner.id, org.id));
+
+    const { POST } = await import("@/app/api/diagnostic/route");
+
+    const skipResponse = await POST(
+      makeRequest({
+        action: "skip",
+        qualificationVersionId: firstQualification.qualificationVersionId,
+      }) as never
+    );
+
+    expect(skipResponse.status).toBe(200);
+    await expect(skipResponse.json()).resolves.toMatchObject({
+      data: {
+        nextPath: `/diagnostic?qualificationVersionId=${secondQualification.qualificationVersionId}`,
+      },
+    });
+
+    const [firstEnrollment] = await db
+      .select({ diagnosticStatus: learnerQualifications.diagnosticStatus })
+      .from(learnerQualifications)
+      .where(eq(
+        learnerQualifications.qualificationVersionId,
+        firstQualification.qualificationVersionId
+      ))
+      .limit(1);
+    expect(firstEnrollment?.diagnosticStatus).toBe("skipped");
+
+    const resolvedStartResponse = await POST(
+      makeRequest({
+        action: "start",
+        qualificationVersionId: firstQualification.qualificationVersionId,
+      }) as never
+    );
+
+    expect(resolvedStartResponse.status).toBe(409);
+    await expect(resolvedStartResponse.json()).resolves.toMatchObject({
+      error: {
+        code: "DIAGNOSTIC_ALREADY_RESOLVED",
+      },
+    });
+  });
 });
 
 function buildLearnerContext(learnerId: string, orgId: string) {

@@ -18,6 +18,7 @@ import {
   roleTypeEnum,
   policyScopeEnum,
   learnerQualStatusEnum,
+  diagnosticStatusEnum,
 } from "./enums";
 import { subjects, qualificationVersions } from "./curriculum";
 
@@ -257,6 +258,9 @@ export const learnerQualifications = pgTable(
     targetGrade: varchar("target_grade", { length: 10 }),
     examDate: date("exam_date"),
     status: learnerQualStatusEnum("status").notNull().default("active"),
+    diagnosticStatus: diagnosticStatusEnum("diagnostic_status")
+      .notNull()
+      .default("pending"),
     enrolledAt: timestamp("enrolled_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

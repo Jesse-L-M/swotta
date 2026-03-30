@@ -24,6 +24,10 @@ import {
   matchesDiagnosticTranscript,
   type DiagnosticMessage,
 } from "@/engine/diagnostic";
+import {
+  getNextPendingDiagnosticPath,
+  getQualificationDiagnosticStatus,
+} from "@/lib/pending-diagnostics";
 import type { LearnerId, QualificationVersionId } from "@/lib/types";
 
 const messageSchema = z.object({
@@ -100,6 +104,24 @@ export async function POST(request: NextRequest) {
         },
       },
       { status: 403 }
+    );
+  }
+
+  const diagnosticStatus = await getQualificationDiagnosticStatus(
+    db,
+    learnerId,
+    qualificationVersionId
+  );
+  if (diagnosticStatus !== "pending") {
+    return NextResponse.json(
+      {
+        error: {
+          code: "DIAGNOSTIC_ALREADY_RESOLVED",
+          message:
+            "Diagnostic has already been resolved for this qualification.",
+        },
+      },
+      { status: 409 }
     );
   }
 
@@ -403,16 +425,19 @@ async function handleComplete(
     qualificationVersionId,
     results
   );
+  const nextPath =
+    (await getNextPendingDiagnosticPath(db, learnerId)) ?? "/dashboard";
 
   structuredLog("diagnostic.completed", {
     learnerId,
     qualificationVersionId,
     topicsAnalysed: results.length,
     topicsUpdated,
+    nextPath,
   });
 
   const response = NextResponse.json({
-    data: { results, topicsUpdated },
+    data: { results, topicsUpdated, nextPath },
   });
 
   clearDiagnosticSessionCookie(response, qualificationVersionId);
@@ -429,15 +454,18 @@ async function handleSkip(
     learnerId,
     qualificationVersionId
   );
+  const nextPath =
+    (await getNextPendingDiagnosticPath(db, learnerId)) ?? "/dashboard";
 
   structuredLog("diagnostic.skipped", {
     learnerId,
     qualificationVersionId,
     topicsInitialised,
+    nextPath,
   });
 
   const response = NextResponse.json({
-    data: { topicsInitialised },
+    data: { topicsInitialised, nextPath },
   });
 
   clearDiagnosticSessionCookie(response, qualificationVersionId);

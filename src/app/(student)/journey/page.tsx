@@ -10,6 +10,7 @@ import {
   calculateDaysToExam,
 } from "@/engine/proximity";
 import type { LearnerId, QualificationVersionId } from "@/lib/types";
+import { getNextPendingDiagnosticPath } from "@/lib/pending-diagnostics";
 
 export default async function JourneyPage() {
   const ctx = await getAuthContext();
@@ -17,6 +18,12 @@ export default async function JourneyPage() {
 
   const learner = await loadLearnerByUserId(ctx.user.id, db);
   if (!learner) redirect("/onboarding");
+
+  const nextDiagnosticPath = await getNextPendingDiagnosticPath(
+    db,
+    learner.id as LearnerId
+  );
+  if (nextDiagnosticPath) redirect(nextDiagnosticPath);
 
   const [journeyData, qualifications] = await Promise.all([
     loadJourneyData(learner.id, db),
