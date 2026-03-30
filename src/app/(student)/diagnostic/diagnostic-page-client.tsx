@@ -108,7 +108,9 @@ function DiagnosticPageContent({
   }, [qualificationVersionId, resetConversation]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (typeof messagesEndRef.current?.scrollIntoView === "function") {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages, pendingMessage, loading]);
 
   const apiCall = useCallback(
