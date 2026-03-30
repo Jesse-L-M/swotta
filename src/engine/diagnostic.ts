@@ -599,7 +599,8 @@ export async function completeDiagnostic(
       transactionalDb,
       learnerId,
       qualificationVersionId,
-      "completed"
+      "completed",
+      { expectedCurrentStatus: "pending" }
     );
 
     return diagnosticResult;
@@ -623,7 +624,8 @@ export async function skipDiagnostic(
       transactionalDb,
       learnerId,
       qualificationVersionId,
-      "skipped"
+      "skipped",
+      { expectedCurrentStatus: "pending" }
     );
 
     return { topicsInitialised: result.topicsCreated };

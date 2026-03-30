@@ -44,6 +44,26 @@ function DiagnosticPageContent() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    setPhase("intro");
+    setQualificationName("");
+    setTopics([]);
+    setMessages([]);
+    setPendingMessage(null);
+    setProgress({
+      explored: [],
+      current: null,
+      total: 0,
+      isComplete: false,
+    });
+    setResults([]);
+    setInput("");
+    setLoading(false);
+    setError(null);
+    setIsComplete(false);
+    setContinuePath("/dashboard");
+  }, [qualificationVersionId]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, pendingMessage, loading]);
 

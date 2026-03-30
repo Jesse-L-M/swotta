@@ -14,6 +14,7 @@ import type {
 import { learnerQualifications, learnerTopicState } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { resetEnvCache } from "@/lib/env";
+import { DiagnosticStatusTransitionError } from "@/lib/pending-diagnostics";
 import {
   DIAGNOSTIC_START_MESSAGE,
   getDiagnosticTopics,
@@ -901,7 +902,7 @@ describe("diagnostic engine", () => {
       expect(enrollment?.diagnosticStatus).toBe("completed");
     });
 
-    it("initialises topic states before updating (idempotent)", async () => {
+    it("rejects a second completion once the qualification is resolved", async () => {
       const db = getTestDb();
       const org = await createTestOrg();
       const learner = await createTestLearner(org.id);
@@ -931,15 +932,14 @@ describe("diagnostic engine", () => {
         results
       );
 
-      const { topicsUpdated } = await completeDiagnostic(
-        db,
-        learner.id as LearnerId,
-        qualificationVersionId,
-        results
-      );
-
-      // Second call still updates the topics
-      expect(topicsUpdated).toBeGreaterThan(0);
+      await expect(
+        completeDiagnostic(
+          db,
+          learner.id as LearnerId,
+          qualificationVersionId,
+          results
+        )
+      ).rejects.toBeInstanceOf(DiagnosticStatusTransitionError);
     });
 
     it("handles empty results array", async () => {
@@ -1026,12 +1026,11 @@ describe("diagnostic engine", () => {
       expect(enrollment?.diagnosticStatus).toBe("skipped");
     });
 
-    it("is idempotent - calling twice does not create duplicates", async () => {
+    it("rejects a second skip once the qualification is resolved", async () => {
       const db = getTestDb();
       const org = await createTestOrg();
       const learner = await createTestLearner(org.id);
-      const { qualificationVersionId, topics: allTopics } =
-        await createTestQualification();
+      const { qualificationVersionId } = await createTestQualification();
       await enrollLearnerInQualification(
         learner.id,
         qualificationVersionId
@@ -1043,22 +1042,13 @@ describe("diagnostic engine", () => {
         qualificationVersionId
       );
 
-      // Second call should not create duplicates (onConflictDoNothing)
-      const { topicsInitialised } = await skipDiagnostic(
-        db,
-        learner.id as LearnerId,
-        qualificationVersionId
-      );
-
-      // Returns 0 since they already exist
-      expect(topicsInitialised).toBe(0);
-
-      // Total count is still the same
-      const states = await db
-        .select()
-        .from(learnerTopicState)
-        .where(eq(learnerTopicState.learnerId, learner.id));
-      expect(states).toHaveLength(allTopics.length);
+      await expect(
+        skipDiagnostic(
+          db,
+          learner.id as LearnerId,
+          qualificationVersionId
+        )
+      ).rejects.toBeInstanceOf(DiagnosticStatusTransitionError);
 
       const [enrollment] = await db
         .select({ diagnosticStatus: learnerQualifications.diagnosticStatus })

@@ -1,38 +1,29 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getAuthContextMock, loadLearnerByUserIdMock, getNextPendingDiagnosticPathMock, redirectMock } =
-  vi.hoisted(() => ({
-    getAuthContextMock: vi.fn(),
-    loadLearnerByUserIdMock: vi.fn(),
-    getNextPendingDiagnosticPathMock: vi.fn(),
-    redirectMock: vi.fn((path: string) => {
-      throw new Error(`REDIRECT:${path}`);
-    }),
-  }));
-
-vi.mock("@/lib/auth", () => ({
-  getAuthContext: getAuthContextMock,
+const {
+  requireStudentPageAuthMock,
+  loadQualificationsMock,
+  loadJourneyDataMock,
+} = vi.hoisted(() => ({
+  requireStudentPageAuthMock: vi.fn(),
+  loadQualificationsMock: vi.fn(),
+  loadJourneyDataMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
   db: {},
 }));
 
+vi.mock("../student-page-auth", () => ({
+  requireStudentPageAuth: requireStudentPageAuthMock,
+}));
+
 vi.mock("@/components/dashboard/data", () => ({
-  loadLearnerByUserId: loadLearnerByUserIdMock,
-  loadQualifications: vi.fn(),
+  loadQualifications: loadQualificationsMock,
 }));
 
 vi.mock("@/components/journey/data", () => ({
-  loadJourneyData: vi.fn(),
-}));
-
-vi.mock("@/lib/pending-diagnostics", () => ({
-  getNextPendingDiagnosticPath: getNextPendingDiagnosticPathMock,
-}));
-
-vi.mock("next/navigation", () => ({
-  redirect: redirectMock,
+  loadJourneyData: loadJourneyDataMock,
 }));
 
 import JourneyPage from "./page";
@@ -40,28 +31,31 @@ import JourneyPage from "./page";
 describe("JourneyPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    loadQualificationsMock.mockResolvedValue([]);
+    loadJourneyDataMock.mockResolvedValue({
+      stats: {
+        sessionsCompleted: 0,
+        topicsMastered: 0,
+        misconceptionsResolved: 0,
+        longestStreak: 0,
+      },
+      milestones: [],
+      misconceptions: [],
+      recentSessions: [],
+    });
   });
 
-  it("redirects learners to their next pending diagnostic before loading journey data", async () => {
-    getAuthContextMock.mockResolvedValue({
-      user: { id: "user-1" },
-      roles: [{ orgId: "org-1", role: "learner" }],
+  it("uses the shared student guard for pending diagnostic gating", async () => {
+    requireStudentPageAuthMock.mockResolvedValue({
+      learner: {
+        id: "learner-1",
+        displayName: "Learner",
+        yearGroup: 10,
+      },
     });
-    loadLearnerByUserIdMock.mockResolvedValue({
-      id: "learner-1",
-      displayName: "Learner",
-      yearGroup: 10,
-    });
-    getNextPendingDiagnosticPathMock.mockResolvedValue(
-      "/diagnostic?qualificationVersionId=qual-1"
-    );
 
-    await expect(JourneyPage()).rejects.toThrow(
-      "REDIRECT:/diagnostic?qualificationVersionId=qual-1"
-    );
+    await JourneyPage();
 
-    expect(redirectMock).toHaveBeenCalledWith(
-      "/diagnostic?qualificationVersionId=qual-1"
-    );
+    expect(requireStudentPageAuthMock).toHaveBeenCalledWith("/journey");
   });
 });

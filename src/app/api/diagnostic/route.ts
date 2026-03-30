@@ -27,6 +27,7 @@ import {
 import {
   getNextPendingDiagnosticPath,
   getQualificationDiagnosticStatus,
+  DiagnosticStatusTransitionError,
 } from "@/lib/pending-diagnostics";
 import type { LearnerId, QualificationVersionId } from "@/lib/types";
 
@@ -419,12 +420,29 @@ async function handleComplete(
     qualName ?? "Unknown qualification"
   );
 
-  const { topicsUpdated } = await completeDiagnostic(
-    db,
-    learnerId,
-    qualificationVersionId,
-    results
-  );
+  let topicsUpdated: number;
+  try {
+    ({ topicsUpdated } = await completeDiagnostic(
+      db,
+      learnerId,
+      qualificationVersionId,
+      results
+    ));
+  } catch (error: unknown) {
+    if (error instanceof DiagnosticStatusTransitionError) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "DIAGNOSTIC_ALREADY_RESOLVED",
+            message:
+              "Diagnostic has already been resolved for this qualification.",
+          },
+        },
+        { status: 409 }
+      );
+    }
+    throw error;
+  }
   const nextPath =
     (await getNextPendingDiagnosticPath(db, learnerId)) ?? "/dashboard";
 
@@ -449,11 +467,28 @@ async function handleSkip(
   learnerId: LearnerId,
   qualificationVersionId: QualificationVersionId
 ) {
-  const { topicsInitialised } = await skipDiagnostic(
-    db,
-    learnerId,
-    qualificationVersionId
-  );
+  let topicsInitialised: number;
+  try {
+    ({ topicsInitialised } = await skipDiagnostic(
+      db,
+      learnerId,
+      qualificationVersionId
+    ));
+  } catch (error: unknown) {
+    if (error instanceof DiagnosticStatusTransitionError) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "DIAGNOSTIC_ALREADY_RESOLVED",
+            message:
+              "Diagnostic has already been resolved for this qualification.",
+          },
+        },
+        { status: 409 }
+      );
+    }
+    throw error;
+  }
   const nextPath =
     (await getNextPendingDiagnosticPath(db, learnerId)) ?? "/dashboard";
 

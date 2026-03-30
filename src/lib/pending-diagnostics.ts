@@ -8,6 +8,13 @@ export type QualificationDiagnosticStatus =
   | "completed"
   | "skipped";
 
+export class DiagnosticStatusTransitionError extends Error {
+  constructor(message = "Diagnostic has already been resolved.") {
+    super(message);
+    this.name = "DiagnosticStatusTransitionError";
+  }
+}
+
 export function buildDiagnosticPath(
   qualificationVersionId: QualificationVersionId
 ): string {
@@ -74,26 +81,46 @@ export async function setQualificationDiagnosticStatus(
   db: Database,
   learnerId: LearnerId,
   qualificationVersionId: QualificationVersionId,
-  diagnosticStatus: QualificationDiagnosticStatus
+  diagnosticStatus: QualificationDiagnosticStatus,
+  options: {
+    expectedCurrentStatus?: QualificationDiagnosticStatus;
+  } = {}
 ): Promise<void> {
+  const conditions = [
+    eq(learnerQualifications.learnerId, learnerId),
+    eq(learnerQualifications.status, "active"),
+    eq(
+      learnerQualifications.qualificationVersionId,
+      qualificationVersionId
+    ),
+  ];
+
+  if (options.expectedCurrentStatus) {
+    conditions.push(
+      eq(
+        learnerQualifications.diagnosticStatus,
+        options.expectedCurrentStatus
+      )
+    );
+  }
+
   const updated = await db
     .update(learnerQualifications)
     .set({ diagnosticStatus })
-    .where(
-      and(
-        eq(learnerQualifications.learnerId, learnerId),
-        eq(learnerQualifications.status, "active"),
-        eq(
-          learnerQualifications.qualificationVersionId,
-          qualificationVersionId
-        )
-      )
-    )
+    .where(and(...conditions))
     .returning({ id: learnerQualifications.id });
 
-  if (updated.length === 0) {
-    throw new Error(
-      `Learner qualification not found for learner ${learnerId} and qualification ${qualificationVersionId}`
+  if (updated.length > 0) {
+    return;
+  }
+
+  if (options.expectedCurrentStatus) {
+    throw new DiagnosticStatusTransitionError(
+      `Diagnostic status transition expected ${options.expectedCurrentStatus} for learner ${learnerId} and qualification ${qualificationVersionId}`
     );
   }
+
+  throw new Error(
+    `Learner qualification not found for learner ${learnerId} and qualification ${qualificationVersionId}`
+  );
 }

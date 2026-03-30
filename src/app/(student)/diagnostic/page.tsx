@@ -15,7 +15,9 @@ export default async function DiagnosticPage({
     ? `/diagnostic?qualificationVersionId=${encodeURIComponent(qualificationVersionId)}`
     : "/diagnostic";
 
-  await requireStudentPageAuth(redirectTarget);
+  await requireStudentPageAuth(redirectTarget, {
+    allowPendingDiagnostic: true,
+  });
 
   return <DiagnosticPageClient />;
 }

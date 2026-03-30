@@ -1,37 +1,32 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getAuthContextMock, loadLearnerByUserIdMock, getNextPendingDiagnosticPathMock, redirectMock } =
-  vi.hoisted(() => ({
-    getAuthContextMock: vi.fn(),
-    loadLearnerByUserIdMock: vi.fn(),
-    getNextPendingDiagnosticPathMock: vi.fn(),
-    redirectMock: vi.fn((path: string) => {
-      throw new Error(`REDIRECT:${path}`);
-    }),
-  }));
-
-vi.mock("@/lib/auth", () => ({
-  getAuthContext: getAuthContextMock,
+const {
+  requireStudentPageAuthMock,
+  loadQualificationsMock,
+  loadDashboardStatsMock,
+  loadMasteryTopicsMock,
+  loadTodayQueueMock,
+} = vi.hoisted(() => ({
+  requireStudentPageAuthMock: vi.fn(),
+  loadQualificationsMock: vi.fn(),
+  loadDashboardStatsMock: vi.fn(),
+  loadMasteryTopicsMock: vi.fn(),
+  loadTodayQueueMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
   db: {},
 }));
 
+vi.mock("../student-page-auth", () => ({
+  requireStudentPageAuth: requireStudentPageAuthMock,
+}));
+
 vi.mock("@/components/dashboard/data", () => ({
-  loadLearnerByUserId: loadLearnerByUserIdMock,
-  loadQualifications: vi.fn(),
-  loadDashboardStats: vi.fn(),
-  loadMasteryTopics: vi.fn(),
-  loadTodayQueue: vi.fn(),
-}));
-
-vi.mock("@/lib/pending-diagnostics", () => ({
-  getNextPendingDiagnosticPath: getNextPendingDiagnosticPathMock,
-}));
-
-vi.mock("next/navigation", () => ({
-  redirect: redirectMock,
+  loadQualifications: loadQualificationsMock,
+  loadDashboardStats: loadDashboardStatsMock,
+  loadMasteryTopics: loadMasteryTopicsMock,
+  loadTodayQueue: loadTodayQueueMock,
 }));
 
 import DashboardPage from "./page";
@@ -39,28 +34,30 @@ import DashboardPage from "./page";
 describe("DashboardPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    loadQualificationsMock.mockResolvedValue([]);
+    loadDashboardStatsMock.mockResolvedValue({
+      totalSessions: 0,
+      totalStudyMinutes: 0,
+      averageMastery: 0,
+      topicsStudied: 0,
+      topicsTotal: 0,
+      currentStreak: 0,
+    });
+    loadMasteryTopicsMock.mockResolvedValue([]);
+    loadTodayQueueMock.mockResolvedValue([]);
   });
 
-  it("redirects learners to their next pending diagnostic before loading the dashboard", async () => {
-    getAuthContextMock.mockResolvedValue({
-      user: { id: "user-1" },
-      roles: [{ orgId: "org-1", role: "learner" }],
+  it("uses the shared student guard for pending diagnostic gating", async () => {
+    requireStudentPageAuthMock.mockResolvedValue({
+      learner: {
+        id: "learner-1",
+        displayName: "Learner",
+        yearGroup: 10,
+      },
     });
-    loadLearnerByUserIdMock.mockResolvedValue({
-      id: "learner-1",
-      displayName: "Learner",
-      yearGroup: 10,
-    });
-    getNextPendingDiagnosticPathMock.mockResolvedValue(
-      "/diagnostic?qualificationVersionId=qual-1"
-    );
 
-    await expect(DashboardPage()).rejects.toThrow(
-      "REDIRECT:/diagnostic?qualificationVersionId=qual-1"
-    );
+    await DashboardPage();
 
-    expect(redirectMock).toHaveBeenCalledWith(
-      "/diagnostic?qualificationVersionId=qual-1"
-    );
+    expect(requireStudentPageAuthMock).toHaveBeenCalledWith("/dashboard");
   });
 });

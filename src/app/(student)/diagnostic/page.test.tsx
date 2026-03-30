@@ -3,14 +3,16 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import DiagnosticPageClient from "./diagnostic-page-client";
 
-const pushMock = vi.fn();
+const { pushMock, searchParamsState } = vi.hoisted(() => ({
+  pushMock: vi.fn(),
+  searchParamsState: {
+    value: "qualificationVersionId=11111111-1111-1111-1111-111111111111",
+  },
+}));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock }),
-  useSearchParams: () =>
-    new URLSearchParams(
-      "qualificationVersionId=11111111-1111-1111-1111-111111111111"
-    ),
+  useSearchParams: () => new URLSearchParams(searchParamsState.value),
 }));
 
 describe("DiagnosticPage", () => {
@@ -19,6 +21,8 @@ describe("DiagnosticPage", () => {
 
   beforeEach(() => {
     pushMock.mockReset();
+    searchParamsState.value =
+      "qualificationVersionId=11111111-1111-1111-1111-111111111111";
     Object.defineProperty(Element.prototype, "scrollIntoView", {
       configurable: true,
       value: vi.fn(),
@@ -191,6 +195,42 @@ describe("DiagnosticPage", () => {
     fireEvent.click(screen.getByTestId("continue-btn"));
 
     expect(pushMock).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("resets back to the intro state when the qualification in the URL changes", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      buildResponse({
+        data: {
+          systemPrompt: "server prompt",
+          qualificationName: "GCSE Test Subject",
+          topics: [
+            { id: "topic-1", name: "Unit 1", code: "1" },
+            { id: "topic-2", name: "Unit 2", code: "2" },
+          ],
+          progress: {
+            explored: [],
+            current: "Unit 1",
+            total: 2,
+            isComplete: false,
+          },
+          reply: "Opening question",
+        },
+      })
+    );
+
+    global.fetch = fetchMock as typeof fetch;
+
+    const view = render(<DiagnosticPageClient />);
+
+    fireEvent.click(screen.getByTestId("start-btn"));
+    await waitFor(() => expect(screen.getByTestId("chat-input")).toBeDefined());
+
+    searchParamsState.value =
+      "qualificationVersionId=22222222-2222-2222-2222-222222222222";
+    view.rerender(<DiagnosticPageClient />);
+
+    await waitFor(() => expect(screen.getByTestId("start-btn")).toBeDefined());
+    expect(screen.queryByTestId("chat-input")).toBeNull();
   });
 });
 

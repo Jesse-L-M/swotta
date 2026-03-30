@@ -1,7 +1,5 @@
-import { redirect } from "next/navigation";
-import { getAuthContext } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { loadLearnerByUserId, loadQualifications } from "@/components/dashboard/data";
+import { loadQualifications } from "@/components/dashboard/data";
 import { loadJourneyData } from "@/components/journey/data";
 import { JourneyTimeline } from "@/components/journey/journey-timeline";
 import { PostExamSummary } from "@/components/journey/post-exam-summary";
@@ -10,20 +8,10 @@ import {
   calculateDaysToExam,
 } from "@/engine/proximity";
 import type { LearnerId, QualificationVersionId } from "@/lib/types";
-import { getNextPendingDiagnosticPath } from "@/lib/pending-diagnostics";
+import { requireStudentPageAuth } from "../student-page-auth";
 
 export default async function JourneyPage() {
-  const ctx = await getAuthContext();
-  if (!ctx) redirect("/login");
-
-  const learner = await loadLearnerByUserId(ctx.user.id, db);
-  if (!learner) redirect("/onboarding");
-
-  const nextDiagnosticPath = await getNextPendingDiagnosticPath(
-    db,
-    learner.id as LearnerId
-  );
-  if (nextDiagnosticPath) redirect(nextDiagnosticPath);
+  const { learner } = await requireStudentPageAuth("/journey");
 
   const [journeyData, qualifications] = await Promise.all([
     loadJourneyData(learner.id, db),

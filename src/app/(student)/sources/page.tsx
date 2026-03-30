@@ -4,8 +4,11 @@ import { AuthError } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { FileList } from "@/components/sources/file-list";
 import { getSourcesPageData } from "./actions";
+import { requireStudentPageAuth } from "../student-page-auth";
 
 export default async function SourcesPage() {
+  await requireStudentPageAuth("/sources");
+
   const { collections, filesByCollectionId, pendingFileCount, failedFileCount } =
     await loadSourcesPageData();
 
