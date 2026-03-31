@@ -268,6 +268,12 @@ export interface DetectedFlag {
   evidence: Record<string, unknown>;
 }
 
+interface SingleTopicMisconceptionCluster {
+  topicId: string;
+  topicName: string;
+  count: number;
+}
+
 export async function detectFlags(
   learnerId: LearnerId,
   lookbackDays = 7,
@@ -394,62 +400,82 @@ export async function detectFlags(
     (cluster) => cluster.signal.totalEvents >= 3,
   );
 
-  if (actionableRootCauseClusters.length > 0) {
-    const severity: FlagSeverity = actionableRootCauseClusters.some(
-      (cluster) => cluster.signal.level === "high",
+  const singleTopicClusters = (await database
+    .select({
+      topicId: misconceptionEvents.topicId,
+      topicName: topics.name,
+      count: sql<number>`count(*)::int`.as("count"),
+    })
+    .from(misconceptionEvents)
+    .innerJoin(topics, eq(misconceptionEvents.topicId, topics.id))
+    .where(
+      and(
+        eq(misconceptionEvents.learnerId, learnerId),
+        gte(misconceptionEvents.createdAt, lookbackDate),
+        eq(misconceptionEvents.resolved, false),
+      ),
     )
-      ? "high"
-      : "medium";
-    const details = actionableRootCauseClusters.map((cluster) => {
-      const topicNames = cluster.memberTopics.map((topic) => topic.topicName);
-      return `${cluster.rootCauseLabel} (${topicNames.join(", ")}; ${cluster.signal.totalEvents}x)`;
-    });
+    .groupBy(misconceptionEvents.topicId, topics.name)
+    .having(sql`count(*) >= 3`)).sort((left, right) => {
+    if (right.count !== left.count) {
+      return right.count - left.count;
+    }
+    return left.topicName.localeCompare(right.topicName);
+  });
+
+  if (actionableRootCauseClusters.length > 0 || singleTopicClusters.length > 0) {
+    const severity: FlagSeverity =
+      actionableRootCauseClusters.some((cluster) => cluster.signal.level === "high") ||
+      singleTopicClusters.some((cluster) => cluster.count >= 5)
+        ? "high"
+        : "medium";
+
     flags.push({
       type: "distress",
-      description: `Repeated root-cause misconceptions detected across topics: ${details.join("; ")}.`,
+      description: buildMisconceptionDistressDescription(
+        actionableRootCauseClusters,
+        singleTopicClusters,
+      ),
       severity,
       evidence: {
-        clusters: actionableRootCauseClusters,
+        crossTopicClusters: actionableRootCauseClusters,
+        singleTopicClusters: singleTopicClusters.map((cluster) => ({
+          topicId: cluster.topicId,
+          topicName: cluster.topicName,
+          count: cluster.count,
+        })),
       },
     });
-  } else {
-    const misconceptionClusters = await database
-      .select({
-        topicId: misconceptionEvents.topicId,
-        topicName: topics.name,
-        count: sql<number>`count(*)::int`.as("count"),
-      })
-      .from(misconceptionEvents)
-      .innerJoin(topics, eq(misconceptionEvents.topicId, topics.id))
-      .where(
-        and(
-          eq(misconceptionEvents.learnerId, learnerId),
-          gte(misconceptionEvents.createdAt, lookbackDate),
-          eq(misconceptionEvents.resolved, false),
-        ),
-      )
-      .groupBy(misconceptionEvents.topicId, topics.name)
-      .having(sql`count(*) >= 3`);
-
-    if (misconceptionClusters.length > 0) {
-      const severity: FlagSeverity = misconceptionClusters.some((c) => c.count >= 5) ? "high" : "medium";
-      const details = misconceptionClusters.map((c) => `${c.topicName} (${c.count}x)`);
-      flags.push({
-        type: "distress",
-        description: `Repeated misconceptions detected: ${details.join(", ")}.`,
-        severity,
-        evidence: {
-          clusters: misconceptionClusters.map((c) => ({
-            topicId: c.topicId,
-            topicName: c.topicName,
-            count: c.count,
-          })),
-        },
-      });
-    }
   }
 
   return flags;
+}
+
+function buildMisconceptionDistressDescription(
+  crossTopicClusters: MisconceptionRootCauseCluster[],
+  singleTopicClusters: SingleTopicMisconceptionCluster[],
+): string {
+  const crossTopicDetails = crossTopicClusters.map((cluster) => {
+    const topicNames = cluster.memberTopics.map((topic) => topic.topicName);
+    return `${cluster.rootCauseLabel} (${topicNames.join(", ")}; ${cluster.signal.totalEvents}x)`;
+  });
+  const singleTopicDetails = singleTopicClusters.map(
+    (cluster) => `${cluster.topicName} (${cluster.count}x)`,
+  );
+
+  if (crossTopicDetails.length > 0 && singleTopicDetails.length === 0) {
+    return `Repeated root-cause misconceptions detected across topics: ${crossTopicDetails.join("; ")}.`;
+  }
+
+  if (crossTopicDetails.length === 0 && singleTopicDetails.length > 0) {
+    return `Repeated misconceptions detected: ${singleTopicDetails.join(", ")}.`;
+  }
+
+  return [
+    "Repeated misconceptions detected.",
+    `Cross-topic root causes: ${crossTopicDetails.join("; ")}.`,
+    `Concentrated single-topic struggles: ${singleTopicDetails.join(", ")}.`,
+  ].join(" ");
 }
 
 // ---------------------------------------------------------------------------

@@ -609,6 +609,14 @@ describe("detectFlags", () => {
     expect(misconceptionFlag!.description).toContain("root-cause");
     expect(misconceptionFlag!.description).toContain(firstTopic.name);
     expect(misconceptionFlag!.description).toContain(secondTopic.name);
+    expect(misconceptionFlag!.evidence).toMatchObject({
+      crossTopicClusters: [
+        expect.objectContaining({
+          rootCauseLabel: "Confusion between diffusion and osmosis",
+        }),
+      ],
+      singleTopicClusters: [],
+    });
   });
 
   it("flags cross-topic misconception clusters as high severity when 5+ events recur", async () => {
@@ -641,6 +649,103 @@ describe("detectFlags", () => {
     );
     expect(misconceptionFlag).toBeDefined();
     expect(misconceptionFlag!.severity).toBe("high");
+  });
+
+  it("surfaces both cross-topic and unrelated repeated single-topic misconception evidence", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qual = await createTestQualification();
+    const firstTopic = qual.topics[1];
+    const secondTopic = qual.topics[2];
+    const thirdTopic = qual.topics[3];
+
+    await createMisconceptionEvent(learner.id, firstTopic.id, {
+      description: "Confuses osmosis with diffusion",
+      resolved: false,
+      createdAt: new Date(),
+    });
+    await createMisconceptionEvent(learner.id, firstTopic.id, {
+      description: "Confuses osmosis with diffusion",
+      resolved: false,
+      createdAt: new Date(),
+    });
+    await createMisconceptionEvent(learner.id, secondTopic.id, {
+      description: "Mixes up diffusion and osmosis",
+      resolved: false,
+      createdAt: new Date(),
+    });
+
+    for (let i = 0; i < 3; i++) {
+      await createMisconceptionEvent(learner.id, thirdTopic.id, {
+        description: "Thinks acceleration is the same as speed",
+        resolved: false,
+        createdAt: new Date(),
+      });
+    }
+
+    await createStudySession(learner.id, { startedAt: new Date() });
+
+    const flags = await detectFlags(learner.id as LearnerId, 7, baseDeps());
+
+    const misconceptionFlags = flags.filter(
+      (f) => f.type === "distress" && f.description.includes("misconception"),
+    );
+    expect(misconceptionFlags).toHaveLength(1);
+    expect(misconceptionFlags[0].description).toContain("Cross-topic root causes");
+    expect(misconceptionFlags[0].description).toContain("Concentrated single-topic struggles");
+    expect(misconceptionFlags[0].description).toContain(firstTopic.name);
+    expect(misconceptionFlags[0].description).toContain(secondTopic.name);
+    expect(misconceptionFlags[0].description).toContain(thirdTopic.name);
+    expect(misconceptionFlags[0].evidence).toMatchObject({
+      crossTopicClusters: [
+        expect.objectContaining({
+          rootCauseLabel: "Confusion between diffusion and osmosis",
+        }),
+      ],
+      singleTopicClusters: [
+        expect.objectContaining({
+          topicId: thirdTopic.id,
+          topicName: thirdTopic.name,
+          count: 3,
+        }),
+      ],
+    });
+  });
+
+  it("still surfaces legacy repeated single-topic misconceptions when no cross-topic cluster exists", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qual = await createTestQualification();
+    const topic = qual.topics[1];
+
+    for (let i = 0; i < 3; i++) {
+      await createMisconceptionEvent(learner.id, topic.id, {
+        description: "Treats acceleration as the same thing as speed",
+        resolved: false,
+        createdAt: new Date(),
+      });
+    }
+    await createStudySession(learner.id, { startedAt: new Date() });
+
+    const flags = await detectFlags(learner.id as LearnerId, 7, baseDeps());
+
+    const misconceptionFlag = flags.find(
+      (f) => f.type === "distress" && f.description.includes("misconception"),
+    );
+    expect(misconceptionFlag).toBeDefined();
+    expect(misconceptionFlag!.description).toBe(
+      `Repeated misconceptions detected: ${topic.name} (3x).`,
+    );
+    expect(misconceptionFlag!.evidence).toMatchObject({
+      crossTopicClusters: [],
+      singleTopicClusters: [
+        expect.objectContaining({
+          topicId: topic.id,
+          topicName: topic.name,
+          count: 3,
+        }),
+      ],
+    });
   });
 
   it("does not flag misconceptions when fewer than 3 per topic", async () => {
