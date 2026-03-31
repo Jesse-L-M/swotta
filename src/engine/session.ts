@@ -7,8 +7,10 @@ import {
   parseSessionStatus,
   buildOutcomeExtractionPrompt,
   type LearnerContext,
+  type ExamSessionContext,
 } from "@/ai/study-modes";
 import { processAttemptOutcome } from "@/engine/mastery";
+import { getPastPaperSessionIntelligence } from "@/engine/past-paper";
 import { syncScheduledReviewQueue } from "@/engine/review-queue";
 import type {
   StudyBlock,
@@ -33,10 +35,16 @@ export type RetrieveChunksFn = (
   }
 ) => Promise<RetrievalResult[]>;
 
+export type LoadSessionExamIntelligenceFn = (
+  db: Database,
+  block: StudyBlock
+) => Promise<ExamSessionContext | null>;
+
 export interface SessionRunnerDeps {
   db: Database;
   anthropic: Anthropic;
   retrieveChunks: RetrieveChunksFn;
+  loadSessionExamIntelligence?: LoadSessionExamIntelligenceFn;
 }
 
 let _deps: SessionRunnerDeps | null = null;
@@ -115,7 +123,14 @@ interface StoredSessionTranscript {
   attemptId: string;
   systemPrompt: string;
   messages: SessionMessage[];
+  examSession: ExamSessionContext | null;
 }
+
+const EXAM_SESSION_BLOCK_TYPES = new Set<BlockType>([
+  "timed_problems",
+  "essay_planning",
+  "worked_example",
+]);
 
 function buildAttemptRawInteraction(
   sessionId: SessionId,
@@ -123,6 +138,7 @@ function buildAttemptRawInteraction(
     messages?: SessionMessage[];
     systemPrompt?: string;
     extractedOutcome?: StoredAttemptOutcome;
+    examSession?: ExamSessionContext | null;
   } = {}
 ): Record<string, unknown> {
   const rawInteraction: Record<string, unknown> = {
@@ -136,6 +152,10 @@ function buildAttemptRawInteraction(
 
   if (options.extractedOutcome) {
     rawInteraction.extractedOutcome = options.extractedOutcome;
+  }
+
+  if (options.examSession) {
+    rawInteraction.examSession = options.examSession;
   }
 
   return rawInteraction;
@@ -180,6 +200,21 @@ export function getPersistedAttemptMisconceptions(
       },
     ];
   });
+}
+
+export function getPersistedExamSession(
+  rawInteraction: unknown
+): ExamSessionContext | null {
+  if (!isRecord(rawInteraction) || !isRecord(rawInteraction.examSession)) {
+    return null;
+  }
+
+  const { examSession } = rawInteraction;
+  if (examSession.source !== "past_paper" && examSession.source !== "fallback") {
+    return null;
+  }
+
+  return examSession as ExamSessionContext;
 }
 
 export function getStoredAttemptMessages(
@@ -251,6 +286,7 @@ export async function getStoredSessionTranscript(
 
   const systemPrompt = getStoredAttemptSystemPrompt(attempt.rawInteraction);
   const messages = getStoredAttemptMessages(attempt.rawInteraction);
+  const examSession = getPersistedExamSession(attempt.rawInteraction);
   if (!systemPrompt || messages.length === 0) {
     return null;
   }
@@ -259,6 +295,61 @@ export async function getStoredSessionTranscript(
     attemptId: attempt.id,
     systemPrompt,
     messages,
+    examSession,
+  };
+}
+
+function isExamSessionBlockType(blockType: BlockType): boolean {
+  return EXAM_SESSION_BLOCK_TYPES.has(blockType);
+}
+
+async function defaultLoadSessionExamIntelligence(
+  db: Database,
+  block: StudyBlock
+): Promise<ExamSessionContext | null> {
+  const intelligence = await getPastPaperSessionIntelligence(db, {
+    topicId: block.topicId,
+    referenceQuestionLimit: 3,
+  });
+
+  return intelligence ? { source: "past_paper", ...intelligence } : null;
+}
+
+async function resolveExamSessionContext(
+  deps: SessionRunnerDeps,
+  block: StudyBlock
+): Promise<ExamSessionContext | null> {
+  if (!isExamSessionBlockType(block.blockType)) {
+    return null;
+  }
+
+  const loadExamIntelligence =
+    deps.loadSessionExamIntelligence ?? defaultLoadSessionExamIntelligence;
+
+  try {
+    const examSession = await loadExamIntelligence(deps.db, block);
+    if (examSession) {
+      return examSession;
+    }
+  } catch (error: unknown) {
+    process.stderr.write(
+      JSON.stringify({
+        event: "session.exam-intelligence-load-failed",
+        topicId: block.topicId,
+        blockType: block.blockType,
+        error: error instanceof Error ? error.message : String(error),
+        ts: new Date().toISOString(),
+      }) + "\n"
+    );
+  }
+
+  return {
+    source: "fallback",
+    qualificationVersionId: null,
+    topicId: block.topicId,
+    topicName: block.topicName,
+    reason:
+      "No structured past-paper intelligence is available for this topic yet. Keep the session exam-relevant, but fall back to clean qualification-appropriate command-word and mark-allocation coaching.",
   };
 }
 
@@ -313,16 +404,22 @@ export async function startSession(
   block: StudyBlock,
   learnerContext: LearnerContext
 ): Promise<StartSessionResult> {
-  const { db, anthropic, retrieveChunks } = getDeps();
+  const deps = getDeps();
+  const { db, anthropic, retrieveChunks } = deps;
 
   const sourceChunks = await retrieveChunks(block.learnerId, block.topicName, {
     topicIds: [block.topicId],
     limit: 5,
   });
 
+  const examSession = await resolveExamSessionContext(deps, block);
+  const promptContext: LearnerContext = examSession
+    ? { ...learnerContext, examSession }
+    : learnerContext;
+
   const systemPrompt = await buildSystemPrompt(
     block,
-    learnerContext,
+    promptContext,
     sourceChunks
   );
 
@@ -358,6 +455,7 @@ export async function startSession(
         blockId: block.id,
         rawInteraction: buildAttemptRawInteraction(sess.id as SessionId, {
           systemPrompt,
+          examSession,
           messages: [
             {
               role: "assistant",
@@ -439,6 +537,7 @@ export async function continueSession(
     .set({
       rawInteraction: buildAttemptRawInteraction(sessionId, {
         systemPrompt: transcript.systemPrompt,
+        examSession: transcript.examSession,
         messages: [
           ...fullMessages,
           {
@@ -515,6 +614,8 @@ export async function endSession(
   }
 ): Promise<EndSessionResult> {
   const { db, anthropic } = getDeps();
+  const storedTranscript = await getStoredSessionTranscript(db, sessionId);
+  const examSession = storedTranscript?.examSession ?? null;
 
   const sessionRows = await db
     .select({
@@ -663,6 +764,7 @@ export async function endSession(
             rawInteraction: buildAttemptRawInteraction(sessionId, {
               messages,
               systemPrompt,
+              examSession,
               extractedOutcome: {
                 score: extracted.score,
                 confidenceBefore,

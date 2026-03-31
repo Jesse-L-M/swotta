@@ -18,8 +18,10 @@ import type {
   CandidateCurriculumPackage,
 } from "@/curriculum/schema";
 import {
+  analyzePastPaperDraft,
   analyzePastPaperFixture,
   getPastPaperQualificationOverview,
+  getPastPaperSessionIntelligence,
   getPastPaperTopicIntelligence,
   listPastPaperQuestionIntelligence,
   loadQualificationPastPaperCatalog,
@@ -294,6 +296,68 @@ describe("past-paper intelligence foundation", () => {
     expect(chemistryQuestionList[0]!.signals.map((signal) => signal.code)).toEqual(
       ["balanced_judgement", "justify_overall_judgement"]
     );
+
+    const chemistryBioleachingTopicId = await loadTopicIdByCode(
+      chemistryQualificationVersionId,
+      "4.10.1.4"
+    );
+    const chemistrySessionIntelligence = await getPastPaperSessionIntelligence(
+      db,
+      {
+        topicId: chemistryBioleachingTopicId,
+      }
+    );
+
+    expect(chemistrySessionIntelligence).toEqual(
+      expect.objectContaining({
+        qualificationVersionId: chemistryQualificationVersionId,
+        topicId: chemistryBioleachingTopicId,
+        topicName: "Alternative methods of extracting metals (HT only)",
+        paperCount: 1,
+        questionCount: 1,
+        totalMarks: 6,
+        marks: {
+          min: 6,
+          max: 6,
+          average: 6,
+          distinct: [6],
+        },
+      })
+    );
+    expect(chemistrySessionIntelligence?.commandWords).toEqual([
+      expect.objectContaining({
+        word: "Evaluate",
+        expectedDepth: 4,
+        count: 1,
+        totalMarks: 6,
+      }),
+    ]);
+    expect(chemistrySessionIntelligence?.questionTypes).toEqual([
+      expect.objectContaining({
+        name: "Open response",
+        count: 1,
+        totalMarks: 6,
+      }),
+    ]);
+    expect(chemistrySessionIntelligence?.markSchemeSignals).toEqual([
+      expect.objectContaining({
+        code: "balanced_judgement",
+        count: 1,
+      }),
+    ]);
+    expect(chemistrySessionIntelligence?.examTechniqueSignals).toEqual([
+      expect.objectContaining({
+        code: "justify_overall_judgement",
+        count: 1,
+      }),
+    ]);
+    expect(chemistrySessionIntelligence?.referenceQuestions).toEqual([
+      expect.objectContaining({
+        marksAvailable: 6,
+        commandWord: expect.objectContaining({ word: "Evaluate" }),
+        questionType: expect.objectContaining({ name: "Open response" }),
+      }),
+    ]);
   });
 
   it("fails fast when the narrower input format references unknown qualification records", async () => {
@@ -308,6 +372,87 @@ describe("past-paper intelligence foundation", () => {
 
     expect(() => analyzePastPaperFixture(catalog, brokenFixture)).toThrow(
       'Unknown component code "paper-9"'
+    );
+  });
+
+  it("keeps aggregate signal notes only when they stay stable across the topic", async () => {
+    const { db, biologyQualificationVersionId } =
+      await seedWedgeQualificationFixtures();
+    const biologyCatalog = await loadQualificationPastPaperCatalog(
+      db,
+      biologyQualificationVersionId
+    );
+    const biologyAnalyses = analyzePastPaperFixture(
+      biologyCatalog,
+      biologyPastPaperFixture
+    );
+
+    const mixedSignalPaper = analyzePastPaperDraft(biologyCatalog, {
+      slug: "aqa-gcse-biology-8461-june-2024-paper-2-osmosis-mix",
+      title: "AQA GCSE Biology June 2024 Paper 2 Osmosis Mix",
+      componentCode: "paper-2",
+      series: "June",
+      examYear: 2024,
+      questions: [
+        {
+          questionNumber: "07.1",
+          prompt: "Explain why water moves into the potato cells by osmosis.",
+          marks: 2,
+          topicCodeHints: ["4.1.3.2"],
+          markSchemeBullets: [
+            "Water moves from a dilute solution to a more concentrated solution.",
+            "It passes through a partially permeable membrane.",
+          ],
+        },
+        {
+          questionNumber: "07.2",
+          prompt:
+            "Explain why water uptake makes the potato tissue become firm.",
+          marks: 4,
+          topicCodeHints: ["4.1.3.2"],
+          markSchemeBullets: [
+            "Water moves from a dilute solution to a more concentrated solution.",
+            "It passes through a partially permeable membrane.",
+            "The vacuole gets larger.",
+            "The cell becomes turgid so the tissue feels firm.",
+          ],
+        },
+      ],
+    });
+
+    await seedPastPaperAnalyses(db, [...biologyAnalyses, mixedSignalPaper]);
+
+    const biologyOsmosisTopicId = await loadTopicIdByCode(
+      biologyQualificationVersionId,
+      "4.1.3.2"
+    );
+    const biologySessionIntelligence = await getPastPaperSessionIntelligence(
+      db,
+      {
+        topicId: biologyOsmosisTopicId,
+      }
+    );
+
+    expect(
+      biologySessionIntelligence?.markSchemeSignals.find(
+        (signal) => signal.code === "point_plus_reason"
+      )
+    ).toEqual(
+      expect.objectContaining({
+        count: 3,
+        note: null,
+      })
+    );
+    expect(
+      biologySessionIntelligence?.examTechniqueSignals.find(
+        (signal) => signal.code === "link_cause_and_effect"
+      )
+    ).toEqual(
+      expect.objectContaining({
+        count: 3,
+        note:
+          "Build each mark as cause -> process -> outcome rather than as isolated statements.",
+      })
     );
   });
 });

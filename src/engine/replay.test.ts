@@ -391,6 +391,7 @@ describe("generateReplaySummary", () => {
     learnerId: string,
     topicId: string,
     overrides?: {
+      blockType?: typeof studyBlocks.$inferInsert.blockType;
       status?: string;
       summary?: string;
       totalDurationMinutes?: number;
@@ -399,6 +400,7 @@ describe("generateReplaySummary", () => {
       misconceptionsDetected?: number;
       confidenceBefore?: string;
       confidenceAfter?: string;
+      rawInteraction?: Record<string, unknown>;
     }
   ) {
     const [block] = await db
@@ -406,7 +408,7 @@ describe("generateReplaySummary", () => {
       .values({
         learnerId,
         topicId,
-        blockType: "retrieval_drill",
+        blockType: overrides?.blockType ?? "retrieval_drill",
         durationMinutes: 15,
       })
       .returning();
@@ -437,6 +439,7 @@ describe("generateReplaySummary", () => {
         misconceptionsDetected: overrides?.misconceptionsDetected ?? 0,
         confidenceBefore: overrides?.confidenceBefore ?? null,
         confidenceAfter: overrides?.confidenceAfter ?? null,
+        rawInteraction: overrides?.rawInteraction ?? null,
       })
       .returning();
 
@@ -497,6 +500,136 @@ describe("generateReplaySummary", () => {
     );
     expect(
       result!.whatYouCovered.some((s) => s.includes("Retrieval Drill"))
+    ).toBe(true);
+  });
+
+  it("surfaces past-paper exam focus in replay when exam context was used", async () => {
+    const { db, learner, topicA } = await setupTestData();
+    const { session } = await createSessionWithBlock(
+      db,
+      learner.id,
+      topicA.id,
+      {
+        blockType: "timed_problems",
+        rawInteraction: {
+          sessionId: "session-with-exam-context",
+          examSession: {
+            source: "past_paper",
+            qualificationVersionId: "qual-1",
+            topicId: topicA.id,
+            topicName: topicA.name,
+            paperCount: 2,
+            questionCount: 3,
+            totalMarks: 10,
+            marks: {
+              min: 2,
+              max: 4,
+              average: 3.3,
+              distinct: [2, 4],
+            },
+            commandWords: [
+              {
+                word: "Explain",
+                definition: "Make something clear, giving reasons.",
+                expectedDepth: 3,
+                count: 2,
+                totalMarks: 8,
+              },
+            ],
+            questionTypes: [
+              {
+                name: "Structured",
+                description: "Short structured response",
+                typicalMarks: 4,
+                markSchemePattern: "Point-plus-reason explanation",
+                count: 2,
+                totalMarks: 8,
+              },
+            ],
+            markSchemeSignals: [
+              {
+                signalType: "mark_scheme_pattern",
+                code: "point_plus_reason",
+                label: "Point-plus-reason explanation",
+                note: "Marks reward linked scientific reasoning.",
+                count: 2,
+              },
+            ],
+            examTechniqueSignals: [
+              {
+                signalType: "exam_technique",
+                code: "link_cause_and_effect",
+                label: "Link cause and effect",
+                note: "Build each mark as cause -> process -> outcome.",
+                count: 2,
+              },
+            ],
+            referenceQuestions: [],
+          },
+        },
+      }
+    );
+
+    const result = await generateReplaySummary(db, session.id as SessionId);
+
+    expect(
+      result?.whatYouCovered.some((entry) => entry.includes("Exam focus: Explain"))
+    ).toBe(true);
+    expect(
+      result?.whatsNext.some((entry) =>
+        entry.includes("cause -> process -> outcome")
+      )
+    ).toBe(true);
+  });
+
+  it("falls back to the safe signal label when aggregate exam notes are unstable", async () => {
+    const { db, learner, topicA } = await setupTestData();
+    const { session } = await createSessionWithBlock(
+      db,
+      learner.id,
+      topicA.id,
+      {
+        blockType: "timed_problems",
+        rawInteraction: {
+          sessionId: "session-with-unstable-exam-note",
+          examSession: {
+            source: "past_paper",
+            qualificationVersionId: "qual-1",
+            topicId: topicA.id,
+            topicName: topicA.name,
+            paperCount: 2,
+            questionCount: 3,
+            totalMarks: 10,
+            marks: {
+              min: 2,
+              max: 4,
+              average: 3.3,
+              distinct: [2, 4],
+            },
+            commandWords: [],
+            questionTypes: [],
+            markSchemeSignals: [],
+            examTechniqueSignals: [
+              {
+                signalType: "exam_technique",
+                code: "one_point_per_mark",
+                label: "One point per mark",
+                note: null,
+                count: 2,
+              },
+            ],
+            referenceQuestions: [],
+          },
+        },
+      }
+    );
+
+    const result = await generateReplaySummary(db, session.id as SessionId);
+
+    expect(
+      result?.whatsNext.some((entry) =>
+        entry.includes("Exam technique focus: One point per mark")
+      )
     ).toBe(true);
   });
 
