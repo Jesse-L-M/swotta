@@ -6,7 +6,10 @@ import type {
   EvalRunReport,
   EvalSuiteDefinition,
 } from "@/evals/core/types";
+import { runPastPaperAwareTutoringSuite } from "@/evals/suites/past-paper-aware-tutoring";
+import { runPolicyAdherenceSuite } from "@/evals/suites/policy-adherence";
 import { runSchedulerQualitySuite } from "@/evals/suites/scheduler-quality";
+import { runSourceGroundingQualitySuite } from "@/evals/suites/source-grounding-quality";
 import { runStructuredContextVsBlankSuite } from "@/evals/suites/structured-context-vs-blank";
 
 const SUITES: EvalSuiteDefinition[] = [
@@ -19,6 +22,21 @@ const SUITES: EvalSuiteDefinition[] = [
     id: "scheduler-quality-vs-baselines",
     title: "Scheduler Quality vs Baselines",
     run: runSchedulerQualitySuite,
+  },
+  {
+    id: "source-grounding-quality",
+    title: "Source Grounding Quality",
+    run: runSourceGroundingQualitySuite,
+  },
+  {
+    id: "policy-adherence",
+    title: "Policy Adherence",
+    run: runPolicyAdherenceSuite,
+  },
+  {
+    id: "past-paper-aware-tutoring",
+    title: "Past-Paper-Aware Tutoring",
+    run: runPastPaperAwareTutoringSuite,
   },
 ];
 
@@ -46,7 +64,12 @@ export async function runEvalSuites(
   generatedAt?: string
 ): Promise<EvalRunReport> {
   const suites = resolveSuiteSelection(selection);
-  const results = await Promise.all(suites.map((suite) => suite.run()));
+  const results = [];
+
+  for (const suite of suites) {
+    results.push(await suite.run());
+  }
+
   return createEvalRunReport(results, generatedAt);
 }
 
