@@ -22,6 +22,9 @@ describe("evals CLI smoke", () => {
     expect(output).toContain("Swotta eval report");
     expect(output).toContain("Structured Context vs Blank Context");
     expect(output).toContain("Scheduler Quality vs Baselines");
+    expect(output).toContain("Source Grounding Quality");
+    expect(output).toContain("Policy Adherence");
+    expect(output).toContain("Past-Paper-Aware Tutoring");
   });
 
   it("runs a named suite invocation through the npm script", () => {

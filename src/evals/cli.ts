@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
+import { closeEvalDatabase } from "@/evals/core/test-db";
 import { formatHumanReport, runEvalSuites } from "@/evals";
 
 interface CliOptions {
@@ -85,9 +86,13 @@ async function main(): Promise<void> {
   process.stdout.write(options.format === "json" ? `${json}\n` : `${human}\n`);
 }
 
-main().catch((error: unknown) => {
-  const message =
-    error instanceof Error ? error.stack ?? error.message : String(error);
-  process.stderr.write(`${message}\n`);
-  process.exitCode = 1;
-});
+main()
+  .catch((error: unknown) => {
+    const message =
+      error instanceof Error ? error.stack ?? error.message : String(error);
+    process.stderr.write(`${message}\n`);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await closeEvalDatabase();
+  });
