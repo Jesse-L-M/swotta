@@ -1,4 +1,4 @@
-import { eq, and, sql, count, sum, desc } from "drizzle-orm";
+import { eq, and, sql, count, sum, desc, gte } from "drizzle-orm";
 import {
   misconceptionEvents,
   learnerTopicState,
@@ -70,13 +70,41 @@ export async function loadMisconceptionThreads(
 
 export async function loadJourneyStats(
   learnerId: string,
-  db: Database
+  db: Database,
+  now: Date = new Date()
 ): Promise<JourneyStats> {
-  const [sessionResults, miscResults, topicStateRows] = await Promise.all([
+  const weekAgo = new Date(now);
+  weekAgo.setDate(weekAgo.getDate() - 7);
+
+  const [sessionResults, recentSessionResults, lastSessionResults, miscResults, topicStateRows] = await Promise.all([
     db
       .select({
         sessionsCompleted: count(studySessions.id),
         totalStudyMinutes: sum(studySessions.totalDurationMinutes),
+      })
+      .from(studySessions)
+      .where(
+        and(
+          eq(studySessions.learnerId, learnerId),
+          eq(studySessions.status, "completed")
+        )
+      ),
+    db
+      .select({
+        sessionsThisWeek: count(studySessions.id),
+        studyMinutesThisWeek: sum(studySessions.totalDurationMinutes),
+      })
+      .from(studySessions)
+      .where(
+        and(
+          eq(studySessions.learnerId, learnerId),
+          eq(studySessions.status, "completed"),
+          gte(studySessions.startedAt, weekAgo)
+        )
+      ),
+    db
+      .select({
+        lastSessionAt: sql<Date | null>`max(${studySessions.startedAt})`,
       })
       .from(studySessions)
       .where(
@@ -105,6 +133,13 @@ export async function loadJourneyStats(
 
   const sessionsCompleted = sessionResults[0]?.sessionsCompleted ?? 0;
   const totalStudyMinutes = Number(sessionResults[0]?.totalStudyMinutes ?? 0);
+  const sessionsThisWeek = Number(
+    recentSessionResults[0]?.sessionsThisWeek ?? 0
+  );
+  const studyMinutesThisWeek = Number(
+    recentSessionResults[0]?.studyMinutesThisWeek ?? 0
+  );
+  const lastSessionAt = lastSessionResults[0]?.lastSessionAt ?? null;
   const misconceptionsTotal = Number(miscResults[0]?.total ?? 0);
   const misconceptionsConquered = Number(miscResults[0]?.resolved ?? 0);
 
@@ -120,6 +155,9 @@ export async function loadJourneyStats(
   return {
     sessionsCompleted,
     totalStudyMinutes,
+    sessionsThisWeek,
+    studyMinutesThisWeek,
+    lastSessionAt,
     misconceptionsTotal,
     misconceptionsConquered,
     specCoveragePercent,

@@ -4,10 +4,12 @@ const {
   requireStudentPageAuthMock,
   loadQualificationsMock,
   loadJourneyDataMock,
+  loadTodayQueueMock,
 } = vi.hoisted(() => ({
   requireStudentPageAuthMock: vi.fn(),
   loadQualificationsMock: vi.fn(),
   loadJourneyDataMock: vi.fn(),
+  loadTodayQueueMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -20,6 +22,7 @@ vi.mock("../student-page-auth", () => ({
 
 vi.mock("@/components/dashboard/data", () => ({
   loadQualifications: loadQualificationsMock,
+  loadTodayQueue: loadTodayQueueMock,
 }));
 
 vi.mock("@/components/journey/data", () => ({
@@ -32,16 +35,23 @@ describe("JourneyPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     loadQualificationsMock.mockResolvedValue([]);
+    loadTodayQueueMock.mockResolvedValue([]);
     loadJourneyDataMock.mockResolvedValue({
       stats: {
         sessionsCompleted: 0,
-        topicsMastered: 0,
-        misconceptionsResolved: 0,
-        longestStreak: 0,
+        totalStudyMinutes: 0,
+        sessionsThisWeek: 0,
+        studyMinutesThisWeek: 0,
+        lastSessionAt: null,
+        misconceptionsTotal: 0,
+        misconceptionsConquered: 0,
+        specCoveragePercent: 0,
+        topicsCovered: 0,
+        totalTopics: 0,
       },
       milestones: [],
-      misconceptions: [],
-      recentSessions: [],
+      conquered: [],
+      active: [],
     });
   });
 

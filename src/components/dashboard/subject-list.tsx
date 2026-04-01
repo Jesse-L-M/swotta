@@ -5,6 +5,7 @@ import {
   MASTERY_STATE_LABEL,
   masteryPercent,
   formatExamCountdown,
+  groupMasteryByState,
 } from "./utils";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +28,7 @@ export function SubjectList({
         const topics = masteryTopics.filter(
           (t) => t.qualificationVersionId === qual.qualificationVersionId
         );
+        const grouped = groupMasteryByState(topics);
         const avgMastery =
           topics.length > 0
             ? topics.reduce((s, t) => s + t.masteryLevel, 0) / topics.length
@@ -34,6 +36,14 @@ export function SubjectList({
         const state = getMasteryState(avgMastery);
         const styles = MASTERY_STYLES[state];
         const countdown = formatExamCountdown(qual.examDate);
+        const focusMessage =
+          grouped["needs-work"] > 0
+            ? `${grouped["needs-work"]} topic${grouped["needs-work"] === 1 ? "" : "s"} still need a solid first pass.`
+            : grouped.developing > 0
+              ? `${grouped.developing} topic${grouped.developing === 1 ? " is" : "s are"} close to sticking with one more push.`
+              : topics.length > 0
+                ? "This subject is in a steady place. Keep it warm with regular review."
+                : "You have not built enough evidence here yet for a strong read on progress.";
 
         return (
           <div
@@ -82,6 +92,8 @@ export function SubjectList({
                 {countdown && <span>{countdown}</span>}
               </div>
             </div>
+
+            <p className="mt-3 text-sm text-[#5C5950]">{focusMessage}</p>
           </div>
         );
       })}

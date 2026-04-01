@@ -1,3 +1,4 @@
+import type { DashboardQueueBlock } from "@/components/dashboard/types";
 import type { MisconceptionThread, JourneyMilestone } from "./types";
 
 export function formatDate(date: Date): string {
@@ -25,7 +26,7 @@ export function buildMilestoneMessage(
   description: string,
   topicName: string
 ): string {
-  return `You conquered "${description}" in ${topicName}!`;
+  return `You turned "${description}" into a strength in ${topicName}.`;
 }
 
 export function extractMilestones(
@@ -57,4 +58,45 @@ export function conqueredPercent(
 ): number {
   if (total === 0) return 0;
   return Math.round((conquered / total) * 100);
+}
+
+export function buildMomentumSummary({
+  nextBlock,
+  queueCount: _queueCount,
+  activeMisconceptions,
+}: {
+  nextBlock: DashboardQueueBlock | null;
+  queueCount: number;
+  activeMisconceptions: number;
+}): {
+  title: string;
+  detail: string;
+  ctaHref: string;
+  ctaLabel: string;
+} {
+  if (nextBlock) {
+    return {
+      title: "Keep today's momentum going",
+      detail: `Next up: ${nextBlock.actionTitle}. ${nextBlock.whyNow}`,
+      ctaHref: `/session/${nextBlock.id}`,
+      ctaLabel: "Start next block",
+    };
+  }
+
+  if (activeMisconceptions > 0) {
+    return {
+      title: "Your queue is clear right now",
+      detail: `You still have ${activeMisconceptions} active misconception${activeMisconceptions === 1 ? "" : "s"} being tracked, but nothing new is scheduled yet. Check the dashboard again later for the next block.`,
+      ctaHref: "/dashboard",
+      ctaLabel: "Back to dashboard",
+    };
+  }
+
+  return {
+    title: "Your queue is clear right now",
+    detail:
+      "Nothing is scheduled right now. Use this page to see what is getting stronger, then come back when the next study block appears.",
+    ctaHref: "/dashboard",
+    ctaLabel: "Back to dashboard",
+  };
 }

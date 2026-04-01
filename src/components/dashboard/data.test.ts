@@ -7,7 +7,13 @@ import {
   createTestQualification,
   enrollLearnerInQualification,
 } from "@/test/fixtures";
-import { learnerTopicState, studySessions, studyBlocks } from "@/db/schema";
+import {
+  learnerTopicState,
+  studySessions,
+  studyBlocks,
+  reviewQueue,
+  misconceptionEvents,
+} from "@/db/schema";
 import {
   loadLearnerByUserId,
   loadQualifications,
@@ -367,5 +373,60 @@ describe("loadTodayQueue", () => {
     const secondResult = await loadTodayQueue(learner.id, db);
     expect(secondResult.length).toBeGreaterThan(0);
     expect(secondResult[0].id).toBe(result[0].id);
+  });
+
+  test("adds learner-friendly why-now metadata from queue context", async () => {
+    const db = getTestDb();
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qual = await createTestQualification();
+
+    await enrollLearnerInQualification(
+      learner.id,
+      qual.qualificationVersionId
+    );
+
+    await db.insert(learnerTopicState).values({
+      learnerId: learner.id,
+      topicId: qual.topics[0].id,
+      masteryLevel: "0.350",
+      confidence: "0.300",
+      reviewCount: 2,
+      nextReviewAt: new Date("2026-03-18T08:00:00Z"),
+    });
+
+    await db.insert(studyBlocks).values({
+      learnerId: learner.id,
+      topicId: qual.topics[0].id,
+      blockType: "retrieval_drill",
+      durationMinutes: 10,
+      priority: 1,
+      status: "pending",
+    });
+
+    await db.insert(reviewQueue).values({
+      learnerId: learner.id,
+      topicId: qual.topics[0].id,
+      reason: "misconception",
+      priority: 1,
+      dueAt: new Date("2026-03-18T08:00:00Z"),
+    });
+
+    await db.insert(misconceptionEvents).values({
+      learnerId: learner.id,
+      topicId: qual.topics[0].id,
+      description: "mixing up mitosis and meiosis",
+      severity: 2,
+      resolved: false,
+    });
+
+    const result = await loadTodayQueue(learner.id, db);
+
+    expect(result[0].reviewReason).toBe("misconception");
+    expect(result[0].actionTitle).toBe(
+      `Pull ${qual.topics[0].name} out of memory`
+    );
+    expect(result[0].whyNow).toContain("mixing up mitosis and meiosis");
+    expect(result[0].impact).toContain("memory");
   });
 });

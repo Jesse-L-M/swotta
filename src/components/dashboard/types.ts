@@ -1,6 +1,4 @@
-import type {
-  StudyBlock,
-} from "@/lib/types";
+import type { ReviewReason, StudyBlock } from "@/lib/types";
 
 export interface DashboardQualification {
   id: string;
@@ -28,6 +26,13 @@ export interface MasteryTopic {
   qualificationVersionId: string;
 }
 
+export interface DashboardQueueBlock extends StudyBlock {
+  reviewReason: ReviewReason | null;
+  actionTitle: string;
+  whyNow: string;
+  impact: string;
+}
+
 export interface DashboardData {
   learner: {
     id: string;
@@ -35,7 +40,7 @@ export interface DashboardData {
     yearGroup: number | null;
   };
   qualifications: DashboardQualification[];
-  todayQueue: StudyBlock[];
+  todayQueue: DashboardQueueBlock[];
   stats: DashboardStats;
   masteryTopics: MasteryTopic[];
 }

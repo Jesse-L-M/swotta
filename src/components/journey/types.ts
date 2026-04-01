@@ -24,6 +24,9 @@ export interface JourneyMilestone {
 export interface JourneyStats {
   sessionsCompleted: number;
   totalStudyMinutes: number;
+  sessionsThisWeek: number;
+  studyMinutesThisWeek: number;
+  lastSessionAt: Date | null;
   misconceptionsTotal: number;
   misconceptionsConquered: number;
   specCoveragePercent: number;

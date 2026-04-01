@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { loadTodayQueue } from "@/components/dashboard/data";
 import { loadQualifications } from "@/components/dashboard/data";
 import { loadJourneyData } from "@/components/journey/data";
 import { JourneyTimeline } from "@/components/journey/journey-timeline";
@@ -13,9 +14,10 @@ import { requireStudentPageAuth } from "../student-page-auth";
 export default async function JourneyPage() {
   const { learner } = await requireStudentPageAuth("/journey");
 
-  const [journeyData, qualifications] = await Promise.all([
+  const [journeyData, qualifications, todayQueue] = await Promise.all([
     loadJourneyData(learner.id, db),
     loadQualifications(learner.id, db),
+    loadTodayQueue(learner.id, db),
   ]);
 
   const now = new Date();
@@ -42,12 +44,12 @@ export default async function JourneyPage() {
           Your learning journey
         </h1>
         <p className="mt-1 text-[#5C5950]">
-          Track your misconceptions, celebrate your progress, and see how far
-          you&apos;ve come.
+          See what is getting stronger, what still trips you up, and how
+          today&apos;s queue fits into that story.
         </p>
       </div>
 
-      <JourneyTimeline data={journeyData} />
+      <JourneyTimeline data={journeyData} todayQueue={todayQueue} />
 
       {postExamSummaries.length > 0 && (
         <section data-testid="post-exam-section">
