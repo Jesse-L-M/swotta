@@ -14,6 +14,7 @@ import { UploadDropzone } from "@/components/sources/upload-dropzone";
 import { UploadProgressBar } from "@/components/sources/processing-status";
 import { TopicMappingPreview } from "@/components/sources/topic-mapping-preview";
 import type {
+  FileStatus,
   TopicMapping,
   UploadProgress,
 } from "@/components/sources/source-types";
@@ -592,7 +593,7 @@ async function uploadPreparedFile({
   file: {
     fileId: string | null;
     filename: string;
-    status: "pending" | "failed";
+    status: FileStatus;
     errorMessage: string | null;
     uploadUrl: string | null;
   };
@@ -604,6 +605,21 @@ async function uploadPreparedFile({
   ) => void;
 }): Promise<FinalizedUpload> {
   const clientFileId = uploadId ?? crypto.randomUUID();
+
+  if (
+    file.status === "queueing"
+    || file.status === "processing"
+    || file.status === "ready"
+  ) {
+    return {
+      fileId: clientFileId,
+      sourceFileId: file.fileId ?? undefined,
+      filename: file.filename,
+      progress: 100,
+      status: file.status,
+      errorMessage: file.errorMessage ?? undefined,
+    };
+  }
 
   if (
     file.status === "failed"
