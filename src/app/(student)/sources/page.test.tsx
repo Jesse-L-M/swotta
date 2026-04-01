@@ -1,4 +1,6 @@
+// @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
 import SourcesPage from "./page";
 
 const { requireStudentPageAuthMock, getSourcesPageDataMock } = vi.hoisted(
@@ -34,5 +36,14 @@ describe("SourcesPage", () => {
     await SourcesPage();
 
     expect(requireStudentPageAuthMock).toHaveBeenCalledWith("/sources");
+  });
+
+  it("renders the learner-facing empty state guidance", async () => {
+    render(await SourcesPage());
+
+    expect(screen.getByText("Build your sources library")).toBeDefined();
+    expect(screen.getByText("Uploaded")).toBeDefined();
+    expect(screen.getByText("Processing")).toBeDefined();
+    expect(screen.getByText("Ready")).toBeDefined();
   });
 });

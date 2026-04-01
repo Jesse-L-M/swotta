@@ -38,8 +38,9 @@ export interface TopicMapping {
 
 export interface UploadProgress {
   fileId: string;
+  sourceFileId?: string;
   filename: string;
   progress: number | null; // 0-100, null for indeterminate upload state
-  status: "uploading" | "processing" | "complete" | "error";
+  status: "uploading" | "uploaded" | FileStatus;
   errorMessage?: string;
 }

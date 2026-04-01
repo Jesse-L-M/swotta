@@ -1,4 +1,6 @@
+// @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
 import UploadPage from "./page";
 
 const { requireStudentPageAuthMock, getCollectionsMock } = vi.hoisted(() => ({
@@ -27,5 +29,13 @@ describe("UploadPage", () => {
     await UploadPage();
 
     expect(requireStudentPageAuthMock).toHaveBeenCalledWith("/sources/upload");
+  });
+
+  it("renders the upload status explainer", async () => {
+    render(await UploadPage());
+
+    expect(screen.getByText("What happens next")).toBeDefined();
+    expect(screen.getByText("Queued")).toBeDefined();
+    expect(screen.getByText("Ready")).toBeDefined();
   });
 });

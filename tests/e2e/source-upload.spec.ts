@@ -44,13 +44,13 @@ test.describe("Source upload flow", () => {
     // Page heading
     await expect(page.getByText("Sources")).toBeVisible();
     await expect(
-      page.getByText("Manage your study materials")
+      page.getByText("Keep track of what has uploaded")
     ).toBeVisible();
 
     // Empty state
-    await expect(page.getByText("No collections yet")).toBeVisible();
+    await expect(page.getByText("Build your sources library")).toBeVisible();
     await expect(
-      page.getByText(/Upload your study materials to get started/)
+      page.getByText(/store them, queue them for processing/)
     ).toBeVisible();
 
     // Upload buttons
@@ -71,7 +71,7 @@ test.describe("Source upload flow", () => {
     // Upload page heading
     await expect(page.getByText("Upload Materials")).toBeVisible();
     await expect(
-      page.getByText(/Upload your revision notes/)
+      page.getByText(/keep their status clear while the background work finishes/)
     ).toBeVisible();
   });
 

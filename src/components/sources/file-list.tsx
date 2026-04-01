@@ -17,7 +17,7 @@ export function FileList({
 }: FileListProps) {
   if (files.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[#D9D2C5] bg-white p-8 text-center">
+      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[#D9D2C5] bg-[#FCFAF6] p-8 text-center">
         <svg
           width="40"
           height="40"
@@ -42,7 +42,7 @@ export function FileList({
       {files.map((file) => (
         <div
           key={file.id}
-          className={`flex items-center gap-4 p-4 ${
+          className={`flex items-start gap-4 p-4 ${
             onFileClick ? "cursor-pointer hover:bg-[#F5F2EC]" : ""
           }`}
           onClick={() => onFileClick?.(file.id)}
@@ -65,20 +65,30 @@ export function FileList({
             <p className="truncate text-sm font-medium text-[#1A1917]">
               {file.filename}
             </p>
-            <p className="text-xs text-[#5C5950]">
+            <p className="mt-1 text-xs text-[#5C5950]">
               {formatFileSize(file.sizeBytes)}
               {file.pageCount !== null && ` \u00B7 ${file.pageCount} pages`}
               {" \u00B7 "}
-              {new Date(file.createdAt).toLocaleDateString()}
+              Added {formatDate(file.createdAt)}
             </p>
           </div>
 
           <ProcessingStatus
             status={file.status}
             errorMessage={file.errorMessage}
+            showDescription
+            className="max-w-[16rem] shrink-0 items-start text-left"
           />
         </div>
       ))}
     </div>
   );
+}
+
+function formatDate(date: Date): string {
+  return new Date(date).toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
