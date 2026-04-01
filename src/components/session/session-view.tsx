@@ -9,6 +9,7 @@ import { ConfidenceSlider } from "./confidence-slider";
 import { SessionTimer } from "./session-timer";
 import { ProgressIndicator } from "./progress-indicator";
 import { SessionComplete } from "./session-complete";
+import { SessionRecoveryCard } from "./session-recovery-card";
 import { AiGuidanceCallout } from "./ai-guidance-callout";
 import { Button } from "@/components/ui/button";
 import { BLOCK_TYPE_LABELS } from "@/lib/labels";
@@ -54,17 +55,50 @@ export function SessionView({
       >
         <div className="text-center">
           <p className="text-sm text-destructive">{session.error}</p>
-          {onBackToDashboard && (
+          <div className="mt-4 flex justify-center gap-2">
             <Button
               variant="outline"
-              onClick={onBackToDashboard}
-              className="mt-4"
-              data-testid="error-dashboard-btn"
+              onClick={() => void session.retry()}
+              data-testid="error-retry-btn"
             >
-              Back to Dashboard
+              Retry
             </Button>
-          )}
+            {onBackToDashboard && (
+              <Button
+                variant="outline"
+                onClick={onBackToDashboard}
+                data-testid="error-dashboard-btn"
+              >
+                Back to Dashboard
+              </Button>
+            )}
+          </div>
         </div>
+      </div>
+    );
+  }
+
+  if (
+    session.phase === "recovery" &&
+    session.block &&
+    session.recoveryState
+  ) {
+    return (
+      <div className="flex h-full items-center justify-center p-6" data-testid="session-recovery">
+        <SessionRecoveryCard
+          topicName={session.block.topicName}
+          statusLabel={session.recoveryState.statusLabel}
+          title={session.recoveryState.title}
+          description={session.recoveryState.description}
+          summary={session.recoveryState.summary}
+          actionLabel={session.recoveryState.actionLabel}
+          onRestart={
+            session.recoveryState.actionLabel
+              ? () => void session.restartSession()
+              : undefined
+          }
+          onBackToDashboard={onBackToDashboard}
+        />
       </div>
     );
   }
@@ -162,6 +196,19 @@ export function SessionView({
           topicName={session.block.topicName}
           blockTypeLabel={BLOCK_TYPE_LABELS[session.block.blockType]}
         />
+        {session.resumeNotice ? (
+          <div
+            className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3"
+            data-testid="session-resume-notice"
+          >
+            <p className="text-sm font-semibold text-teal-800">
+              {session.resumeNotice.title}
+            </p>
+            <p className="mt-1 text-sm text-teal-700">
+              {session.resumeNotice.description}
+            </p>
+          </div>
+        ) : null}
         <SessionTimer
           elapsedSeconds={session.elapsedSeconds}
           durationMinutes={session.block.durationMinutes}

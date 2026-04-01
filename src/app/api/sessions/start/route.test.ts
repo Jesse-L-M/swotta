@@ -12,6 +12,8 @@ const {
   requireLearnerMock,
   assembleLearnerContextMock,
   startSessionMock,
+  getBlockSessionRecoveryStateMock,
+  abandonActiveSessionsForBlockMock,
   ensureSessionRunnerConfiguredMock,
   MockAuthError,
 } = vi.hoisted(() => {
@@ -28,6 +30,8 @@ const {
     requireLearnerMock: vi.fn(),
     assembleLearnerContextMock: vi.fn(),
     startSessionMock: vi.fn(),
+    getBlockSessionRecoveryStateMock: vi.fn(),
+    abandonActiveSessionsForBlockMock: vi.fn(),
     ensureSessionRunnerConfiguredMock: vi.fn(),
     MockAuthError: HoistedAuthError,
   };
@@ -49,6 +53,8 @@ vi.mock("@/engine/memory", () => ({
 
 vi.mock("@/engine/session", () => ({
   startSession: startSessionMock,
+  getBlockSessionRecoveryState: getBlockSessionRecoveryStateMock,
+  abandonActiveSessionsForBlock: abandonActiveSessionsForBlockMock,
 }));
 
 vi.mock("@/app/api/sessions/_lib/session-runner", () => ({
@@ -92,7 +98,11 @@ beforeEach(async () => {
   requireLearnerMock.mockReset();
   assembleLearnerContextMock.mockReset();
   startSessionMock.mockReset();
+  getBlockSessionRecoveryStateMock.mockReset();
+  abandonActiveSessionsForBlockMock.mockReset();
   ensureSessionRunnerConfiguredMock.mockReset();
+  getBlockSessionRecoveryStateMock.mockResolvedValue({ mode: "fresh" });
+  abandonActiveSessionsForBlockMock.mockResolvedValue([]);
 });
 
 describe("POST /api/sessions/start", () => {
@@ -181,5 +191,78 @@ describe("POST /api/sessions/start", () => {
     expect(response.status).toBe(404);
     expect(body.error.code).toBe("NOT_FOUND");
     expect(startSessionMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 when an active session should be resumed instead", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qual = await createTestQualification();
+    const block = await createBlock(learner.id, qual.topics[1].id);
+
+    requireLearnerMock.mockResolvedValue({
+      learnerId: learner.id,
+      orgId: org.id,
+    });
+    getBlockSessionRecoveryStateMock.mockResolvedValue({
+      mode: "resume",
+      sessionId: "session-1",
+      startedAt: new Date(),
+      systemPrompt: "prompt",
+      messages: [{ role: "assistant", content: "Resume me" }],
+      completionPending: false,
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/sessions/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blockId: block.id }),
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.error.code).toBe("ACTIVE_SESSION_EXISTS");
+    expect(startSessionMock).not.toHaveBeenCalled();
+  });
+
+  it("archives stale active sessions before starting fresh on restart", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qual = await createTestQualification();
+    const block = await createBlock(learner.id, qual.topics[1].id);
+
+    requireLearnerMock.mockResolvedValue({
+      learnerId: learner.id,
+      orgId: org.id,
+    });
+    assembleLearnerContextMock.mockResolvedValue({
+      masteryLevel: 0.5,
+      knownMisconceptions: [],
+      confirmedMemory: [],
+      preferences: {},
+      policies: [],
+    });
+    startSessionMock.mockResolvedValue({
+      sessionId: "session-2",
+      systemPrompt: "prompt",
+      initialMessage: "Fresh start",
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/sessions/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blockId: block.id, restart: true }),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(abandonActiveSessionsForBlockMock).toHaveBeenCalledWith(
+      db,
+      learner.id,
+      block.id
+    );
+    expect(startSessionMock).toHaveBeenCalledTimes(1);
   });
 });

@@ -6,6 +6,7 @@ import { SessionView, BLOCK_TYPE_LABELS, type SessionViewProps } from "./session
 import {
   type StudySessionApi,
   type SessionBlockInfo,
+  type SessionRecoverySnapshot,
 } from "./use-study-session";
 import type { AttemptOutcome, BlockId, BlockType } from "@/lib/types";
 
@@ -36,6 +37,39 @@ function makeOutcome(overrides?: Partial<AttemptOutcome>): AttemptOutcome {
   };
 }
 
+function makeFreshRecovery(): SessionRecoverySnapshot {
+  return { mode: "fresh" };
+}
+
+function makeRestartRecovery(
+  overrides?: Partial<Extract<SessionRecoverySnapshot, { mode: "restart" }>>
+): SessionRecoverySnapshot {
+  return {
+    mode: "restart",
+    sessionId: "session-1",
+    reason: "abandoned",
+    startedAt: "2026-04-01T10:00:00.000Z",
+    endedAt: "2026-04-01T10:12:00.000Z",
+    summary: "You left this session early.",
+    messagesCount: 3,
+    ...overrides,
+  };
+}
+
+function makeResumeRecovery(
+  overrides?: Partial<Extract<SessionRecoverySnapshot, { mode: "resume" }>>
+): SessionRecoverySnapshot {
+  return {
+    mode: "resume",
+    sessionId: "session-1",
+    startedAt: "2026-04-01T10:00:00.000Z",
+    systemPrompt: "System prompt",
+    completionPending: false,
+    messages: [{ role: "assistant", content: "Welcome to the session!" }],
+    ...overrides,
+  };
+}
+
 function makeStream(text: string): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   return new ReadableStream({
@@ -48,7 +82,12 @@ function makeStream(text: string): ReadableStream<Uint8Array> {
 
 function makeMockApi(overrides?: Partial<StudySessionApi>): StudySessionApi {
   return {
-    fetchBlock: vi.fn<StudySessionApi["fetchBlock"]>().mockResolvedValue(makeBlock()),
+    fetchSessionState: vi
+      .fn<StudySessionApi["fetchSessionState"]>()
+      .mockResolvedValue({
+        block: makeBlock(),
+        recovery: makeFreshRecovery(),
+      }),
     startSession: vi.fn<StudySessionApi["startSession"]>().mockResolvedValue({
       sessionId: "session-1",
       systemPrompt: "System prompt",
@@ -82,21 +121,46 @@ describe("BLOCK_TYPE_LABELS", () => {
 
 describe("SessionView", () => {
   it("shows loading state initially", () => {
-    const api = makeMockApi({ fetchBlock: vi.fn().mockReturnValue(new Promise(() => {})) });
+    const api = makeMockApi({
+      fetchSessionState: vi.fn().mockReturnValue(new Promise(() => {})),
+    });
     render(h({ blockId: "block-1", api }));
     expect(screen.getByTestId("session-loading")).toBeTruthy();
   });
 
-  it("shows error state when block fetch fails", async () => {
-    const api = makeMockApi({ fetchBlock: vi.fn().mockRejectedValue(new Error("Not found")) });
+  it("shows error state when session state fetch fails", async () => {
+    const api = makeMockApi({
+      fetchSessionState: vi.fn().mockRejectedValue(new Error("Not found")),
+    });
     render(h({ blockId: "block-1", api }));
     await waitFor(() => expect(screen.getByTestId("session-error")).toBeTruthy());
     expect(screen.getByText("Not found")).toBeTruthy();
   });
 
+  it("shows retry button on error", async () => {
+    const fetchSessionState = vi
+      .fn<StudySessionApi["fetchSessionState"]>()
+      .mockRejectedValueOnce(new Error("Not found"))
+      .mockResolvedValueOnce({
+        block: makeBlock(),
+        recovery: makeFreshRecovery(),
+      });
+
+    const api = makeMockApi({ fetchSessionState });
+    render(h({ blockId: "block-1", api }));
+
+    await waitFor(() => expect(screen.getByTestId("session-error")).toBeTruthy());
+    fireEvent.click(screen.getByTestId("error-retry-btn"));
+    await waitFor(() =>
+      expect(screen.getByTestId("session-confidence-before")).toBeTruthy()
+    );
+  });
+
   it("shows dashboard button on error when callback provided", async () => {
     const onBack = vi.fn();
-    const api = makeMockApi({ fetchBlock: vi.fn().mockRejectedValue(new Error("err")) });
+    const api = makeMockApi({
+      fetchSessionState: vi.fn().mockRejectedValue(new Error("err")),
+    });
     render(h({ blockId: "block-1", api, onBackToDashboard: onBack }));
     await waitFor(() => expect(screen.getByTestId("session-error")).toBeTruthy());
     fireEvent.click(screen.getByTestId("error-dashboard-btn"));
@@ -110,6 +174,37 @@ describe("SessionView", () => {
     expect(screen.getByTestId("ai-guidance-callout")).toBeTruthy();
   });
 
+  it("shows a recovery card for abandoned sessions", async () => {
+    const api = makeMockApi({
+      fetchSessionState: vi.fn().mockResolvedValue({
+        block: makeBlock(),
+        recovery: makeRestartRecovery(),
+      }),
+    });
+
+    render(h({ blockId: "block-1", api, onBackToDashboard: vi.fn() }));
+
+    await waitFor(() => expect(screen.getByTestId("session-recovery")).toBeTruthy());
+    expect(screen.getByTestId("session-recovery-card")).toBeTruthy();
+    expect(screen.getByTestId("session-recovery-action")).toBeTruthy();
+  });
+
+  it("can restart from the recovery card", async () => {
+    const api = makeMockApi({
+      fetchSessionState: vi.fn().mockResolvedValue({
+        block: makeBlock(),
+        recovery: makeRestartRecovery(),
+      }),
+    });
+
+    render(h({ blockId: "block-1", api }));
+
+    await waitFor(() => expect(screen.getByTestId("session-recovery")).toBeTruthy());
+    fireEvent.click(screen.getByTestId("session-recovery-action"));
+    await waitFor(() => expect(screen.getByTestId("session-active")).toBeTruthy());
+    expect(api.startSession).toHaveBeenCalledWith("block-1", { restart: true });
+  });
+
   it("transitions to active session after confidence submission", async () => {
     render(h({ blockId: "block-1", api: makeMockApi() }));
     await waitFor(() => expect(screen.getByTestId("session-confidence-before")).toBeTruthy());
@@ -120,6 +215,25 @@ describe("SessionView", () => {
     expect(screen.getByTestId("chat-interface")).toBeTruthy();
     expect(screen.getByTestId("session-timer")).toBeTruthy();
     expect(screen.getByTestId("progress-indicator")).toBeTruthy();
+  });
+
+  it("shows a resume notice when returning to an active session", async () => {
+    const api = makeMockApi({
+      fetchSessionState: vi.fn().mockResolvedValue({
+        block: makeBlock(),
+        recovery: makeResumeRecovery({
+          messages: [
+            { role: "assistant", content: "Welcome to the session!" },
+            { role: "user", content: "My answer" },
+          ],
+        }),
+      }),
+    });
+
+    render(h({ blockId: "block-1", api }));
+
+    await waitFor(() => expect(screen.getByTestId("session-active")).toBeTruthy());
+    expect(screen.getByTestId("session-resume-notice")).toBeTruthy();
   });
 
   it("shows abandon button in active state", async () => {

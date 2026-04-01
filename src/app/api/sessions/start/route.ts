@@ -5,7 +5,11 @@ import { db } from "@/lib/db";
 import { requireLearner, AuthError } from "@/lib/auth";
 import { studyBlocks, topics } from "@/db/schema";
 import { assembleLearnerContext } from "@/engine/memory";
-import { startSession } from "@/engine/session";
+import {
+  abandonActiveSessionsForBlock,
+  getBlockSessionRecoveryState,
+  startSession,
+} from "@/engine/session";
 import { ensureSessionRunnerConfigured } from "@/app/api/sessions/_lib/session-runner";
 import type {
   BlockId,
@@ -17,6 +21,7 @@ import type {
 
 const requestSchema = z.object({
   blockId: z.string().uuid(),
+  restart: z.boolean().optional(),
 });
 
 export async function POST(request: Request) {
@@ -82,9 +87,10 @@ export async function POST(request: Request) {
 
   const learnerId = blockRow.learnerId as LearnerId;
   const topicId = blockRow.topicId as TopicId;
+  const blockId = blockRow.id as BlockId;
 
   const block: StudyBlock = {
-    id: blockRow.id as BlockId,
+    id: blockId,
     learnerId,
     topicId,
     topicName: blockRow.topicName,
@@ -93,6 +99,39 @@ export async function POST(request: Request) {
     priority: blockRow.priority,
     reason: "Scheduled study block",
   };
+
+  const recovery = await getBlockSessionRecoveryState(db, learnerId, blockId);
+  if (!parsed.data.restart && recovery.mode === "resume") {
+    return NextResponse.json(
+      {
+        error: {
+          code: "ACTIVE_SESSION_EXISTS",
+          message: "An in-progress study session is ready to resume",
+        },
+      },
+      { status: 409 }
+    );
+  }
+
+  if (
+    !parsed.data.restart &&
+    recovery.mode === "restart" &&
+    recovery.reason === "transcript_missing"
+  ) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "ACTIVE_SESSION_RESTART_REQUIRED",
+          message: "The last in-progress session could not be restored safely",
+        },
+      },
+      { status: 409 }
+    );
+  }
+
+  if (parsed.data.restart) {
+    await abandonActiveSessionsForBlock(db, learnerId, blockId);
+  }
 
   const learnerContext = await assembleLearnerContext(db, learnerId, topicId);
 
