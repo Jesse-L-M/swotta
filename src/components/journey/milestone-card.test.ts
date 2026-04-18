@@ -26,7 +26,7 @@ describe("MilestoneCard", () => {
   it("renders the milestone message", () => {
     render(h({ milestone: makeMilestone() }));
     expect(screen.getByTestId("milestone-message").textContent).toBe(
-      'You conquered "osmosis vs diffusion confusion" in Transport in Cells!'
+      'You turned "osmosis vs diffusion confusion" into a strength in Transport in Cells.'
     );
   });
 

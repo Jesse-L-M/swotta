@@ -214,6 +214,9 @@ describe("loadJourneyStats", () => {
 
     expect(stats.sessionsCompleted).toBe(0);
     expect(stats.totalStudyMinutes).toBe(0);
+    expect(stats.sessionsThisWeek).toBe(0);
+    expect(stats.studyMinutesThisWeek).toBe(0);
+    expect(stats.lastSessionAt).toBeNull();
     expect(stats.misconceptionsTotal).toBe(0);
     expect(stats.misconceptionsConquered).toBe(0);
     expect(stats.specCoveragePercent).toBe(0);
@@ -247,6 +250,41 @@ describe("loadJourneyStats", () => {
     const stats = await loadJourneyStats(learner.id, db);
     expect(stats.sessionsCompleted).toBe(2);
     expect(stats.totalStudyMinutes).toBe(50);
+    expect(stats.sessionsThisWeek).toBe(2);
+    expect(stats.studyMinutesThisWeek).toBe(50);
+    expect(stats.lastSessionAt).toBeTruthy();
+  });
+
+  it("tracks current-week momentum separately from historical totals", async () => {
+    const db = getTestDb();
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+
+    await db.insert(studySessions).values([
+      {
+        learnerId: learner.id,
+        status: "completed",
+        totalDurationMinutes: 25,
+        startedAt: new Date("2026-03-17T09:00:00Z"),
+      },
+      {
+        learnerId: learner.id,
+        status: "completed",
+        totalDurationMinutes: 40,
+        startedAt: new Date("2026-03-01T09:00:00Z"),
+      },
+    ]);
+
+    const stats = await loadJourneyStats(
+      learner.id,
+      db,
+      new Date("2026-03-18T12:00:00Z")
+    );
+
+    expect(stats.sessionsCompleted).toBe(2);
+    expect(stats.totalStudyMinutes).toBe(65);
+    expect(stats.sessionsThisWeek).toBe(1);
+    expect(stats.studyMinutesThisWeek).toBe(25);
   });
 
   it("counts unique misconception threads", async () => {

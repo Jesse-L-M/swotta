@@ -45,7 +45,7 @@ export default async function DashboardPage() {
           {greeting}
         </h1>
         <p className="mt-1 text-[#6B7280]">
-          Here&apos;s your study overview for today.
+          One clear next step for today, plus the progress behind it.
         </p>
       </div>
 
@@ -94,6 +94,11 @@ export default async function DashboardPage() {
         <h2 className="mb-4 font-[family-name:var(--font-serif)] text-xl text-[#1A1A2E]">
           Today&apos;s queue
         </h2>
+        <p className="-mt-2 mb-4 max-w-2xl text-sm text-[#6B7280]">
+          Start with the highlighted block, then work down the rest of the
+          queue. Each card explains why it is showing up today and what it
+          should help you improve.
+        </p>
         <TodayQueue blocks={todayQueue} />
       </section>
 

@@ -1,4 +1,4 @@
-import { eq, and, count, sum, asc } from "drizzle-orm";
+import { eq, and, count, sum, asc, inArray, isNull, desc } from "drizzle-orm";
 import {
   learners,
   learnerQualifications,
@@ -10,14 +10,29 @@ import {
   studySessions,
   studyBlocks,
   topics,
+  misconceptionEvents,
+  reviewQueue,
 } from "@/db/schema";
 import type { Database } from "@/lib/db";
-import type { StudyBlock, LearnerId, BlockId, TopicId, BlockType } from "@/lib/types";
 import type {
+  StudyBlock,
+  LearnerId,
+  BlockId,
+  TopicId,
+  BlockType,
+  ReviewReason,
+} from "@/lib/types";
+import type {
+  DashboardQueueBlock,
   DashboardQualification,
   DashboardStats,
   MasteryTopic,
 } from "./types";
+import {
+  buildQueueWhyNow,
+  getQueueActionTitle,
+  getQueueImpact,
+} from "./utils";
 
 export async function loadLearnerByUserId(
   userId: string,
@@ -140,7 +155,7 @@ export async function loadDashboardStats(
 export async function loadTodayQueue(
   learnerId: string,
   db: Database
-): Promise<StudyBlock[]> {
+): Promise<DashboardQueueBlock[]> {
   const existing = await db
     .select({
       id: studyBlocks.id,
@@ -162,20 +177,169 @@ export async function loadTodayQueue(
     .orderBy(asc(studyBlocks.priority));
 
   if (existing.length > 0) {
-    return existing.map((b) => ({
-      id: b.id as BlockId,
-      learnerId: b.learnerId as LearnerId,
-      topicId: b.topicId as TopicId,
-      topicName: b.topicName,
-      blockType: b.blockType as BlockType,
-      durationMinutes: b.durationMinutes,
-      priority: b.priority,
-      reason: "Scheduled review",
-    }));
+    return enrichQueueBlocks(
+      existing.map((b) => ({
+        id: b.id as BlockId,
+        learnerId: b.learnerId as LearnerId,
+        topicId: b.topicId as TopicId,
+        topicName: b.topicName,
+        blockType: b.blockType as BlockType,
+        durationMinutes: b.durationMinutes,
+        priority: b.priority,
+        reason: "Scheduled review",
+      })),
+      learnerId,
+      db
+    );
   }
 
   const { getNextBlocks } = await import("@/engine/scheduler");
-  return getNextBlocks(learnerId as LearnerId, db);
+  const blocks = await getNextBlocks(learnerId as LearnerId, db);
+  return enrichQueueBlocks(blocks, learnerId, db);
+}
+
+async function enrichQueueBlocks(
+  blocks: StudyBlock[],
+  learnerId: string,
+  db: Database
+): Promise<DashboardQueueBlock[]> {
+  if (blocks.length === 0) {
+    return [];
+  }
+
+  const topicIds = [...new Set(blocks.map((block) => block.topicId as string))];
+
+  const [topicStateRows, reviewRows, misconceptionRows] = await Promise.all([
+    db
+      .select({
+        topicId: topics.id,
+        masteryLevel: learnerTopicState.masteryLevel,
+        confidence: learnerTopicState.confidence,
+        reviewCount: learnerTopicState.reviewCount,
+        nextReviewAt: learnerTopicState.nextReviewAt,
+        examDate: learnerQualifications.examDate,
+      })
+      .from(topics)
+      .leftJoin(
+        learnerTopicState,
+        and(
+          eq(learnerTopicState.topicId, topics.id),
+          eq(learnerTopicState.learnerId, learnerId)
+        )
+      )
+      .leftJoin(
+        learnerQualifications,
+        and(
+          eq(learnerQualifications.learnerId, learnerId),
+          eq(
+            learnerQualifications.qualificationVersionId,
+            topics.qualificationVersionId
+          ),
+          eq(learnerQualifications.status, "active")
+        )
+      )
+      .where(inArray(topics.id, topicIds)),
+    db
+      .select({
+        topicId: reviewQueue.topicId,
+        reason: reviewQueue.reason,
+        priority: reviewQueue.priority,
+        dueAt: reviewQueue.dueAt,
+      })
+      .from(reviewQueue)
+      .where(
+        and(
+          eq(reviewQueue.learnerId, learnerId),
+          inArray(reviewQueue.topicId, topicIds),
+          isNull(reviewQueue.fulfilledAt)
+        )
+      )
+      .orderBy(asc(reviewQueue.priority), asc(reviewQueue.dueAt)),
+    db
+      .select({
+        topicId: misconceptionEvents.topicId,
+        description: misconceptionEvents.description,
+        createdAt: misconceptionEvents.createdAt,
+      })
+      .from(misconceptionEvents)
+      .where(
+        and(
+          eq(misconceptionEvents.learnerId, learnerId),
+          inArray(misconceptionEvents.topicId, topicIds),
+          eq(misconceptionEvents.resolved, false)
+        )
+      )
+      .orderBy(desc(misconceptionEvents.createdAt)),
+  ]);
+
+  const topicStateMap = new Map(
+    topicStateRows.map((row) => [
+      row.topicId,
+      {
+        masteryLevel:
+          row.masteryLevel === null ? null : Number(row.masteryLevel),
+        confidence: row.confidence === null ? null : Number(row.confidence),
+        reviewCount: row.reviewCount ?? 0,
+        nextReviewAt: row.nextReviewAt,
+        examDate: row.examDate,
+      },
+    ])
+  );
+
+  const reviewReasonMap = new Map<string, ReviewReason>();
+  for (const row of reviewRows) {
+    if (!reviewReasonMap.has(row.topicId)) {
+      reviewReasonMap.set(row.topicId, row.reason as ReviewReason);
+    }
+  }
+
+  const misconceptionMap = new Map<
+    string,
+    { count: number; description: string | null }
+  >();
+  for (const row of misconceptionRows) {
+    const existing = misconceptionMap.get(row.topicId);
+    if (existing) {
+      existing.count += 1;
+      continue;
+    }
+
+    misconceptionMap.set(row.topicId, {
+      count: 1,
+      description: row.description,
+    });
+  }
+
+  return blocks.map((block) => {
+    const topicState = topicStateMap.get(block.topicId as string);
+    const misconception = misconceptionMap.get(block.topicId as string);
+    const reviewReason = reviewReasonMap.get(block.topicId as string) ?? null;
+
+    return {
+      id: block.id,
+      learnerId: block.learnerId,
+      topicId: block.topicId,
+      topicName: block.topicName,
+      blockType: block.blockType,
+      durationMinutes: block.durationMinutes,
+      priority: block.priority,
+      reason: block.reason,
+      reviewReason,
+      actionTitle: getQueueActionTitle(block.blockType, block.topicName),
+      whyNow: buildQueueWhyNow({
+        topicName: block.topicName,
+        reviewReason,
+        masteryLevel: topicState?.masteryLevel ?? null,
+        confidence: topicState?.confidence ?? null,
+        reviewCount: topicState?.reviewCount ?? 0,
+        nextReviewAt: topicState?.nextReviewAt ?? null,
+        examDate: topicState?.examDate ?? null,
+        activeMisconceptionCount: misconception?.count ?? 0,
+        activeMisconceptionDescription: misconception?.description ?? null,
+      }),
+      impact: getQueueImpact(block.blockType),
+    };
+  });
 }
 
 export async function loadMasteryTopics(

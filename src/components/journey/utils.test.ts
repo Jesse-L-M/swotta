@@ -3,12 +3,14 @@ import {
   formatDate,
   formatRelativeDate,
   buildMilestoneMessage,
+  buildMomentumSummary,
   extractMilestones,
   severityLabel,
   conqueredPercent,
 } from "./utils";
+import type { DashboardQueueBlock } from "@/components/dashboard/types";
 import type { MisconceptionThread } from "./types";
-import type { TopicId } from "@/lib/types";
+import type { BlockId, LearnerId, TopicId } from "@/lib/types";
 
 function makeThread(overrides?: Partial<MisconceptionThread>): MisconceptionThread {
   return {
@@ -88,8 +90,56 @@ describe("buildMilestoneMessage", () => {
       "Transport in Cells"
     );
     expect(msg).toBe(
-      'You conquered "osmosis vs diffusion confusion" in Transport in Cells!'
+      'You turned "osmosis vs diffusion confusion" into a strength in Transport in Cells.'
     );
+  });
+});
+
+describe("buildMomentumSummary", () => {
+  function makeQueueBlock(
+    overrides?: Partial<DashboardQueueBlock>
+  ): DashboardQueueBlock {
+    return {
+      id: "block-1" as BlockId,
+      learnerId: "learner-1" as LearnerId,
+      topicId: "topic-1" as TopicId,
+      topicName: "Cell Division",
+      blockType: "retrieval_drill",
+      durationMinutes: 12,
+      priority: 1,
+      reason: "Scheduled review",
+      reviewReason: "misconception",
+      actionTitle: "Pull Cell Division out of memory",
+      whyNow:
+        'You recently got stuck on "Confuses mitosis with meiosis" here, so this block is about fixing it before the same mistake repeats.',
+      impact:
+        "Pulling answers from memory now makes later questions faster and less fragile.",
+      ...overrides,
+    };
+  }
+
+  it("builds a start-now summary when a queue block exists", () => {
+    const summary = buildMomentumSummary({
+      nextBlock: makeQueueBlock(),
+      queueCount: 2,
+      activeMisconceptions: 1,
+    });
+
+    expect(summary.title).toBe("Keep today's momentum going");
+    expect(summary.ctaHref).toBe("/session/block-1");
+    expect(summary.detail).toContain("Next up");
+  });
+
+  it("falls back to dashboard guidance when no block is queued", () => {
+    const summary = buildMomentumSummary({
+      nextBlock: null,
+      queueCount: 0,
+      activeMisconceptions: 2,
+    });
+
+    expect(summary.title).toBe("Your queue is clear right now");
+    expect(summary.ctaHref).toBe("/dashboard");
+    expect(summary.detail).toContain("2 active misconceptions");
   });
 });
 

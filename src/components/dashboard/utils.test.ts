@@ -11,6 +11,10 @@ import {
   groupMasteryByState,
   masteryPercent,
   nextExam,
+  getQueueActionTitle,
+  getQueueImpact,
+  getQueuePositionLabel,
+  buildQueueWhyNow,
   MASTERY_STATE_LABEL,
   MASTERY_STYLES,
   type MasteryState,
@@ -267,5 +271,98 @@ describe("nextExam", () => {
     const quals = [{ examDate: "2026-06-01" }];
     const result = nextExam(quals, now);
     expect(result).toEqual({ examDate: "2026-06-01", daysLeft: 0 });
+  });
+});
+
+describe("getQueueActionTitle", () => {
+  test("returns a learner-friendly action title", () => {
+    expect(getQueueActionTitle("retrieval_drill", "Cell division")).toBe(
+      "Pull Cell division out of memory"
+    );
+    expect(getQueueActionTitle("mistake_review", "Inheritance")).toBe(
+      "Correct the slip in Inheritance"
+    );
+  });
+});
+
+describe("getQueueImpact", () => {
+  test("explains why each block type matters", () => {
+    expect(getQueueImpact("retrieval_drill")).toContain("memory");
+    expect(getQueueImpact("timed_problems")).toContain("exam-ready");
+  });
+});
+
+describe("getQueuePositionLabel", () => {
+  test("returns labels based on queue order", () => {
+    expect(getQueuePositionLabel(0)).toBe("Start here");
+    expect(getQueuePositionLabel(1)).toBe("Then");
+    expect(getQueuePositionLabel(2)).toBe("Keep going");
+    expect(getQueuePositionLabel(3)).toBe("If you still have time");
+  });
+});
+
+describe("buildQueueWhyNow", () => {
+  const now = new Date("2026-03-18T12:00:00Z");
+
+  test("prioritises active misconceptions when present", () => {
+    expect(
+      buildQueueWhyNow({
+        topicName: "Cell division",
+        reviewReason: "misconception",
+        masteryLevel: 0.4,
+        confidence: 0.4,
+        reviewCount: 2,
+        nextReviewAt: null,
+        examDate: null,
+        activeMisconceptionCount: 1,
+        activeMisconceptionDescription: "mixing up mitosis and meiosis",
+        now,
+      })
+    ).toContain("mixing up mitosis and meiosis");
+  });
+
+  test("calls out exam urgency when exams are close", () => {
+    expect(
+      buildQueueWhyNow({
+        topicName: "Inheritance",
+        reviewReason: "exam_approaching",
+        masteryLevel: 0.7,
+        confidence: 0.7,
+        reviewCount: 5,
+        nextReviewAt: null,
+        examDate: "2026-03-28",
+        now,
+      })
+    ).toContain("exam");
+  });
+
+  test("calls out fading knowledge when a topic is due now", () => {
+    expect(
+      buildQueueWhyNow({
+        topicName: "Osmosis",
+        reviewReason: "decay",
+        masteryLevel: 0.7,
+        confidence: 0.7,
+        reviewCount: 4,
+        nextReviewAt: new Date("2026-03-17T12:00:00Z"),
+        examDate: null,
+        now,
+      })
+    ).toContain("due for review now");
+  });
+
+  test("falls back to foundation-building language for weak topics", () => {
+    expect(
+      buildQueueWhyNow({
+        topicName: "Photosynthesis",
+        reviewReason: null,
+        masteryLevel: 0.1,
+        confidence: 0.1,
+        reviewCount: 0,
+        nextReviewAt: null,
+        examDate: null,
+        now,
+      })
+    ).toContain("first layer of understanding");
   });
 });

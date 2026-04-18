@@ -9,6 +9,9 @@ function makeStats(overrides?: Partial<JourneyStatsType>): JourneyStatsType {
   return {
     sessionsCompleted: 12,
     totalStudyMinutes: 360,
+    sessionsThisWeek: 3,
+    studyMinutesThisWeek: 95,
+    lastSessionAt: new Date("2026-03-18T10:00:00Z"),
     misconceptionsTotal: 8,
     misconceptionsConquered: 5,
     specCoveragePercent: 65.5,
@@ -104,8 +107,8 @@ describe("JourneyStats", () => {
   it("displays sessions count and minutes", () => {
     render(h({ stats: makeStats() }));
     const sessions = screen.getByTestId("stat-sessions");
-    expect(sessions.textContent).toContain("12");
-    expect(sessions.textContent).toContain("360 min total");
+    expect(sessions.textContent).toContain("3 this week");
+    expect(sessions.textContent).toContain("1h 35m");
   });
 
   it("displays conquered count and percentage", () => {
@@ -113,7 +116,7 @@ describe("JourneyStats", () => {
     const conquered = screen.getByTestId("stat-conquered");
     expect(conquered.textContent).toContain("5");
     expect(conquered.textContent).toContain("63%");
-    expect(conquered.textContent).toContain("8 total");
+    expect(conquered.textContent).toContain("slips");
   });
 
   it("shows 'None encountered yet' when no misconceptions", () => {
@@ -133,13 +136,16 @@ describe("JourneyStats", () => {
   it("displays active misconception count", () => {
     render(h({ stats: makeStats() }));
     expect(screen.getByTestId("stat-active").textContent).toContain("3");
+    expect(screen.getByTestId("stat-active").textContent).toContain(
+      "worth checking"
+    );
   });
 
   it("displays spec coverage", () => {
     render(h({ stats: makeStats() }));
     const coverage = screen.getByTestId("stat-coverage");
     expect(coverage.textContent).toContain("65.5%");
-    expect(coverage.textContent).toContain("20 of 30 topics");
+    expect(coverage.textContent).toContain("20 of 30 topics with study evidence");
   });
 
   it("uses teal accent for conquered when count > 0", () => {

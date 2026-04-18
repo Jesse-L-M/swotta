@@ -6,13 +6,17 @@ import {
   JourneyTimeline,
   type JourneyTimelineProps,
 } from "./journey-timeline";
+import type { DashboardQueueBlock } from "@/components/dashboard/types";
 import type { JourneyData, MisconceptionThread, JourneyStats } from "./types";
-import type { TopicId } from "@/lib/types";
+import type { BlockId, LearnerId, TopicId } from "@/lib/types";
 
 function makeStats(overrides?: Partial<JourneyStats>): JourneyStats {
   return {
     sessionsCompleted: 10,
     totalStudyMinutes: 300,
+    sessionsThisWeek: 2,
+    studyMinutesThisWeek: 45,
+    lastSessionAt: new Date("2026-03-18T10:00:00Z"),
     misconceptionsTotal: 5,
     misconceptionsConquered: 3,
     specCoveragePercent: 50,
@@ -50,18 +54,46 @@ function makeData(overrides?: Partial<JourneyData>): JourneyData {
   };
 }
 
+function makeQueueBlock(
+  overrides?: Partial<DashboardQueueBlock>
+): DashboardQueueBlock {
+  return {
+    id: "block-1" as BlockId,
+    learnerId: "learner-1" as LearnerId,
+    topicId: "topic-1" as TopicId,
+    topicName: "Cell Division",
+    blockType: "retrieval_drill",
+    durationMinutes: 12,
+    priority: 1,
+    reason: "Scheduled review",
+    reviewReason: "misconception",
+    actionTitle: "Pull Cell Division out of memory",
+    whyNow:
+      'You recently got stuck on "Confuses mitosis with meiosis" here, so this block is about fixing it before the same mistake repeats.',
+    impact:
+      "Pulling answers from memory now makes later questions faster and less fragile.",
+    ...overrides,
+  };
+}
+
 function h(props: JourneyTimelineProps) {
   return createElement(JourneyTimeline, props);
 }
 
 describe("JourneyTimeline", () => {
+  it("renders the momentum section", () => {
+    render(h({ data: makeData(), todayQueue: [makeQueueBlock()] }));
+    expect(screen.getByTestId("journey-momentum")).toBeTruthy();
+    expect(screen.getByText("Keep today's momentum going")).toBeTruthy();
+  });
+
   it("renders stats section", () => {
-    render(h({ data: makeData() }));
+    render(h({ data: makeData(), todayQueue: [makeQueueBlock()] }));
     expect(screen.getByTestId("journey-stats")).toBeTruthy();
   });
 
   it("shows empty state when no misconceptions", () => {
-    render(h({ data: makeData() }));
+    render(h({ data: makeData(), todayQueue: [] }));
     expect(screen.getByTestId("journey-empty")).toBeTruthy();
     expect(screen.queryByTestId("active-section")).toBeNull();
     expect(screen.queryByTestId("conquered-section")).toBeNull();
@@ -73,6 +105,7 @@ describe("JourneyTimeline", () => {
         data: makeData({
           active: [makeThread()],
         }),
+        todayQueue: [makeQueueBlock()],
       })
     );
     expect(screen.queryByTestId("journey-empty")).toBeNull();
@@ -84,6 +117,7 @@ describe("JourneyTimeline", () => {
         data: makeData({
           active: [makeThread({ id: "a1" }), makeThread({ id: "a2" })],
         }),
+        todayQueue: [makeQueueBlock()],
       })
     );
     expect(screen.getByTestId("active-section")).toBeTruthy();
@@ -96,7 +130,12 @@ describe("JourneyTimeline", () => {
       resolved: true,
       resolvedAt: new Date("2026-03-01"),
     });
-    render(h({ data: makeData({ conquered: [conquered] }) }));
+    render(
+      h({
+        data: makeData({ conquered: [conquered] }),
+        todayQueue: [makeQueueBlock()],
+      })
+    );
     expect(screen.getByTestId("conquered-section")).toBeTruthy();
   });
 
@@ -112,6 +151,7 @@ describe("JourneyTimeline", () => {
             }),
           ],
         }),
+        todayQueue: [makeQueueBlock()],
       })
     );
     expect(screen.queryByTestId("active-section")).toBeNull();
@@ -123,6 +163,7 @@ describe("JourneyTimeline", () => {
         data: makeData({
           active: [makeThread()],
         }),
+        todayQueue: [makeQueueBlock()],
       })
     );
     expect(screen.queryByTestId("conquered-section")).toBeNull();
@@ -149,6 +190,7 @@ describe("JourneyTimeline", () => {
             },
           ],
         }),
+        todayQueue: [makeQueueBlock()],
       })
     );
     expect(screen.getByTestId("milestones-section")).toBeTruthy();
@@ -156,7 +198,7 @@ describe("JourneyTimeline", () => {
   });
 
   it("hides milestones section when no milestones", () => {
-    render(h({ data: makeData() }));
+    render(h({ data: makeData(), todayQueue: [makeQueueBlock()] }));
     expect(screen.queryByTestId("milestones-section")).toBeNull();
   });
 
@@ -176,6 +218,7 @@ describe("JourneyTimeline", () => {
           ),
           milestones,
         }),
+        todayQueue: [makeQueueBlock()],
       })
     );
     expect(screen.getAllByTestId("milestone-card")).toHaveLength(5);
@@ -187,6 +230,7 @@ describe("JourneyTimeline", () => {
         data: makeData({
           active: [makeThread({ id: "a1" }), makeThread({ id: "a2" })],
         }),
+        todayQueue: [makeQueueBlock()],
       })
     );
     const section = screen.getByTestId("active-section");
@@ -199,7 +243,12 @@ describe("JourneyTimeline", () => {
       resolved: true,
       resolvedAt: new Date(),
     });
-    render(h({ data: makeData({ conquered: [conquered] }) }));
+    render(
+      h({
+        data: makeData({ conquered: [conquered] }),
+        todayQueue: [makeQueueBlock()],
+      })
+    );
     const section = screen.getByTestId("conquered-section");
     expect(section.textContent).toContain("1");
   });

@@ -1,5 +1,6 @@
 "use client";
 
+import { formatStudyMinutes } from "@/components/dashboard/utils";
 import type { JourneyStats as JourneyStatsType } from "./types";
 import { conqueredPercent } from "./utils";
 
@@ -56,10 +57,14 @@ export function JourneyStats({ stats }: JourneyStatsProps) {
       data-testid="journey-stats"
     >
       <JourneyStat
-        label="Sessions"
-        value={String(stats.sessionsCompleted)}
-        detail={`${stats.totalStudyMinutes} min total`}
-        accent="neutral"
+        label="Study momentum"
+        value={`${stats.sessionsThisWeek} this week`}
+        detail={
+          stats.sessionsThisWeek > 0
+            ? `${formatStudyMinutes(stats.studyMinutesThisWeek)} in the last 7 days`
+            : "No completed sessions in the last 7 days"
+        }
+        accent={stats.sessionsThisWeek > 0 ? "teal" : "neutral"}
         testId="stat-sessions"
       />
       <JourneyStat
@@ -67,7 +72,7 @@ export function JourneyStats({ stats }: JourneyStatsProps) {
         value={String(stats.misconceptionsConquered)}
         detail={
           stats.misconceptionsTotal > 0
-            ? `${conquered}% of ${stats.misconceptionsTotal} total`
+            ? `${conquered}% of the slips you've met so far`
             : "None encountered yet"
         }
         accent={stats.misconceptionsConquered > 0 ? "teal" : "neutral"}
@@ -78,6 +83,11 @@ export function JourneyStats({ stats }: JourneyStatsProps) {
         value={String(
           stats.misconceptionsTotal - stats.misconceptionsConquered
         )}
+        detail={
+          stats.misconceptionsTotal - stats.misconceptionsConquered > 0
+            ? "These are still worth checking in your next sessions"
+            : "Nothing is currently recurring"
+        }
         accent={
           stats.misconceptionsTotal - stats.misconceptionsConquered > 0
             ? "coral"
@@ -88,7 +98,7 @@ export function JourneyStats({ stats }: JourneyStatsProps) {
       <JourneyStat
         label="Spec coverage"
         value={`${stats.specCoveragePercent}%`}
-        detail={`${stats.topicsCovered} of ${stats.totalTopics} topics`}
+        detail={`${stats.topicsCovered} of ${stats.totalTopics} topics with study evidence`}
         accent={stats.specCoveragePercent >= 50 ? "teal" : "neutral"}
         testId="stat-coverage"
       />
