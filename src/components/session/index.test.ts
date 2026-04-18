@@ -31,6 +31,10 @@ describe("session barrel export", () => {
     expect(session.SessionComplete).toBeDefined();
   });
 
+  it("exports SessionRecoveryCard", () => {
+    expect(session.SessionRecoveryCard).toBeDefined();
+  });
+
   it("exports AiGuidanceCallout", () => {
     expect(session.AiGuidanceCallout).toBeDefined();
   });

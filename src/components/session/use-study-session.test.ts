@@ -5,6 +5,7 @@ import {
   useStudySession,
   type StudySessionApi,
   type SessionBlockInfo,
+  type SessionRecoverySnapshot,
 } from "./use-study-session";
 import type { AttemptOutcome, BlockId } from "@/lib/types";
 
@@ -35,6 +36,65 @@ function makeOutcome(overrides?: Partial<AttemptOutcome>): AttemptOutcome {
   };
 }
 
+function makeFreshRecovery(): SessionRecoverySnapshot {
+  return { mode: "fresh" };
+}
+
+function makeResumeRecovery(
+  overrides?: Partial<Extract<SessionRecoverySnapshot, { mode: "resume" }>>
+): SessionRecoverySnapshot {
+  return {
+    mode: "resume",
+    sessionId: "session-1",
+    startedAt: "2026-04-01T10:00:00.000Z",
+    systemPrompt: "You are Swotta...",
+    completionPending: false,
+    confidenceBefore: 0.4,
+    messages: [
+      {
+        role: "assistant",
+        content: "Welcome back to Cell Biology.",
+      },
+    ],
+    ...overrides,
+  };
+}
+
+function makeCompletedRecovery(
+  overrides?: Partial<Extract<SessionRecoverySnapshot, { mode: "completed" }>>
+): SessionRecoverySnapshot {
+  return {
+    mode: "completed",
+    sessionId: "session-1",
+    startedAt: "2026-04-01T10:00:00.000Z",
+    endedAt: "2026-04-01T10:12:00.000Z",
+    summary: "Good session on Cell Biology.",
+    result: {
+      outcome: makeOutcome({
+        confidenceBefore: 0.4,
+        confidenceAfter: null,
+      }),
+      summary: "Good session on Cell Biology.",
+    },
+    ...overrides,
+  };
+}
+
+function makeRestartRecovery(
+  overrides?: Partial<Extract<SessionRecoverySnapshot, { mode: "restart" }>>
+): SessionRecoverySnapshot {
+  return {
+    mode: "restart",
+    sessionId: "session-1",
+    reason: "abandoned",
+    startedAt: "2026-04-01T10:00:00.000Z",
+    endedAt: "2026-04-01T10:12:00.000Z",
+    summary: "You left this session early.",
+    messagesCount: 3,
+    ...overrides,
+  };
+}
+
 function makeStream(text: string): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   return new ReadableStream({
@@ -49,7 +109,12 @@ function makeMockApi(
   overrides?: Partial<StudySessionApi>
 ): StudySessionApi {
   return {
-    fetchBlock: vi.fn<StudySessionApi["fetchBlock"]>().mockResolvedValue(makeBlock()),
+    fetchSessionState: vi
+      .fn<StudySessionApi["fetchSessionState"]>()
+      .mockResolvedValue({
+        block: makeBlock(),
+        recovery: makeFreshRecovery(),
+      }),
     startSession: vi
       .fn<StudySessionApi["startSession"]>()
       .mockResolvedValue({
@@ -70,9 +135,13 @@ function makeMockApi(
   };
 }
 
+afterEach(() => {
+  window.localStorage.clear();
+});
+
 
 describe("useStudySession", () => {
-  it("starts in loading phase and transitions to confidence-before after fetching block", async () => {
+  it("starts in loading phase and transitions to confidence-before after fetching session state", async () => {
     const api = makeMockApi();
     const { result } = renderHook(() =>
       useStudySession({ blockId: "block-1", api })
@@ -81,12 +150,12 @@ describe("useStudySession", () => {
     expect(result.current.phase).toBe("loading");
     await waitFor(() => expect(result.current.phase).toBe("confidence-before"));
     expect(result.current.block).toEqual(makeBlock());
-    expect(api.fetchBlock).toHaveBeenCalledWith("block-1");
+    expect(api.fetchSessionState).toHaveBeenCalledWith("block-1");
   });
 
-  it("transitions to error phase if block fetch fails", async () => {
+  it("transitions to error phase if session state fetch fails", async () => {
     const api = makeMockApi({
-      fetchBlock: vi.fn().mockRejectedValue(new Error("Network error")),
+      fetchSessionState: vi.fn().mockRejectedValue(new Error("Network error")),
     });
     const { result } = renderHook(() =>
       useStudySession({ blockId: "block-1", api })
@@ -96,16 +165,55 @@ describe("useStudySession", () => {
     expect(result.current.error).toBe("Network error");
   });
 
-  it("handles non-Error rejection in fetchBlock", async () => {
+  it("handles non-Error rejection while loading session state", async () => {
     const api = makeMockApi({
-      fetchBlock: vi.fn().mockRejectedValue("string error"),
+      fetchSessionState: vi.fn().mockRejectedValue("string error"),
     });
     const { result } = renderHook(() =>
       useStudySession({ blockId: "block-1", api })
     );
 
     await waitFor(() => expect(result.current.phase).toBe("error"));
-    expect(result.current.error).toBe("Failed to load block");
+    expect(result.current.error).toBe("Failed to load session");
+  });
+
+  it("hydrates an in-progress session without asking for confidence again", async () => {
+    const api = makeMockApi({
+      fetchSessionState: vi.fn().mockResolvedValue({
+        block: makeBlock(),
+        recovery: makeResumeRecovery({
+          messages: [
+            { role: "assistant", content: "Question 1" },
+            { role: "user", content: "Answer 1" },
+          ],
+        }),
+      }),
+    });
+
+    const { result } = renderHook(() =>
+      useStudySession({ blockId: "block-1", api })
+    );
+
+    await waitFor(() => expect(result.current.phase).toBe("active"));
+    expect(result.current.messages).toHaveLength(2);
+    expect(result.current.resumeNotice?.title).toBe("Session resumed");
+  });
+
+  it("moves abandoned sessions into the recovery screen", async () => {
+    const api = makeMockApi({
+      fetchSessionState: vi.fn().mockResolvedValue({
+        block: makeBlock(),
+        recovery: makeRestartRecovery(),
+      }),
+    });
+
+    const { result } = renderHook(() =>
+      useStudySession({ blockId: "block-1", api })
+    );
+
+    await waitFor(() => expect(result.current.phase).toBe("recovery"));
+    expect(result.current.recoveryState?.mode).toBe("restart");
+    expect(result.current.recoveryState?.actionLabel).toBe("Start fresh");
   });
 
   it("submits confidence before and starts session", async () => {
@@ -130,7 +238,39 @@ describe("useStudySession", () => {
     expect(result.current.messages[0].content).toBe(
       "Welcome! Let's review Cell Biology."
     );
-    expect(api.startSession).toHaveBeenCalledWith("block-1");
+    expect(api.startSession).toHaveBeenCalledWith("block-1", {
+      restart: false,
+      confidenceBefore: 0.6,
+    });
+  });
+
+  it("routes restart recovery back through confidence-before", async () => {
+    const api = makeMockApi({
+      fetchSessionState: vi.fn().mockResolvedValue({
+        block: makeBlock(),
+        recovery: makeRestartRecovery(),
+      }),
+    });
+
+    const { result } = renderHook(() =>
+      useStudySession({ blockId: "block-1", api })
+    );
+
+    await waitFor(() => expect(result.current.phase).toBe("recovery"));
+
+    await act(async () => {
+      await result.current.restartSession();
+    });
+
+    expect(result.current.phase).toBe("confidence-before");
+
+    act(() => result.current.submitConfidenceBefore(0.7));
+
+    await waitFor(() => expect(result.current.phase).toBe("active"));
+    expect(api.startSession).toHaveBeenCalledWith("block-1", {
+      restart: true,
+      confidenceBefore: 0.7,
+    });
   });
 
   it("transitions to error if startSession fails", async () => {
@@ -244,6 +384,140 @@ describe("useStudySession", () => {
     });
 
     expect(api.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it("reloads recovery state instead of hard-failing on session conflicts", async () => {
+    const fetchSessionState = vi
+      .fn<StudySessionApi["fetchSessionState"]>()
+      .mockResolvedValueOnce({
+        block: makeBlock(),
+        recovery: makeFreshRecovery(),
+      })
+      .mockResolvedValueOnce({
+        block: makeBlock(),
+        recovery: makeRestartRecovery({
+          reason: "transcript_missing",
+          summary: null,
+        }),
+      });
+
+    const api = makeMockApi({
+      fetchSessionState,
+    });
+
+    const sessionConflict = Object.assign(new Error("Transcript mismatch"), {
+      code: "SESSION_TRANSCRIPT_MISMATCH",
+      status: 409,
+    });
+
+    api.sendMessage = vi.fn().mockRejectedValue(sessionConflict);
+
+    const { result } = renderHook(() =>
+      useStudySession({ blockId: "block-1", api })
+    );
+
+    await waitFor(() => expect(result.current.phase).toBe("confidence-before"));
+    act(() => result.current.submitConfidenceBefore(0.5));
+    await waitFor(() => expect(result.current.phase).toBe("active"));
+
+    await act(async () => {
+      await result.current.sendMessage("test");
+    });
+
+    await waitFor(() => expect(result.current.phase).toBe("recovery"));
+    expect(result.current.recoveryState?.statusLabel).toBe("Needs restart");
+  });
+
+  it("reuses stored confidence before when a resumed session completes", async () => {
+    const api = makeMockApi({
+      fetchSessionState: vi.fn().mockResolvedValue({
+        block: makeBlock(),
+        recovery: makeResumeRecovery({
+          messages: [
+            { role: "assistant", content: "Welcome back to Cell Biology." },
+            { role: "user", content: "My prior answer" },
+          ],
+          confidenceBefore: 0.6,
+        }),
+      }),
+      sendMessage: vi
+        .fn()
+        .mockResolvedValue(
+          makeStream(
+            "Well done.<session_status>complete</session_status>"
+          )
+        ),
+    });
+
+    const { result } = renderHook(() =>
+      useStudySession({ blockId: "block-1", api })
+    );
+
+    await waitFor(() => expect(result.current.phase).toBe("active"));
+
+    await act(async () => {
+      await result.current.sendMessage("Final answer");
+    });
+
+    await waitFor(() => expect(result.current.phase).toBe("confidence-after"));
+    expect(api.endSession).toHaveBeenCalledWith(
+      "session-1",
+      expect.any(Array),
+      "You are Swotta...",
+      "completed",
+      { before: 0.6, after: null }
+    );
+  });
+
+  it("restores the confidence-after step for a completed session with local reentry state", async () => {
+    window.localStorage.setItem(
+      "study-session:completion:block-1",
+      JSON.stringify({
+        sessionId: "session-1",
+        phase: "confidence-after",
+        confidenceAfter: null,
+      })
+    );
+
+    const api = makeMockApi({
+      fetchSessionState: vi.fn().mockResolvedValue({
+        block: makeBlock(),
+        recovery: makeCompletedRecovery(),
+      }),
+    });
+
+    const { result } = renderHook(() =>
+      useStudySession({ blockId: "block-1", api })
+    );
+
+    await waitFor(() => expect(result.current.phase).toBe("confidence-after"));
+    expect(result.current.result?.summary).toBe("Good session on Cell Biology.");
+    expect(result.current.confidenceBefore).toBe(0.4);
+  });
+
+  it("restores the complete view for a completed session with stored post-session confidence", async () => {
+    window.localStorage.setItem(
+      "study-session:completion:block-1",
+      JSON.stringify({
+        sessionId: "session-1",
+        phase: "complete",
+        confidenceAfter: 0.8,
+      })
+    );
+
+    const api = makeMockApi({
+      fetchSessionState: vi.fn().mockResolvedValue({
+        block: makeBlock(),
+        recovery: makeCompletedRecovery(),
+      }),
+    });
+
+    const { result } = renderHook(() =>
+      useStudySession({ blockId: "block-1", api })
+    );
+
+    await waitFor(() => expect(result.current.phase).toBe("complete"));
+    expect(result.current.confidenceAfter).toBe(0.8);
   });
 
   it("detects session completion from stream and transitions through confidence-after to complete", async () => {
@@ -522,11 +796,13 @@ describe("useStudySession with default API", () => {
     globalThis.fetch = originalFetch;
   });
 
-  it("fetches block via /api/blocks/:id", async () => {
+  it("fetches session state via /api/sessions/block/:id", async () => {
     const mockBlock = makeBlock();
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ data: mockBlock }),
+      json: async () => ({
+        data: { block: mockBlock, recovery: makeFreshRecovery() },
+      }),
     });
 
     const { result } = renderHook(() =>
@@ -535,10 +811,10 @@ describe("useStudySession with default API", () => {
 
     await waitFor(() => expect(result.current.phase).toBe("confidence-before"));
     expect(result.current.block).toEqual(mockBlock);
-    expect(globalThis.fetch).toHaveBeenCalledWith("/api/blocks/block-1");
+    expect(globalThis.fetch).toHaveBeenCalledWith("/api/sessions/block/block-1");
   });
 
-  it("handles fetch error for block", async () => {
+  it("handles fetch error for session state", async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 404 });
 
     const { result } = renderHook(() =>
@@ -546,13 +822,18 @@ describe("useStudySession with default API", () => {
     );
 
     await waitFor(() => expect(result.current.phase).toBe("error"));
-    expect(result.current.error).toContain("Failed to fetch block");
+    expect(result.current.error).toContain("Failed to load session state");
   });
 
   it("calls start session endpoint", async () => {
     globalThis.fetch = vi.fn().mockImplementation(async (url: string) => {
-      if (typeof url === "string" && url.includes("/api/blocks/")) {
-        return { ok: true, json: async () => ({ data: makeBlock() }) };
+      if (typeof url === "string" && url.includes("/api/sessions/block/")) {
+        return {
+          ok: true,
+          json: async () => ({
+            data: { block: makeBlock(), recovery: makeFreshRecovery() },
+          }),
+        };
       }
       if (typeof url === "string" && url.includes("/api/sessions/start")) {
         return {
@@ -589,8 +870,13 @@ describe("useStudySession with default API", () => {
     });
 
     globalThis.fetch = vi.fn().mockImplementation(async (url: string) => {
-      if (typeof url === "string" && url.includes("/api/blocks/")) {
-        return { ok: true, json: async () => ({ data: makeBlock() }) };
+      if (typeof url === "string" && url.includes("/api/sessions/block/")) {
+        return {
+          ok: true,
+          json: async () => ({
+            data: { block: makeBlock(), recovery: makeFreshRecovery() },
+          }),
+        };
       }
       if (typeof url === "string" && url.includes("/api/sessions/start")) {
         return {
@@ -624,8 +910,13 @@ describe("useStudySession with default API", () => {
 
   it("throws when send message has no body", async () => {
     globalThis.fetch = vi.fn().mockImplementation(async (url: string) => {
-      if (typeof url === "string" && url.includes("/api/blocks/")) {
-        return { ok: true, json: async () => ({ data: makeBlock() }) };
+      if (typeof url === "string" && url.includes("/api/sessions/block/")) {
+        return {
+          ok: true,
+          json: async () => ({
+            data: { block: makeBlock(), recovery: makeFreshRecovery() },
+          }),
+        };
       }
       if (typeof url === "string" && url.includes("/api/sessions/start")) {
         return {
@@ -658,8 +949,13 @@ describe("useStudySession with default API", () => {
 
   it("throws when send message returns non-ok", async () => {
     globalThis.fetch = vi.fn().mockImplementation(async (url: string) => {
-      if (typeof url === "string" && url.includes("/api/blocks/")) {
-        return { ok: true, json: async () => ({ data: makeBlock() }) };
+      if (typeof url === "string" && url.includes("/api/sessions/block/")) {
+        return {
+          ok: true,
+          json: async () => ({
+            data: { block: makeBlock(), recovery: makeFreshRecovery() },
+          }),
+        };
       }
       if (typeof url === "string" && url.includes("/api/sessions/start")) {
         return {
@@ -692,8 +988,13 @@ describe("useStudySession with default API", () => {
 
   it("calls end session endpoint", async () => {
     globalThis.fetch = vi.fn().mockImplementation(async (url: string) => {
-      if (typeof url === "string" && url.includes("/api/blocks/")) {
-        return { ok: true, json: async () => ({ data: makeBlock() }) };
+      if (typeof url === "string" && url.includes("/api/sessions/block/")) {
+        return {
+          ok: true,
+          json: async () => ({
+            data: { block: makeBlock(), recovery: makeFreshRecovery() },
+          }),
+        };
       }
       if (typeof url === "string" && url.includes("/api/sessions/start")) {
         return {
@@ -732,8 +1033,13 @@ describe("useStudySession with default API", () => {
 
   it("throws when end session returns non-ok", async () => {
     globalThis.fetch = vi.fn().mockImplementation(async (url: string) => {
-      if (typeof url === "string" && url.includes("/api/blocks/")) {
-        return { ok: true, json: async () => ({ data: makeBlock() }) };
+      if (typeof url === "string" && url.includes("/api/sessions/block/")) {
+        return {
+          ok: true,
+          json: async () => ({
+            data: { block: makeBlock(), recovery: makeFreshRecovery() },
+          }),
+        };
       }
       if (typeof url === "string" && url.includes("/api/sessions/start")) {
         return {
@@ -766,8 +1072,13 @@ describe("useStudySession with default API", () => {
 
   it("handles non-ok start session", async () => {
     globalThis.fetch = vi.fn().mockImplementation(async (url: string) => {
-      if (typeof url === "string" && url.includes("/api/blocks/")) {
-        return { ok: true, json: async () => ({ data: makeBlock() }) };
+      if (typeof url === "string" && url.includes("/api/sessions/block/")) {
+        return {
+          ok: true,
+          json: async () => ({
+            data: { block: makeBlock(), recovery: makeFreshRecovery() },
+          }),
+        };
       }
       return { ok: false, status: 500 };
     });

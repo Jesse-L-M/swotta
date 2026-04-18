@@ -124,7 +124,49 @@ interface StoredSessionTranscript {
   systemPrompt: string;
   messages: SessionMessage[];
   examSession: ExamSessionContext | null;
+  completionPending: boolean;
+  confidenceBefore: number | null;
+  extractedOutcome: StoredAttemptOutcome | null;
 }
+
+export type SessionRecoveryReason =
+  | "abandoned"
+  | "timeout"
+  | "transcript_missing";
+
+export type BlockSessionRecovery =
+  | {
+      mode: "fresh";
+    }
+  | {
+      mode: "resume";
+      sessionId: SessionId;
+      startedAt: Date;
+      systemPrompt: string;
+      messages: SessionMessage[];
+      completionPending: boolean;
+      confidenceBefore: number | null;
+    }
+  | {
+      mode: "restart";
+      sessionId: SessionId | null;
+      reason: SessionRecoveryReason;
+      startedAt: Date | null;
+      endedAt: Date | null;
+      summary: string | null;
+      messagesCount: number;
+    }
+  | {
+      mode: "completed";
+      sessionId: SessionId;
+      startedAt: Date;
+      endedAt: Date | null;
+      summary: string | null;
+      result: {
+        outcome: AttemptOutcome;
+        summary: string;
+      } | null;
+    };
 
 const EXAM_SESSION_BLOCK_TYPES = new Set<BlockType>([
   "timed_problems",
@@ -139,6 +181,8 @@ function buildAttemptRawInteraction(
     systemPrompt?: string;
     extractedOutcome?: StoredAttemptOutcome;
     examSession?: ExamSessionContext | null;
+    completionPending?: boolean;
+    confidenceBefore?: number | null;
   } = {}
 ): Record<string, unknown> {
   const rawInteraction: Record<string, unknown> = {
@@ -156,6 +200,14 @@ function buildAttemptRawInteraction(
 
   if (options.examSession) {
     rawInteraction.examSession = options.examSession;
+  }
+
+  if (typeof options.completionPending === "boolean") {
+    rawInteraction.completionPending = options.completionPending;
+  }
+
+  if (typeof options.confidenceBefore === "number") {
+    rawInteraction.confidenceBefore = options.confidenceBefore;
   }
 
   return rawInteraction;
@@ -252,6 +304,90 @@ export function getStoredAttemptSystemPrompt(
   return rawInteraction.systemPrompt;
 }
 
+export function getStoredAttemptCompletionPending(
+  rawInteraction: unknown
+): boolean {
+  return isRecord(rawInteraction) && rawInteraction.completionPending === true;
+}
+
+function parseStoredDecimal(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+export function getStoredAttemptConfidenceBefore(
+  rawInteraction: unknown
+): number | null {
+  if (!isRecord(rawInteraction)) {
+    return null;
+  }
+
+  const directConfidence = parseStoredDecimal(rawInteraction.confidenceBefore);
+  if (directConfidence !== null) {
+    return directConfidence;
+  }
+
+  if (isRecord(rawInteraction.extractedOutcome)) {
+    return parseStoredDecimal(rawInteraction.extractedOutcome.confidenceBefore);
+  }
+
+  return null;
+}
+
+function getStoredAttemptOutcome(
+  rawInteraction: unknown
+): StoredAttemptOutcome | null {
+  if (!isRecord(rawInteraction) || !isRecord(rawInteraction.extractedOutcome)) {
+    return null;
+  }
+
+  const extractedOutcome = rawInteraction.extractedOutcome;
+  const misconceptions = Array.isArray(extractedOutcome.misconceptions)
+    ? extractedOutcome.misconceptions.flatMap((item) => {
+        if (!isRecord(item) || typeof item.description !== "string") {
+          return [];
+        }
+
+        const severity = Number(item.severity);
+        return [
+          {
+            description: item.description,
+            severity: ([1, 2, 3].includes(severity) ? severity : 2) as 1 | 2 | 3,
+          },
+        ];
+      })
+    : [];
+
+  return {
+    score: parseStoredDecimal(extractedOutcome.score),
+    confidenceBefore: parseStoredDecimal(extractedOutcome.confidenceBefore),
+    confidenceAfter: parseStoredDecimal(extractedOutcome.confidenceAfter),
+    helpRequested: extractedOutcome.helpRequested === true,
+    helpTiming:
+      extractedOutcome.helpTiming === "before_attempt" ||
+      extractedOutcome.helpTiming === "after_attempt"
+        ? extractedOutcome.helpTiming
+        : null,
+    retentionOutcome:
+      extractedOutcome.retentionOutcome === "remembered" ||
+      extractedOutcome.retentionOutcome === "partial" ||
+      extractedOutcome.retentionOutcome === "forgotten"
+        ? extractedOutcome.retentionOutcome
+        : null,
+    misconceptions,
+    summary:
+      typeof extractedOutcome.summary === "string" ? extractedOutcome.summary : "",
+  };
+}
+
 function areSessionMessagesEqual(
   left: SessionMessage[],
   right: SessionMessage[]
@@ -273,6 +409,7 @@ export async function getStoredSessionTranscript(
   const [attempt] = await dbLike
     .select({
       id: blockAttempts.id,
+      confidenceBefore: blockAttempts.confidenceBefore,
       rawInteraction: blockAttempts.rawInteraction,
     })
     .from(blockAttempts)
@@ -287,6 +424,13 @@ export async function getStoredSessionTranscript(
   const systemPrompt = getStoredAttemptSystemPrompt(attempt.rawInteraction);
   const messages = getStoredAttemptMessages(attempt.rawInteraction);
   const examSession = getPersistedExamSession(attempt.rawInteraction);
+  const completionPending = getStoredAttemptCompletionPending(
+    attempt.rawInteraction
+  );
+  const confidenceBefore =
+    parseStoredDecimal(attempt.confidenceBefore) ??
+    getStoredAttemptConfidenceBefore(attempt.rawInteraction);
+  const extractedOutcome = getStoredAttemptOutcome(attempt.rawInteraction);
   if (!systemPrompt || messages.length === 0) {
     return null;
   }
@@ -296,7 +440,325 @@ export async function getStoredSessionTranscript(
     systemPrompt,
     messages,
     examSession,
+    completionPending,
+    confidenceBefore,
+    extractedOutcome,
   };
+}
+
+function getSessionDurationMinutes(
+  startedAt: Date,
+  endedAt: Date | null,
+  storedDurationMinutes: number | null
+): number {
+  if (typeof storedDurationMinutes === "number" && Number.isFinite(storedDurationMinutes)) {
+    return storedDurationMinutes;
+  }
+
+  const finalEndedAt = endedAt ?? new Date();
+  return Math.max(
+    0,
+    Math.round((finalEndedAt.getTime() - startedAt.getTime()) / 60000)
+  );
+}
+
+function buildRecoveredAttemptOutcome(
+  options: {
+    blockId: BlockId;
+    topicId: TopicId | null;
+    durationMinutes: number;
+    messages: SessionMessage[];
+  },
+  extractedOutcome: StoredAttemptOutcome
+): AttemptOutcome {
+  return {
+    blockId: options.blockId,
+    score: extractedOutcome.score,
+    confidenceBefore: extractedOutcome.confidenceBefore,
+    confidenceAfter: extractedOutcome.confidenceAfter,
+    helpRequested: extractedOutcome.helpRequested,
+    helpTiming: extractedOutcome.helpTiming,
+    misconceptions: extractedOutcome.misconceptions.map((misconception) => ({
+      topicId: (options.topicId ?? "") as TopicId,
+      ruleId: null,
+      description: misconception.description,
+      severity: misconception.severity,
+    })),
+    retentionOutcome: extractedOutcome.retentionOutcome,
+    durationMinutes: options.durationMinutes,
+    rawInteraction: { messages: options.messages },
+  };
+}
+
+function buildArchivedAttemptOutcome(
+  summary: string,
+  confidenceBefore: number | null
+): StoredAttemptOutcome {
+  return {
+    score: null,
+    confidenceBefore,
+    confidenceAfter: null,
+    helpRequested: false,
+    helpTiming: null,
+    retentionOutcome: null,
+    misconceptions: [],
+    summary,
+  };
+}
+
+export async function getBlockSessionRecoveryState(
+  dbLike: Database,
+  learnerId: LearnerId,
+  blockId: BlockId
+): Promise<BlockSessionRecovery> {
+  const [activeSession] = await dbLike
+    .select({
+      id: studySessions.id,
+      status: studySessions.status,
+      startedAt: studySessions.startedAt,
+      endedAt: studySessions.endedAt,
+      summary: studySessions.summary,
+      topicsCovered: studySessions.topicsCovered,
+      totalDurationMinutes: studySessions.totalDurationMinutes,
+    })
+    .from(studySessions)
+    .where(
+      and(
+        eq(studySessions.learnerId, learnerId),
+        eq(studySessions.blockId, blockId),
+        eq(studySessions.status, "active")
+      )
+    )
+    .orderBy(desc(studySessions.startedAt))
+    .limit(1);
+
+  if (activeSession) {
+    const transcript = await getStoredSessionTranscript(
+      dbLike,
+      activeSession.id as SessionId
+    );
+    if (!transcript) {
+      return {
+        mode: "restart",
+        sessionId: activeSession.id as SessionId,
+        reason: "transcript_missing",
+        startedAt: activeSession.startedAt,
+        endedAt: activeSession.endedAt,
+        summary: activeSession.summary,
+        messagesCount: 0,
+      };
+    }
+
+    return {
+      mode: "resume",
+      sessionId: activeSession.id as SessionId,
+      startedAt: activeSession.startedAt,
+      systemPrompt: transcript.systemPrompt,
+      messages: transcript.messages,
+      completionPending: transcript.completionPending,
+      confidenceBefore: transcript.confidenceBefore,
+    };
+  }
+
+  const [session] = await dbLike
+    .select({
+      id: studySessions.id,
+      status: studySessions.status,
+      startedAt: studySessions.startedAt,
+      endedAt: studySessions.endedAt,
+      summary: studySessions.summary,
+      topicsCovered: studySessions.topicsCovered,
+      totalDurationMinutes: studySessions.totalDurationMinutes,
+    })
+    .from(studySessions)
+    .where(
+      and(
+        eq(studySessions.learnerId, learnerId),
+        eq(studySessions.blockId, blockId)
+      )
+    )
+    .orderBy(desc(studySessions.startedAt))
+    .limit(1);
+
+  if (!session) {
+    return { mode: "fresh" };
+  }
+
+  if (session.status === "completed") {
+    const transcript = await getStoredSessionTranscript(dbLike, session.id as SessionId);
+    const durationMinutes = getSessionDurationMinutes(
+      session.startedAt,
+      session.endedAt,
+      session.totalDurationMinutes
+    );
+    const result = transcript?.extractedOutcome
+      ? {
+          outcome: buildRecoveredAttemptOutcome(
+            {
+              blockId,
+              topicId: (session.topicsCovered?.[0] ?? null) as TopicId | null,
+              durationMinutes,
+              messages: transcript.messages,
+            },
+            transcript.extractedOutcome
+          ),
+          summary: transcript.extractedOutcome.summary,
+        }
+      : null;
+
+    return {
+      mode: "completed",
+      sessionId: session.id as SessionId,
+      startedAt: session.startedAt,
+      endedAt: session.endedAt,
+      summary: session.summary,
+      result,
+    };
+  }
+
+  if (session.status === "abandoned" || session.status === "timeout") {
+    const transcript = await getStoredSessionTranscript(
+      dbLike,
+      session.id as SessionId
+    );
+
+    return {
+      mode: "restart",
+      sessionId: session.id as SessionId,
+      reason: session.status,
+      startedAt: session.startedAt,
+      endedAt: session.endedAt,
+      summary: session.summary,
+      messagesCount: transcript?.messages.length ?? 0,
+    };
+  }
+
+  const transcript = await getStoredSessionTranscript(dbLike, session.id as SessionId);
+  if (!transcript) {
+    return {
+      mode: "restart",
+      sessionId: session.id as SessionId,
+      reason: "transcript_missing",
+      startedAt: session.startedAt,
+      endedAt: session.endedAt,
+      summary: session.summary,
+      messagesCount: 0,
+    };
+  }
+
+  return {
+    mode: "resume",
+    sessionId: session.id as SessionId,
+    startedAt: session.startedAt,
+    systemPrompt: transcript.systemPrompt,
+    messages: transcript.messages,
+    completionPending: transcript.completionPending,
+    confidenceBefore: transcript.confidenceBefore,
+  };
+}
+
+export async function abandonActiveSessionsForBlock(
+  dbLike: Database,
+  learnerId: LearnerId,
+  blockId: BlockId,
+  summary = "Session restarted before completion.",
+  options: { excludeSessionIds?: SessionId[] } = {}
+): Promise<SessionId[]> {
+  const activeSessions = await dbLike
+    .select({
+      id: studySessions.id,
+      startedAt: studySessions.startedAt,
+    })
+    .from(studySessions)
+    .where(
+      and(
+        eq(studySessions.learnerId, learnerId),
+        eq(studySessions.blockId, blockId),
+        eq(studySessions.status, "active")
+      )
+    )
+    .orderBy(desc(studySessions.startedAt));
+
+  const excludedSessionIds = new Set(options.excludeSessionIds ?? []);
+  const sessionsToArchive = activeSessions.filter(
+    (session) => !excludedSessionIds.has(session.id as SessionId)
+  );
+  const hasRemainingActiveSessions =
+    sessionsToArchive.length !== activeSessions.length;
+
+  if (sessionsToArchive.length === 0) {
+    return [];
+  }
+
+  const endedAt = new Date();
+  const sessionIds = sessionsToArchive.map((session) => session.id as SessionId);
+
+  await dbLike.transaction(async (tx) => {
+    for (const session of sessionsToArchive) {
+      const sessionId = session.id as SessionId;
+      const durationMinutes = getSessionDurationMinutes(
+        session.startedAt,
+        endedAt,
+        null
+      );
+      const transcript = await getStoredSessionTranscript(tx, sessionId);
+      const confidenceBefore = transcript?.confidenceBefore ?? null;
+
+      await tx
+        .update(studySessions)
+        .set({
+          status: "abandoned",
+          endedAt,
+          summary,
+          totalDurationMinutes: durationMinutes,
+        })
+        .where(eq(studySessions.id, sessionId));
+
+      const attemptId = await findOpenAttemptIdForSession(
+        tx,
+        blockId,
+        sessionId
+      );
+      if (!attemptId) {
+        continue;
+      }
+
+      await tx
+        .update(blockAttempts)
+        .set({
+          completedAt: endedAt,
+          score: null,
+          confidenceBefore:
+            confidenceBefore !== null ? confidenceBefore.toFixed(3) : null,
+          confidenceAfter: null,
+          helpRequested: false,
+          helpTiming: null,
+          misconceptionsDetected: 0,
+          notes: summary,
+          rawInteraction: buildAttemptRawInteraction(sessionId, {
+            messages: transcript?.messages,
+            systemPrompt: transcript?.systemPrompt,
+            examSession: transcript?.examSession ?? null,
+            confidenceBefore,
+            extractedOutcome: buildArchivedAttemptOutcome(
+              summary,
+              confidenceBefore
+            ),
+          }),
+        })
+        .where(eq(blockAttempts.id, attemptId));
+    }
+
+    await tx
+      .update(studyBlocks)
+      .set({
+        status: hasRemainingActiveSessions ? "active" : "pending",
+        updatedAt: endedAt,
+      })
+      .where(eq(studyBlocks.id, blockId));
+  });
+
+  return sessionIds;
 }
 
 function isExamSessionBlockType(blockType: BlockType): boolean {
@@ -400,9 +862,48 @@ async function findAttemptIdForSession(
   return latestAttempt?.id ?? null;
 }
 
+async function findOpenAttemptIdForSession(
+  dbLike: { select: Database["select"] },
+  blockId: BlockId,
+  sessionId: SessionId
+): Promise<string | null> {
+  const [linkedAttempt] = await dbLike
+    .select({ id: blockAttempts.id })
+    .from(blockAttempts)
+    .where(
+      and(
+        eq(blockAttempts.blockId, blockId),
+        sql`${blockAttempts.rawInteraction} ->> 'sessionId' = ${sessionId}`
+      )
+    )
+    .orderBy(desc(blockAttempts.createdAt))
+    .limit(1);
+
+  if (linkedAttempt) {
+    return linkedAttempt.id;
+  }
+
+  const [incompleteAttempt] = await dbLike
+    .select({ id: blockAttempts.id })
+    .from(blockAttempts)
+    .where(
+      and(
+        eq(blockAttempts.blockId, blockId),
+        sql`${blockAttempts.completedAt} IS NULL`
+      )
+    )
+    .orderBy(desc(blockAttempts.createdAt))
+    .limit(1);
+
+  return incompleteAttempt?.id ?? null;
+}
+
 export async function startSession(
   block: StudyBlock,
-  learnerContext: LearnerContext
+  learnerContext: LearnerContext,
+  options: {
+    confidenceBefore?: number | null;
+  } = {}
 ): Promise<StartSessionResult> {
   const deps = getDeps();
   const { db, anthropic, retrieveChunks } = deps;
@@ -450,16 +951,22 @@ export async function startSession(
       .returning();
 
     await tx
-      .insert(blockAttempts)
-      .values({
-        blockId: block.id,
-        rawInteraction: buildAttemptRawInteraction(sess.id as SessionId, {
-          systemPrompt,
-          examSession,
-          messages: [
-            {
-              role: "assistant",
-              content: initialMessage,
+        .insert(blockAttempts)
+        .values({
+          blockId: block.id,
+          confidenceBefore:
+            options.confidenceBefore !== null &&
+            options.confidenceBefore !== undefined
+              ? options.confidenceBefore.toFixed(3)
+              : null,
+          rawInteraction: buildAttemptRawInteraction(sess.id as SessionId, {
+            systemPrompt,
+            examSession,
+            confidenceBefore: options.confidenceBefore ?? null,
+            messages: [
+              {
+                role: "assistant",
+                content: initialMessage,
             },
           ],
         }),
@@ -538,6 +1045,7 @@ export async function continueSession(
       rawInteraction: buildAttemptRawInteraction(sessionId, {
         systemPrompt: transcript.systemPrompt,
         examSession: transcript.examSession,
+        completionPending: isComplete,
         messages: [
           ...fullMessages,
           {
