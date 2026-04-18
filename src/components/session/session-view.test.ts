@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { createElement } from "react";
 import { SessionView, BLOCK_TYPE_LABELS, type SessionViewProps } from "./session-view";
@@ -65,7 +65,28 @@ function makeResumeRecovery(
     startedAt: "2026-04-01T10:00:00.000Z",
     systemPrompt: "System prompt",
     completionPending: false,
+    confidenceBefore: 0.4,
     messages: [{ role: "assistant", content: "Welcome to the session!" }],
+    ...overrides,
+  };
+}
+
+function makeCompletedRecovery(
+  overrides?: Partial<Extract<SessionRecoverySnapshot, { mode: "completed" }>>
+): SessionRecoverySnapshot {
+  return {
+    mode: "completed",
+    sessionId: "session-1",
+    startedAt: "2026-04-01T10:00:00.000Z",
+    endedAt: "2026-04-01T10:12:00.000Z",
+    summary: "Recovered summary",
+    result: {
+      outcome: makeOutcome({
+        confidenceBefore: 0.4,
+        confidenceAfter: null,
+      }),
+      summary: "Recovered summary",
+    },
     ...overrides,
   };
 }
@@ -105,6 +126,10 @@ function makeMockApi(overrides?: Partial<StudySessionApi>): StudySessionApi {
 function h(props: SessionViewProps) {
   return createElement(SessionView, props);
 }
+
+afterEach(() => {
+  window.localStorage.clear();
+});
 
 
 describe("BLOCK_TYPE_LABELS", () => {
@@ -201,8 +226,16 @@ describe("SessionView", () => {
 
     await waitFor(() => expect(screen.getByTestId("session-recovery")).toBeTruthy());
     fireEvent.click(screen.getByTestId("session-recovery-action"));
+    await waitFor(() =>
+      expect(screen.getByTestId("session-confidence-before")).toBeTruthy()
+    );
+    fireEvent.click(screen.getByTestId("confidence-3"));
+    fireEvent.click(screen.getByTestId("confidence-submit"));
     await waitFor(() => expect(screen.getByTestId("session-active")).toBeTruthy());
-    expect(api.startSession).toHaveBeenCalledWith("block-1", { restart: true });
+    expect(api.startSession).toHaveBeenCalledWith("block-1", {
+      restart: true,
+      confidenceBefore: 0.6,
+    });
   });
 
   it("transitions to active session after confidence submission", async () => {
@@ -234,6 +267,22 @@ describe("SessionView", () => {
 
     await waitFor(() => expect(screen.getByTestId("session-active")).toBeTruthy());
     expect(screen.getByTestId("session-resume-notice")).toBeTruthy();
+  });
+
+  it("shows the complete view for a completed session recovery", async () => {
+    const api = makeMockApi({
+      fetchSessionState: vi.fn().mockResolvedValue({
+        block: makeBlock(),
+        recovery: makeCompletedRecovery(),
+      }),
+    });
+
+    render(h({ blockId: "block-1", api, onBackToDashboard: vi.fn() }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("session-complete-view")).toBeTruthy()
+    );
+    expect(screen.getByTestId("session-complete")).toBeTruthy();
   });
 
   it("shows abandon button in active state", async () => {

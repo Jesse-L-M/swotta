@@ -14,7 +14,7 @@ import {
   studyPlans,
   reviewQueue,
 } from "@/db/schema";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import type {
   StudyBlock,
   SessionId,
@@ -825,7 +825,41 @@ describe("getBlockSessionRecoveryState", () => {
         mode: "resume",
         sessionId: started.sessionId,
         completionPending: false,
+        confidenceBefore: null,
         messages: [{ role: "assistant", content: "Welcome back!" }],
+      })
+    );
+  });
+
+  it("restores stored confidenceBefore when resuming an active session", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qual = await createTestQualification();
+    const topicId = qual.topics[1].id;
+    const blockId = await createBlockInDb(learner.id, topicId);
+
+    configureSessionRunner({
+      db,
+      anthropic: createMockAnthropicClient(["Welcome back!"]) as unknown as SessionRunnerDeps["anthropic"],
+      retrieveChunks: createMockRetrieveChunks(),
+    });
+
+    const block = makeBlock(learner.id, topicId, blockId);
+    const started = await startSession(block, makeLearnerContext(), {
+      confidenceBefore: 0.6,
+    });
+
+    const recovery = await getBlockSessionRecoveryState(
+      db,
+      learner.id as LearnerId,
+      blockId as BlockId
+    );
+
+    expect(recovery).toEqual(
+      expect.objectContaining({
+        mode: "resume",
+        sessionId: started.sessionId,
+        confidenceBefore: 0.6,
       })
     );
   });
@@ -891,6 +925,84 @@ describe("getBlockSessionRecoveryState", () => {
       })
     );
   });
+
+  it("prefers the latest active session over a newer completed row", async () => {
+    const started = await createStartedSession("Still active");
+
+    await db.insert(studySessions).values({
+      learnerId: started.learner.id,
+      blockId: started.blockId,
+      status: "completed",
+      topicsCovered: [started.topicId],
+      summary: "Completed later",
+      startedAt: new Date("2026-04-02T10:00:00.000Z"),
+      endedAt: new Date("2026-04-02T10:10:00.000Z"),
+      totalDurationMinutes: 10,
+    });
+
+    const recovery = await getBlockSessionRecoveryState(
+      db,
+      started.learner.id as LearnerId,
+      started.blockId as BlockId
+    );
+
+    expect(recovery).toEqual(
+      expect.objectContaining({
+        mode: "resume",
+        sessionId: started.sessionId,
+      })
+    );
+  });
+
+  it("returns a completed result snapshot for completed sessions", async () => {
+    const started = await createStartedSession("Welcome!");
+
+    configureSessionRunner({
+      db,
+      anthropic: createMockAnthropicClient([
+        JSON.stringify({
+          score: 80,
+          misconceptions: [],
+          helpRequested: false,
+          helpTiming: null,
+          retentionOutcome: "remembered",
+          summary: "Student performed well.",
+        }),
+      ]) as unknown as SessionRunnerDeps["anthropic"],
+      retrieveChunks: createMockRetrieveChunks(),
+    });
+
+    await endSession(
+      started.sessionId,
+      [
+        { role: "assistant", content: started.initialMessage },
+        { role: "user", content: "Answer" },
+      ],
+      started.systemPrompt,
+      "completed",
+      { before: 0.4, after: null }
+    );
+
+    const recovery = await getBlockSessionRecoveryState(
+      db,
+      started.learner.id as LearnerId,
+      started.blockId as BlockId
+    );
+
+    expect(recovery).toEqual(
+      expect.objectContaining({
+        mode: "completed",
+        sessionId: started.sessionId,
+        result: expect.objectContaining({
+          summary: "Student performed well.",
+          outcome: expect.objectContaining({
+            blockId: started.blockId,
+            confidenceBefore: 0.4,
+          }),
+        }),
+      })
+    );
+  });
 });
 
 describe("abandonActiveSessionsForBlock", () => {
@@ -919,6 +1031,53 @@ describe("abandonActiveSessionsForBlock", () => {
       .where(eq(studyBlocks.id, started.blockId));
 
     expect(block.status).toBe("pending");
+  });
+
+  it("can leave a newly-started replacement session active", async () => {
+    const first = await createStartedSession("First session");
+
+    configureSessionRunner({
+      db,
+      anthropic: createMockAnthropicClient(["Replacement session"]) as unknown as SessionRunnerDeps["anthropic"],
+      retrieveChunks: createMockRetrieveChunks(),
+    });
+
+    const replacement = await startSession(
+      makeBlock(first.learner.id, first.topicId, first.blockId),
+      makeLearnerContext(),
+      { confidenceBefore: 0.7 }
+    );
+
+    const archivedIds = await abandonActiveSessionsForBlock(
+      db,
+      first.learner.id as LearnerId,
+      first.blockId as BlockId,
+      "Session restarted before completion.",
+      { excludeSessionIds: [replacement.sessionId] }
+    );
+
+    expect(archivedIds).toContain(first.sessionId);
+    expect(archivedIds).not.toContain(replacement.sessionId);
+
+    const sessions = await db
+      .select({ id: studySessions.id, status: studySessions.status })
+      .from(studySessions)
+      .where(eq(studySessions.blockId, first.blockId))
+      .orderBy(desc(studySessions.startedAt));
+
+    expect(
+      sessions.find((session) => session.id === replacement.sessionId)?.status
+    ).toBe("active");
+    expect(
+      sessions.find((session) => session.id === first.sessionId)?.status
+    ).toBe("abandoned");
+
+    const [block] = await db
+      .select({ status: studyBlocks.status })
+      .from(studyBlocks)
+      .where(eq(studyBlocks.id, first.blockId));
+
+    expect(block.status).toBe("active");
   });
 });
 

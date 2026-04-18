@@ -22,6 +22,7 @@ import type {
 const requestSchema = z.object({
   blockId: z.string().uuid(),
   restart: z.boolean().optional(),
+  confidenceBefore: z.number().min(0).max(1).nullable().optional(),
 });
 
 export async function POST(request: Request) {
@@ -129,14 +130,22 @@ export async function POST(request: Request) {
     );
   }
 
-  if (parsed.data.restart) {
-    await abandonActiveSessionsForBlock(db, learnerId, blockId);
-  }
-
   const learnerContext = await assembleLearnerContext(db, learnerId, topicId);
 
   ensureSessionRunnerConfigured();
-  const result = await startSession(block, learnerContext);
+  const result = await startSession(block, learnerContext, {
+    confidenceBefore: parsed.data.confidenceBefore ?? null,
+  });
+
+  if (parsed.data.restart) {
+    await abandonActiveSessionsForBlock(
+      db,
+      learnerId,
+      blockId,
+      "Session restarted before completion.",
+      { excludeSessionIds: [result.sessionId] }
+    );
+  }
 
   return NextResponse.json({
     data: {

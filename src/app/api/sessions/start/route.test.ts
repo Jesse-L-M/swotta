@@ -156,7 +156,8 @@ describe("POST /api/sessions/start", () => {
         priority: 4,
         reason: "Scheduled study block",
       }),
-      expect.objectContaining({ masteryLevel: 0.5 })
+      expect.objectContaining({ masteryLevel: 0.5 }),
+      { confidenceBefore: null }
     );
     expect(body).toEqual({
       data: {
@@ -261,8 +262,49 @@ describe("POST /api/sessions/start", () => {
     expect(abandonActiveSessionsForBlockMock).toHaveBeenCalledWith(
       db,
       learner.id,
-      block.id
+      block.id,
+      "Session restarted before completion.",
+      { excludeSessionIds: ["session-2"] }
     );
     expect(startSessionMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("passes confidenceBefore through to session start", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qual = await createTestQualification();
+    const block = await createBlock(learner.id, qual.topics[1].id);
+
+    requireLearnerMock.mockResolvedValue({
+      learnerId: learner.id,
+      orgId: org.id,
+    });
+    assembleLearnerContextMock.mockResolvedValue({
+      masteryLevel: 0.5,
+      knownMisconceptions: [],
+      confirmedMemory: [],
+      preferences: {},
+      policies: [],
+    });
+    startSessionMock.mockResolvedValue({
+      sessionId: "session-3",
+      systemPrompt: "prompt",
+      initialMessage: "Welcome",
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/sessions/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blockId: block.id, confidenceBefore: 0.6 }),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(startSessionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: block.id }),
+      expect.objectContaining({ masteryLevel: 0.5 }),
+      { confidenceBefore: 0.6 }
+    );
   });
 });

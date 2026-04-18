@@ -49,12 +49,33 @@ function makeResumeRecovery(
     startedAt: "2026-04-01T10:00:00.000Z",
     systemPrompt: "You are Swotta...",
     completionPending: false,
+    confidenceBefore: 0.4,
     messages: [
       {
         role: "assistant",
         content: "Welcome back to Cell Biology.",
       },
     ],
+    ...overrides,
+  };
+}
+
+function makeCompletedRecovery(
+  overrides?: Partial<Extract<SessionRecoverySnapshot, { mode: "completed" }>>
+): SessionRecoverySnapshot {
+  return {
+    mode: "completed",
+    sessionId: "session-1",
+    startedAt: "2026-04-01T10:00:00.000Z",
+    endedAt: "2026-04-01T10:12:00.000Z",
+    summary: "Good session on Cell Biology.",
+    result: {
+      outcome: makeOutcome({
+        confidenceBefore: 0.4,
+        confidenceAfter: null,
+      }),
+      summary: "Good session on Cell Biology.",
+    },
     ...overrides,
   };
 }
@@ -113,6 +134,10 @@ function makeMockApi(
     ...overrides,
   };
 }
+
+afterEach(() => {
+  window.localStorage.clear();
+});
 
 
 describe("useStudySession", () => {
@@ -215,6 +240,36 @@ describe("useStudySession", () => {
     );
     expect(api.startSession).toHaveBeenCalledWith("block-1", {
       restart: false,
+      confidenceBefore: 0.6,
+    });
+  });
+
+  it("routes restart recovery back through confidence-before", async () => {
+    const api = makeMockApi({
+      fetchSessionState: vi.fn().mockResolvedValue({
+        block: makeBlock(),
+        recovery: makeRestartRecovery(),
+      }),
+    });
+
+    const { result } = renderHook(() =>
+      useStudySession({ blockId: "block-1", api })
+    );
+
+    await waitFor(() => expect(result.current.phase).toBe("recovery"));
+
+    await act(async () => {
+      await result.current.restartSession();
+    });
+
+    expect(result.current.phase).toBe("confidence-before");
+
+    act(() => result.current.submitConfidenceBefore(0.7));
+
+    await waitFor(() => expect(result.current.phase).toBe("active"));
+    expect(api.startSession).toHaveBeenCalledWith("block-1", {
+      restart: true,
+      confidenceBefore: 0.7,
     });
   });
 
@@ -371,6 +426,98 @@ describe("useStudySession", () => {
 
     await waitFor(() => expect(result.current.phase).toBe("recovery"));
     expect(result.current.recoveryState?.statusLabel).toBe("Needs restart");
+  });
+
+  it("reuses stored confidence before when a resumed session completes", async () => {
+    const api = makeMockApi({
+      fetchSessionState: vi.fn().mockResolvedValue({
+        block: makeBlock(),
+        recovery: makeResumeRecovery({
+          messages: [
+            { role: "assistant", content: "Welcome back to Cell Biology." },
+            { role: "user", content: "My prior answer" },
+          ],
+          confidenceBefore: 0.6,
+        }),
+      }),
+      sendMessage: vi
+        .fn()
+        .mockResolvedValue(
+          makeStream(
+            "Well done.<session_status>complete</session_status>"
+          )
+        ),
+    });
+
+    const { result } = renderHook(() =>
+      useStudySession({ blockId: "block-1", api })
+    );
+
+    await waitFor(() => expect(result.current.phase).toBe("active"));
+
+    await act(async () => {
+      await result.current.sendMessage("Final answer");
+    });
+
+    await waitFor(() => expect(result.current.phase).toBe("confidence-after"));
+    expect(api.endSession).toHaveBeenCalledWith(
+      "session-1",
+      expect.any(Array),
+      "You are Swotta...",
+      "completed",
+      { before: 0.6, after: null }
+    );
+  });
+
+  it("restores the confidence-after step for a completed session with local reentry state", async () => {
+    window.localStorage.setItem(
+      "study-session:completion:block-1",
+      JSON.stringify({
+        sessionId: "session-1",
+        phase: "confidence-after",
+        confidenceAfter: null,
+      })
+    );
+
+    const api = makeMockApi({
+      fetchSessionState: vi.fn().mockResolvedValue({
+        block: makeBlock(),
+        recovery: makeCompletedRecovery(),
+      }),
+    });
+
+    const { result } = renderHook(() =>
+      useStudySession({ blockId: "block-1", api })
+    );
+
+    await waitFor(() => expect(result.current.phase).toBe("confidence-after"));
+    expect(result.current.result?.summary).toBe("Good session on Cell Biology.");
+    expect(result.current.confidenceBefore).toBe(0.4);
+  });
+
+  it("restores the complete view for a completed session with stored post-session confidence", async () => {
+    window.localStorage.setItem(
+      "study-session:completion:block-1",
+      JSON.stringify({
+        sessionId: "session-1",
+        phase: "complete",
+        confidenceAfter: 0.8,
+      })
+    );
+
+    const api = makeMockApi({
+      fetchSessionState: vi.fn().mockResolvedValue({
+        block: makeBlock(),
+        recovery: makeCompletedRecovery(),
+      }),
+    });
+
+    const { result } = renderHook(() =>
+      useStudySession({ blockId: "block-1", api })
+    );
+
+    await waitFor(() => expect(result.current.phase).toBe("complete"));
+    expect(result.current.confidenceAfter).toBe(0.8);
   });
 
   it("detects session completion from stream and transitions through confidence-after to complete", async () => {

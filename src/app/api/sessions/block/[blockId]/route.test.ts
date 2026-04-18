@@ -100,6 +100,7 @@ describe("GET /api/sessions/block/[blockId]", () => {
       systemPrompt: "prompt",
       messages: [{ role: "assistant", content: "Resume me" }],
       completionPending: false,
+      confidenceBefore: 0.6,
     });
 
     const response = await GET(
@@ -117,6 +118,71 @@ describe("GET /api/sessions/block/[blockId]", () => {
       systemPrompt: "prompt",
       messages: [{ role: "assistant", content: "Resume me" }],
       completionPending: false,
+      confidenceBefore: 0.6,
+    });
+  });
+
+  it("serializes completed recovery results", async () => {
+    const org = await createTestOrg();
+    const learner = await createTestLearner(org.id);
+    const qual = await createTestQualification();
+    const block = await createBlock(learner.id, qual.topics[1].id);
+
+    requireLearnerMock.mockResolvedValue({
+      learnerId: learner.id,
+      orgId: org.id,
+    });
+    getBlockSessionRecoveryStateMock.mockResolvedValue({
+      mode: "completed",
+      sessionId: "session-2",
+      startedAt: new Date("2026-04-01T10:00:00.000Z"),
+      endedAt: new Date("2026-04-01T10:12:00.000Z"),
+      summary: "Finished",
+      result: {
+        summary: "Finished",
+        outcome: {
+          blockId: block.id,
+          score: 80,
+          confidenceBefore: 0.4,
+          confidenceAfter: null,
+          helpRequested: false,
+          helpTiming: null,
+          misconceptions: [],
+          retentionOutcome: "remembered",
+          durationMinutes: 12,
+          rawInteraction: null,
+        },
+      },
+    });
+
+    const response = await GET(
+      new Request(`http://localhost/api/sessions/block/${block.id}`),
+      { params: Promise.resolve({ blockId: block.id }) }
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.recovery).toEqual({
+      mode: "completed",
+      sessionId: "session-2",
+      startedAt: "2026-04-01T10:00:00.000Z",
+      endedAt: "2026-04-01T10:12:00.000Z",
+      summary: "Finished",
+      result: {
+        summary: "Finished",
+        outcome: {
+          blockId: block.id,
+          score: 80,
+          confidenceBefore: 0.4,
+          confidenceAfter: null,
+          helpRequested: false,
+          helpTiming: null,
+          misconceptions: [],
+          retentionOutcome: "remembered",
+          durationMinutes: 12,
+          rawInteraction: null,
+        },
+      },
     });
   });
 

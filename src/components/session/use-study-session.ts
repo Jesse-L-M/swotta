@@ -54,6 +54,7 @@ interface SessionRecoveryResume {
     content: string;
   }>;
   completionPending: boolean;
+  confidenceBefore: number | null;
 }
 
 interface SessionRecoveryRestart {
@@ -72,6 +73,7 @@ interface SessionRecoveryCompleted {
   startedAt: string;
   endedAt: string | null;
   summary: string | null;
+  result: SessionResult | null;
 }
 
 export type SessionRecoverySnapshot =
@@ -81,7 +83,7 @@ export type SessionRecoverySnapshot =
   | SessionRecoveryCompleted;
 
 export interface SessionRecoveryState {
-  mode: "restart" | "completed";
+  mode: "restart";
   title: string;
   description: string;
   actionLabel: string | null;
@@ -92,6 +94,12 @@ export interface SessionRecoveryState {
 export interface SessionResumeNotice {
   title: string;
   description: string;
+}
+
+interface StoredCompletionReentryState {
+  sessionId: string;
+  phase: "confidence-after" | "complete";
+  confidenceAfter: number | null;
 }
 
 class StudySessionApiError extends Error {
@@ -113,7 +121,7 @@ export interface StudySessionApi {
   }>;
   startSession: (
     blockId: string,
-    options?: { restart?: boolean }
+    options?: { restart?: boolean; confidenceBefore?: number | null }
   ) => Promise<{
     sessionId: string;
     systemPrompt: string;
@@ -183,6 +191,7 @@ function defaultApi(): StudySessionApi {
         body: JSON.stringify({
           blockId,
           restart: options?.restart ?? false,
+          confidenceBefore: options?.confidenceBefore ?? null,
         }),
       });
 
@@ -258,23 +267,68 @@ function toSessionMessages(
   }));
 }
 
-function buildRecoveryState(
-  block: SessionBlockInfo,
-  recovery: SessionRecoveryRestart | SessionRecoveryCompleted
-): SessionRecoveryState {
-  if (recovery.mode === "completed") {
-    return {
-      mode: "completed",
-      title: "This session is already complete",
-      description:
-        recovery.summary?.trim() ||
-        `You already finished ${block.topicName}. Head back to your dashboard for the next step.`,
-      actionLabel: null,
-      summary: recovery.summary,
-      statusLabel: "Complete",
-    };
+function getCompletionReentryKey(blockId: string): string {
+  return `study-session:completion:${blockId}`;
+}
+
+function readCompletionReentryState(
+  blockId: string
+): StoredCompletionReentryState | null {
+  if (typeof window === "undefined") {
+    return null;
   }
 
+  try {
+    const rawValue = window.localStorage.getItem(getCompletionReentryKey(blockId));
+    if (!rawValue) {
+      return null;
+    }
+
+    const parsed = JSON.parse(rawValue) as StoredCompletionReentryState;
+    if (
+      typeof parsed.sessionId !== "string" ||
+      (parsed.phase !== "confidence-after" && parsed.phase !== "complete")
+    ) {
+      return null;
+    }
+
+    return {
+      sessionId: parsed.sessionId,
+      phase: parsed.phase,
+      confidenceAfter:
+        typeof parsed.confidenceAfter === "number" ? parsed.confidenceAfter : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeCompletionReentryState(
+  blockId: string,
+  state: StoredCompletionReentryState
+): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(
+    getCompletionReentryKey(blockId),
+    JSON.stringify(state)
+  );
+}
+
+function clearCompletionReentryState(blockId: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.removeItem(getCompletionReentryKey(blockId));
+}
+
+function buildRecoveryState(
+  block: SessionBlockInfo,
+  recovery: SessionRecoveryRestart
+): SessionRecoveryState {
   if (recovery.reason === "abandoned") {
     return {
       mode: "restart",
@@ -316,6 +370,38 @@ function buildResumeNotice(block: SessionBlockInfo): SessionResumeNotice {
   return {
     title: "Session resumed",
     description: `You're back in ${block.topicName}. Continue from your last exchange.`,
+  };
+}
+
+function buildFallbackCompletedResult(
+  block: SessionBlockInfo,
+  recovery: SessionRecoveryCompleted
+): SessionResult {
+  const elapsedSeconds = Math.max(
+    0,
+    Math.floor(
+      ((recovery.endedAt ? new Date(recovery.endedAt) : new Date()).getTime() -
+        new Date(recovery.startedAt).getTime()) /
+        1000
+    )
+  );
+
+  return {
+    summary:
+      recovery.summary?.trim() ||
+      `You already finished ${block.topicName}.`,
+    outcome: {
+      blockId: block.id as AttemptOutcome["blockId"],
+      score: null,
+      confidenceBefore: null,
+      confidenceAfter: null,
+      helpRequested: false,
+      helpTiming: null,
+      misconceptions: [],
+      retentionOutcome: null,
+      durationMinutes: Math.max(1, Math.round(elapsedSeconds / 60)),
+      rawInteraction: null,
+    },
   };
 }
 
@@ -394,6 +480,7 @@ export function useStudySession({
   const [resumeNotice, setResumeNotice] = useState<SessionResumeNotice | null>(
     null
   );
+  const [restartRequested, setRestartRequested] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -422,6 +509,7 @@ export function useStudySession({
       setConfidenceAfter(null);
       setRecoveryState(null);
       setResumeNotice(null);
+      setRestartRequested(false);
       startTimeRef.current = null;
       abortRef.current = null;
 
@@ -447,6 +535,11 @@ export function useStudySession({
         setResult(endResult);
         setRecoveryState(null);
         setResumeNotice(null);
+        writeCompletionReentryState(blockId, {
+          sessionId: snapshot.sessionId,
+          phase: "confidence-after",
+          confidenceAfter: null,
+        });
         setPhase("confidence-after");
       } catch (err: unknown) {
         if (isRecoverableSessionError(err)) {
@@ -458,7 +551,7 @@ export function useStudySession({
         setPhase("error");
       }
     },
-    []
+    [blockId]
   );
 
   const applyRecoverySnapshot = useCallback(
@@ -470,12 +563,15 @@ export function useStudySession({
       setError(null);
 
       if (recovery.mode === "fresh") {
+        clearCompletionReentryState(blockId);
+        confidenceBeforeRef.current = null;
         resetInteractiveState({ clearConfidenceBefore: true });
         setPhase("confidence-before");
         return;
       }
 
       if (recovery.mode === "resume") {
+        clearCompletionReentryState(blockId);
         const hydratedMessages = toSessionMessages(
           recovery.messages,
           recovery.startedAt
@@ -491,6 +587,10 @@ export function useStudySession({
         setMessages(hydratedMessages);
         messagesRef.current = hydratedMessages;
         setIsStreaming(false);
+        setConfidenceBefore(recovery.confidenceBefore);
+        confidenceBeforeRef.current = recovery.confidenceBefore;
+        setConfidenceAfter(null);
+        setRestartRequested(false);
 
         const startedAtMs = new Date(recovery.startedAt).getTime();
         startTimeRef.current = Number.isNaN(startedAtMs)
@@ -509,11 +609,75 @@ export function useStudySession({
         return;
       }
 
+      if (recovery.mode === "completed") {
+        const localCompletionState = readCompletionReentryState(blockId);
+        if (
+          localCompletionState &&
+          localCompletionState.sessionId !== recovery.sessionId
+        ) {
+          clearCompletionReentryState(blockId);
+        }
+        const recoveredResult =
+          recovery.result ?? buildFallbackCompletedResult(blockInfo, recovery);
+
+        setRecoveryState(null);
+        setResumeNotice(null);
+        setRestartRequested(false);
+        setSessionId(recovery.sessionId);
+        setSystemPrompt(null);
+        setMessages([]);
+        messagesRef.current = [];
+        setIsStreaming(false);
+        setResult(recoveredResult);
+        setConfidenceBefore(recoveredResult.outcome.confidenceBefore);
+        confidenceBeforeRef.current = recoveredResult.outcome.confidenceBefore;
+
+        const endedAtMs = recovery.endedAt
+          ? new Date(recovery.endedAt).getTime()
+          : Date.now();
+        const startedAtMs = new Date(recovery.startedAt).getTime();
+        setElapsedSeconds(
+          Math.max(
+            0,
+            Math.floor(
+              (endedAtMs - (Number.isNaN(startedAtMs) ? endedAtMs : startedAtMs)) /
+                1000
+            )
+          )
+        );
+
+        if (
+          localCompletionState &&
+          localCompletionState.sessionId === recovery.sessionId &&
+          localCompletionState.phase === "confidence-after"
+        ) {
+          setConfidenceAfter(null);
+          setPhase("confidence-after");
+          return;
+        }
+
+        if (
+          localCompletionState &&
+          localCompletionState.sessionId === recovery.sessionId &&
+          localCompletionState.phase === "complete"
+        ) {
+          setConfidenceAfter(localCompletionState.confidenceAfter);
+          setPhase("complete");
+          return;
+        }
+
+        setConfidenceAfter(recoveredResult.outcome.confidenceAfter);
+        setPhase("complete");
+        return;
+      }
+
+      clearCompletionReentryState(blockId);
+      confidenceBeforeRef.current = null;
       resetInteractiveState({ clearConfidenceBefore: true });
       setRecoveryState(buildRecoveryState(blockInfo, recovery));
       setPhase("recovery");
     },
-    [finalizeRecoveredCompletion, resetInteractiveState]
+    [blockId, finalizeRecoveredCompletion, resetInteractiveState]
   );
 
   const loadSessionState = useCallback(async () => {
@@ -596,6 +760,7 @@ export function useStudySession({
     async (options?: { confidenceBefore?: number | null; restart?: boolean }) => {
       if (options && "confidenceBefore" in options) {
         setConfidenceBefore(options.confidenceBefore ?? null);
+        confidenceBeforeRef.current = options.confidenceBefore ?? null;
       }
 
       setError(null);
@@ -610,12 +775,14 @@ export function useStudySession({
       setSystemPrompt(null);
       setElapsedSeconds(0);
       startTimeRef.current = null;
+      clearCompletionReentryState(blockId);
       setPhase("starting");
 
       try {
         const { sessionId: nextSessionId, systemPrompt: nextSystemPrompt, initialMessage } =
           await apiRef.current.startSession(blockId, {
             restart: options?.restart ?? false,
+            confidenceBefore: options?.confidenceBefore ?? null,
           });
 
         const initialMessages: SessionMessage[] = [
@@ -632,6 +799,7 @@ export function useStudySession({
         setMessages(initialMessages);
         messagesRef.current = initialMessages;
         startTimeRef.current = Date.now();
+        setRestartRequested(false);
         setPhase("active");
       } catch (err: unknown) {
         if (isRecoverableSessionError(err)) {
@@ -648,15 +816,21 @@ export function useStudySession({
 
   const submitConfidenceBefore = useCallback(
     (value: number) => {
-      void startFreshSession({ confidenceBefore: value });
+      void startFreshSession({
+        confidenceBefore: value,
+        restart: restartRequested,
+      });
     },
-    [startFreshSession]
+    [restartRequested, startFreshSession]
   );
 
   const restartSession = useCallback(async () => {
-    setConfidenceBefore(null);
-    await startFreshSession({ confidenceBefore: null, restart: true });
-  }, [startFreshSession]);
+    clearCompletionReentryState(blockId);
+    confidenceBeforeRef.current = null;
+    resetInteractiveState({ clearConfidenceBefore: true });
+    setRestartRequested(true);
+    setPhase("confidence-before");
+  }, [blockId, resetInteractiveState]);
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -764,6 +938,11 @@ export function useStudySession({
             );
             setResult(endResult);
             setResumeNotice(null);
+            writeCompletionReentryState(blockId, {
+              sessionId,
+              phase: "confidence-after",
+              confidenceAfter: null,
+            });
             setPhase("confidence-after");
           } catch (err: unknown) {
             if (isRecoverableSessionError(err)) {
@@ -792,13 +971,27 @@ export function useStudySession({
         abortRef.current = null;
       }
     },
-    [confidenceBefore, isStreaming, loadSessionState, sessionId, systemPrompt]
+    [
+      blockId,
+      confidenceBefore,
+      isStreaming,
+      loadSessionState,
+      sessionId,
+      systemPrompt,
+    ]
   );
 
   const submitConfidenceAfter = useCallback((value: number) => {
     setConfidenceAfter(value);
+    if (sessionId) {
+      writeCompletionReentryState(blockId, {
+        sessionId,
+        phase: "complete",
+        confidenceAfter: value,
+      });
+    }
     setPhase("complete");
-  }, []);
+  }, [blockId, sessionId]);
 
   const abandonSession = useCallback(async () => {
     if (!sessionId || !systemPrompt) {
@@ -824,6 +1017,7 @@ export function useStudySession({
         "abandoned",
         { before: confidenceBefore, after: confidenceAfter }
       );
+      clearCompletionReentryState(blockId);
       setResult(endResult);
       setResumeNotice(null);
       setPhase("complete");
@@ -839,6 +1033,7 @@ export function useStudySession({
   }, [
     confidenceAfter,
     confidenceBefore,
+    blockId,
     loadSessionState,
     sessionId,
     systemPrompt,
