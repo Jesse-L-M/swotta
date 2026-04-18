@@ -56,6 +56,7 @@ import {
   createCollection,
   getCollections,
   getFiles,
+  getUploadStatusSnapshot,
   prepareSourceUploads,
   getTopicMappings,
   reportUploadFailure,
@@ -600,7 +601,8 @@ describe("source actions", () => {
 
       expect(firstResult).toEqual({
         success: false,
-        error: "Upload completed, but processing could not be queued",
+        error:
+          "Upload completed, but processing could not be queued. Upload the file again to retry.",
       });
       expect(secondResult).toEqual({ success: true });
       expect(queueSourceFileUploadedMock).toHaveBeenCalledTimes(2);
@@ -687,12 +689,75 @@ describe("source actions", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Upload completed, but processing could not be queued",
+        error:
+          "Upload completed, but processing could not be queued. Upload the file again to retry.",
       });
 
       const files = await getFiles(collection.collectionId!, db);
       expect(files).toHaveLength(1);
       expect(files[0].status).toBe("pending");
+    });
+  });
+
+  describe("getUploadStatusSnapshot", () => {
+    it("returns the latest statuses for owned files", async () => {
+      const collection = await createCollection({ name: "Snapshot" }, db);
+      const upload = await registerUpload(
+        {
+          collectionId: collection.collectionId!,
+          filename: "notes.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 1024,
+        },
+        db
+      );
+
+      await db
+        .update(sourceFiles)
+        .set({
+          status: "processing",
+        })
+        .where(eq(sourceFiles.id, upload.fileId!));
+
+      const files = await getUploadStatusSnapshot([upload.fileId!], db);
+
+      expect(files).toHaveLength(1);
+      expect(files[0].id).toBe(upload.fileId);
+      expect(files[0].status).toBe("processing");
+    });
+
+    it("ignores file ids that do not belong to the learner", async () => {
+      const otherUser = await createTestUser();
+      const otherLearner = await createTestLearner(orgId, {
+        userId: otherUser.id,
+      });
+
+      const [collection] = await db
+        .insert(sourceCollections)
+        .values({
+          scope: "private",
+          learnerId: otherLearner.id,
+          orgId,
+          name: "Other learner collection",
+        })
+        .returning({ id: sourceCollections.id });
+
+      const [file] = await db
+        .insert(sourceFiles)
+        .values({
+          collectionId: collection.id,
+          uploadedByUserId: otherUser.id,
+          filename: "other.pdf",
+          mimeType: "application/pdf",
+          storagePath: "sources/test/other.pdf",
+          sizeBytes: 1024,
+          status: "ready",
+        })
+        .returning({ id: sourceFiles.id });
+
+      const files = await getUploadStatusSnapshot([file.id], db);
+
+      expect(files).toEqual([]);
     });
   });
 

@@ -125,7 +125,8 @@ export function UploadDropzone({
             {isDragOver ? "Drop files here" : "Drag and drop files here"}
           </p>
           <p className="mt-1 text-xs text-[#5C5950]">
-            or click to browse. PDF and DOCX up to {MAX_FILE_SIZE_LABEL}
+            or click to browse. PDF and DOCX up to {MAX_FILE_SIZE_LABEL}, up
+            to 10 files at once
           </p>
         </div>
       </div>

@@ -55,6 +55,9 @@ const uploadSuccessReportSchema = z.object({
   fileId: fileIdSchema,
   qualificationVersionId: z.string().uuid().optional(),
 });
+const uploadStatusSnapshotSchema = z
+  .array(fileIdSchema)
+  .max(25, "Too many files requested");
 
 interface LearnerScope {
   userId: string;
@@ -847,11 +850,13 @@ export async function reportUploadSuccess(
   }
 
   if (file.status === "failed") {
-    return {
-      success: false,
-      error: file.errorMessage ?? "This file can no longer be processed",
-    };
-  }
+      return {
+        success: false,
+        error:
+          file.errorMessage
+          ?? "This file can no longer be processed. Upload it again to make a fresh attempt.",
+      };
+    }
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const currentFile =
@@ -899,7 +904,8 @@ export async function reportUploadSuccess(
         return {
           success: false,
           error:
-            resolvedFile.errorMessage ?? "This file can no longer be processed",
+            resolvedFile.errorMessage
+            ?? "This file can no longer be processed. Upload it again to make a fresh attempt.",
         };
       }
 
@@ -933,7 +939,8 @@ export async function reportUploadSuccess(
 
       return {
         success: false,
-        error: "Upload completed, but processing could not be queued",
+        error:
+          "Upload completed, but processing could not be queued. Upload the file again to retry.",
       };
     }
 
@@ -955,7 +962,8 @@ export async function reportUploadSuccess(
       ) {
         return {
           success: false,
-          error: "Upload completed, but processing state could not be confirmed",
+          error:
+            "Upload completed, but processing state could not be confirmed. Check the sources page or upload the file again.",
         };
       }
     }
@@ -972,8 +980,20 @@ export async function reportUploadSuccess(
 
   return {
     success: false,
-    error: "Upload completed, but processing state could not be confirmed",
+    error:
+      "Upload completed, but processing state could not be confirmed. Check the sources page or upload the file again.",
   };
+}
+
+export async function getUploadStatusSnapshot(
+  fileIds: string[],
+  database: Database = db
+): Promise<SourceFileInfo[]> {
+  const parsed = uploadStatusSnapshotSchema.safeParse(fileIds);
+  if (!parsed.success) return [];
+
+  const { learnerId } = await getLearnerScope(database);
+  return listFilesByIds(learnerId, parsed.data, database);
 }
 
 export async function getTopicMappings(
